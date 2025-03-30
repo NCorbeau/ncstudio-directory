@@ -2,16 +2,71 @@
 import BaseLayout from './BaseLayout.astro';
 import Header from '../components/core/Header.astro';
 import Footer from '../components/core/Footer.astro';
+import { generateBreadcrumbSchema, generateDirectoryHomeSchema } from '../utils/schema-generator';
 
 // Import the theme-specific components dynamically
-const { directoryData, title, description } = Astro.props;
+const { 
+  directoryData, 
+  title, 
+  description, 
+  image,
+  canonicalUrl = Astro.url.href,
+  structuredData = null,
+  breadcrumbs = []
+} = Astro.props;
+
 const theme = directoryData.theme || 'default';
 
 // Dynamically import theme CSS
 const themeStylesPath = `../styles/themes/${theme}.css`;
+
+// Generate breadcrumb schema if breadcrumbs are provided
+let combinedStructuredData = structuredData;
+
+// If we have breadcrumbs, generate the breadcrumb schema
+if (breadcrumbs && breadcrumbs.length > 0) {
+  const breadcrumbSchema = generateBreadcrumbSchema(breadcrumbs);
+  
+  // If there's already structured data, we need to handle multiple schema objects
+  if (combinedStructuredData) {
+    // If we already have an array of schemas, add to it
+    if (Array.isArray(combinedStructuredData)) {
+      combinedStructuredData = [...combinedStructuredData, breadcrumbSchema];
+    } else {
+      // If we have a single schema object, turn it into an array
+      combinedStructuredData = [combinedStructuredData, breadcrumbSchema];
+    }
+  } else {
+    // No existing schema, just use the breadcrumb schema
+    combinedStructuredData = breadcrumbSchema;
+  }
+}
+
+// For homepage, add website schema
+const isHomePage = Astro.url.pathname.split('/').length <= 3; // /directory-id/ pattern
+if (isHomePage && directoryData) {
+  const homeSchema = generateDirectoryHomeSchema(directoryData, canonicalUrl);
+  
+  // Same logic as above to combine schemas
+  if (combinedStructuredData) {
+    if (Array.isArray(combinedStructuredData)) {
+      combinedStructuredData = [...combinedStructuredData, homeSchema];
+    } else {
+      combinedStructuredData = [combinedStructuredData, homeSchema];
+    }
+  } else {
+    combinedStructuredData = homeSchema;
+  }
+}
 ---
 
-<BaseLayout title={title} description={description}>
+<BaseLayout 
+  title={title} 
+  description={description}
+  image={image}
+  canonicalUrl={canonicalUrl}
+  structuredData={combinedStructuredData}
+>
   <!-- Add theme-specific CSS -->
   <link rel="stylesheet" href={themeStylesPath} />
   
@@ -19,6 +74,7 @@ const themeStylesPath = `../styles/themes/${theme}.css`;
   <style is:inline define:vars={{
     primaryColor: directoryData.primaryColor,
     secondaryColor: directoryData.secondaryColor,
+    primaryColorRgb: hexToRgb(directoryData.primaryColor || '#3366cc')
   }}>
     :root {
       /* Colors are set via define:vars above */
@@ -46,3 +102,21 @@ const themeStylesPath = `../styles/themes/${theme}.css`;
     />
   </div>
 </BaseLayout>
+
+<script>
+  // Helper functions for the component
+</script>
+
+{/* Helper function to convert hex to RGB for CSS variables */}
+{function hexToRgb(hex) {
+  // Remove the hash if it exists
+  hex = hex.replace('#', '');
+  
+  // Parse the hex values
+  const r = parseInt(hex.substring(0, 2), 16);
+  const g = parseInt(hex.substring(2, 4), 16);
+  const b = parseInt(hex.substring(4, 6), 16);
+  
+  // Return as RGB string
+  return `${r}, ${g}, ${b}`;
+}}

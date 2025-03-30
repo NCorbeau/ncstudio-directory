@@ -1,8 +1,10 @@
+// src/pages/[directory]/category/[category].astro
 ---
 import { getCollection } from 'astro:content';
 import DirectoryLayout from '../../../layouts/DirectoryLayout.astro';
 import ListingCard from '../../../components/core/ListingCard.astro';
 import SearchBar from '../../../components/core/SearchBar.astro';
+import { generateCategorySchema } from '../../../utils/schema-generator';
 
 export async function getStaticPaths() {
   const directories = await getCollection('directories');
@@ -42,12 +44,39 @@ export async function getStaticPaths() {
 
 const { directory, category } = Astro.params;
 const { directoryData, categoryName, categoryDescription, listings } = Astro.props;
+
+// Construct canonical URL
+const canonicalUrl = new URL(`/${directory}/category/${category}`, Astro.site || 'http://localhost:3000').toString();
+
+// Generate structured data for category page
+const categoryData = {
+  id: category,
+  name: categoryName,
+  description: categoryDescription
+};
+
+const structuredData = generateCategorySchema(directory, directoryData, categoryData, canonicalUrl);
+
+// Generate breadcrumbs for this category
+const breadcrumbs = [
+  {
+    name: directoryData.name,
+    url: `/${directory}/`
+  },
+  {
+    name: categoryName,
+    url: canonicalUrl
+  }
+];
 ---
 
 <DirectoryLayout
   title={`${categoryName} | ${directoryData.name}`}
   description={categoryDescription || `Browse ${categoryName} listings in ${directoryData.name}`}
   directoryData={directoryData}
+  canonicalUrl={canonicalUrl}
+  structuredData={structuredData}
+  breadcrumbs={breadcrumbs}
 >
   <div class="container">
     <header class="category-header">

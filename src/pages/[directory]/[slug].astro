@@ -1,6 +1,8 @@
+// src/pages/[directory]/[slug].astro
 ---
 import { getCollection } from 'astro:content';
 import DirectoryLayout from '../../layouts/DirectoryLayout.astro';
+import { generateListingSchema } from '../../utils/schema-generator';
 
 // Generate all dynamic routes
 export async function getStaticPaths() {
@@ -31,18 +33,52 @@ export async function getStaticPaths() {
 
 // Get the listing data from props
 const { listing, directoryData } = Astro.props;
+const { directory } = Astro.params;
 
 // Process the markdown content
 const { Content } = await listing.render();
 
 // Build the image gallery
 const images = listing.data.images || [];
+
+// Construct the canonical URL
+const canonicalUrl = new URL(`/${directory}/${Astro.params.slug}`, Astro.site || 'http://localhost:3000').toString();
+
+// Generate structured data for this listing
+const structuredData = generateListingSchema(directory, listing.data, canonicalUrl);
+
+// Generate breadcrumbs for this listing
+const breadcrumbs = [
+  {
+    name: directoryData.name,
+    url: `/${directory}/`
+  }
+];
+
+// Add category breadcrumb if available
+if (listing.data.category) {
+  const categoryName = directoryData.categories.find(cat => cat.id === listing.data.category)?.name || listing.data.category;
+  breadcrumbs.push({
+    name: categoryName,
+    url: `/${directory}/category/${listing.data.category}`
+  });
+}
+
+// Add current page breadcrumb
+breadcrumbs.push({
+  name: listing.data.title,
+  url: canonicalUrl
+});
 ---
 
 <DirectoryLayout
   title={`${listing.data.title} | ${directoryData.name}`}
   description={listing.data.description}
   directoryData={directoryData}
+  canonicalUrl={canonicalUrl}
+  structuredData={structuredData}
+  breadcrumbs={breadcrumbs}
+  image={images.length > 0 ? images[0] : undefined}
 >
   <article class="listing-detail">
     <div class="container">
