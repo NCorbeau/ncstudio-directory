@@ -1,0 +1,430 @@
+---
+import { getCollection } from 'astro:content';
+import DirectoryLayout from '../../layouts/DirectoryLayout.astro';
+
+// Generate all dynamic routes
+export async function getStaticPaths() {
+  const allListings = await getCollection('listings');
+  const directories = await getCollection('directories');
+  
+  return allListings.map(listing => {
+    const directoryId = listing.data.directory;
+    const directoryData = directories.find(dir => dir.id === directoryId)?.data;
+    
+    if (!directoryData) {
+      console.warn(`Directory data not found for listing: ${listing.slug}`);
+      return null;
+    }
+    
+    return {
+      params: { 
+        directory: directoryId,
+        slug: listing.slug.replace(`${directoryId}/`, '') // Remove directory prefix from slug if present
+      },
+      props: { 
+        listing,
+        directoryData
+      }
+    };
+  }).filter(Boolean); // Remove any null entries
+}
+
+// Get the listing data from props
+const { listing, directoryData } = Astro.props;
+
+// Process the markdown content
+const { Content } = await listing.render();
+
+// Build the image gallery
+const images = listing.data.images || [];
+---
+
+<DirectoryLayout
+  title={`${listing.data.title} | ${directoryData.name}`}
+  description={listing.data.description}
+  directoryData={directoryData}
+>
+  <article class="listing-detail">
+    <div class="container">
+      <header class="listing-header">
+        <h1>{listing.data.title}</h1>
+        <p class="description">{listing.data.description}</p>
+        
+        {listing.data.category && (
+          <div class="category">
+            <a href={`/${directoryData.id}/category/${listing.data.category}`}>
+              {directoryData.categories.find(cat => cat.id === listing.data.category)?.name || listing.data.category}
+            </a>
+          </div>
+        )}
+        
+        {listing.data.tags && listing.data.tags.length > 0 && (
+          <div class="tags">
+            {listing.data.tags.map(tag => (
+              <span class="tag">{tag}</span>
+            ))}
+          </div>
+        )}
+        
+        {typeof listing.data.rating === 'number' && (
+          <div class="rating">
+            <div class="stars" style={`--rating: ${listing.data.rating}`}>
+              <span class="sr-only">{listing.data.rating} out of 5 stars</span>
+            </div>
+          </div>
+        )}
+      </header>
+      
+      {images.length > 0 && (
+        <div class="image-gallery">
+          <div class="main-image">
+            <img 
+              src={images[0]} 
+              alt={`Main image of ${listing.data.title}`}
+              id="gallery-main" 
+            />
+          </div>
+          
+          {images.length > 1 && (
+            <div class="thumbnails">
+              {images.map((image, index) => (
+                <button 
+                  class={`thumbnail ${index === 0 ? 'active' : ''}`} 
+                  data-index={index}
+                  data-src={image}
+                >
+                  <img src={image} alt={`Thumbnail ${index + 1}`} />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+      
+      <div class="listing-info">
+        <div class="info-sidebar">
+          {listing.data.address && (
+            <div class="info-section">
+              <h3>Address</h3>
+              <p>{listing.data.address}</p>
+              
+              <a 
+                href={`https://maps.google.com/?q=${encodeURIComponent(listing.data.address)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="map-link"
+              >
+                View on Map
+              </a>
+            </div>
+          )}
+          
+          {listing.data.website && (
+            <div class="info-section">
+              <h3>Website</h3>
+              <a 
+                href={listing.data.website}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="website-link"
+              >
+                Visit Website
+              </a>
+            </div>
+          )}
+          
+          {listing.data.phone && (
+            <div class="info-section">
+              <h3>Phone</h3>
+              <a href={`tel:${listing.data.phone}`}>{listing.data.phone}</a>
+            </div>
+          )}
+          
+          {listing.data.openingHours && listing.data.openingHours.length > 0 && (
+            <div class="info-section">
+              <h3>Opening Hours</h3>
+              <ul class="hours-list">
+                {listing.data.openingHours.map(timeSlot => (
+                  <li>
+                    <span class="day">{timeSlot.day}</span>
+                    <span class="hours">{timeSlot.hours}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          
+          {/* Display custom fields if available */}
+          {listing.data.customFields && Object.keys(listing.data.customFields).length > 0 && (
+            <div class="info-section">
+              <h3>Additional Information</h3>
+              <ul class="custom-fields">
+                {Object.entries(listing.data.customFields).map(([key, value]) => (
+                  <li>
+                    <span class="label">{key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1')}</span>
+                    <span class="value">
+                      {typeof value === 'boolean' 
+                        ? (value ? 'Yes' : 'No')
+                        : String(value)
+                      }
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+        
+        <div class="content">
+          <Content />
+        </div>
+      </div>
+    </div>
+  </article>
+</DirectoryLayout>
+
+<script>
+  // Image gallery functionality
+  document.addEventListener('DOMContentLoaded', () => {
+    const mainImage = document.getElementById('gallery-main');
+    const thumbnails = document.querySelectorAll('.thumbnail');
+    
+    thumbnails.forEach(thumb => {
+      thumb.addEventListener('click', () => {
+        // Update active state
+        thumbnails.forEach(t => t.classList.remove('active'));
+        thumb.classList.add('active');
+        
+        // Update main image
+        if (mainImage) {
+          mainImage.src = thumb.getAttribute('data-src') || '';
+        }
+      });
+    });
+  });
+</script>
+
+<style>
+  .container {
+    max-width: var(--max-width, 1200px);
+    margin: 0 auto;
+    padding: 0 1rem;
+  }
+  
+  .listing-header {
+    margin-bottom: 2rem;
+  }
+  
+  .listing-header h1 {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .description {
+    font-size: 1.1rem;
+    color: #555;
+    margin-bottom: 1rem;
+  }
+  
+  .category a {
+    display: inline-block;
+    background-color: var(--primaryColor);
+    color: white;
+    padding: 0.3rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    text-decoration: none;
+    margin-right: 0.5rem;
+  }
+  
+  .tags {
+    margin-top: 0.75rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  
+  .tag {
+    background-color: #f5f5f5;
+    color: #555;
+    padding: 0.3rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.9rem;
+  }
+  
+  .rating {
+    margin-top: 1rem;
+  }
+  
+  .stars {
+    position: relative;
+    display: inline-block;
+    font-size: 1.5rem;
+    color: #ffc107;
+  }
+  
+  .stars::before {
+    content: "★★★★★";
+    letter-spacing: 3px;
+    background: linear-gradient(90deg, 
+      currentColor calc(var(--rating) / 5 * 100%), 
+      #ddd calc(var(--rating) / 5 * 100%)
+    );
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  
+  .image-gallery {
+    margin-bottom: 2rem;
+  }
+  
+  .main-image {
+    width: 100%;
+    height: 400px;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 1rem;
+  }
+  
+  .main-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  
+  .thumbnails {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+  }
+  
+  .thumbnail {
+    width: 80px;
+    height: 60px;
+    border-radius: 4px;
+    overflow: hidden;
+    cursor: pointer;
+    padding: 0;
+    border: 2px solid transparent;
+    background: none;
+  }
+  
+  .thumbnail.active {
+    border-color: var(--primaryColor);
+  }
+  
+  .thumbnail img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  
+  .listing-info {
+    display: grid;
+    grid-template-columns: 1fr 3fr;
+    gap: 2rem;
+  }
+  
+  .info-sidebar {
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    padding: 1.5rem;
+  }
+  
+  .info-section {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid #eee;
+  }
+  
+  .info-section:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+  }
+  
+  .info-section h3 {
+    font-size: 1.1rem;
+    margin-bottom: 0.75rem;
+    color: #333;
+  }
+  
+  .hours-list,
+  .custom-fields {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  
+  .hours-list li,
+  .custom-fields li {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+  }
+  
+  .content {
+    font-size: 1.1rem;
+    line-height: 1.7;
+  }
+  
+  .content h1 {
+    font-size: 2rem;
+    margin: 1.5rem 0 1rem;
+  }
+  
+  .content h2 {
+    font-size: 1.5rem;
+    margin: 1.5rem 0 1rem;
+  }
+  
+  .content h3 {
+    font-size: 1.3rem;
+    margin: 1.5rem 0 1rem;
+  }
+  
+  .content p {
+    margin-bottom: 1.5rem;
+  }
+  
+  .content img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 4px;
+    margin: 1.5rem 0;
+  }
+  
+  .content ul, 
+  .content ol {
+    margin: 1rem 0;
+    padding-left: 1.5rem;
+  }
+  
+  .map-link,
+  .website-link {
+    display: inline-block;
+    margin-top: 0.5rem;
+    color: var(--primaryColor);
+    text-decoration: none;
+  }
+  
+  .map-link:hover,
+  .website-link:hover {
+    text-decoration: underline;
+  }
+  
+  @media (max-width: 768px) {
+    .listing-info {
+      grid-template-columns: 1fr;
+    }
+    
+    .listing-header h1 {
+      font-size: 2rem;
+    }
+    
+    .main-image {
+      height: 300px;
+    }
+  }
+</style>

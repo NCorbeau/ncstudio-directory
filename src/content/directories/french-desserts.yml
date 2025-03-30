@@ -1,0 +1,79 @@
+id: french-desserts
+name: French Desserts Guide
+description: The ultimate guide to authentic French pastries, cakes, and regional dessert specialties
+domain: frenchdesserts-guide.com
+theme: elegant
+primaryColor: "#8D1F1F"
+secondaryColor: "#F9C784"
+logo: /french-desserts/logo.svg
+categories:
+  - id: pastries
+    name: Pastries
+    description: Flaky, buttery, and delicate French pastries including croissants, pain au chocolat, and more
+
+  - id: cakes
+    name: Cakes & Gateaux
+    description: Classic French cakes from simple pound cakes to elaborate layer cakes
+
+  - id: tarts
+    name: Tarts & Pies
+    description: Sweet pastry crusts filled with fruits, custards, and other delicious fillings
+
+  - id: cookies
+    name: Cookies & Small Treats
+    description: Delicate French cookies, macarons, and other bite-sized sweets
+
+  - id: custards
+    name: Custards & Creams
+    description: Silky crème brûlée, mousse, and other creamy French desserts
+
+  - id: regional-specialties
+    name: Regional Specialties
+    description: Distinctive desserts from different regions of France, from Brittany to Provence
+
+  - id: chocolates
+    name: Chocolate Creations
+    description: Elegant chocolate desserts and confections from the French tradition
+
+  - id: breads
+    name: Sweet Breads
+    description: Brioche, pain perdu, and other sweet French bread specialties
+
+metaTags:
+  title: French Desserts Guide - Authentic Pastries, Cakes & Regional Specialties
+  description: Discover the art of French pastry with our comprehensive guide to authentic French desserts, from flaky croissants to delicate macarons to regional specialties.
+  keywords:
+    - french desserts
+    - french pastry
+    - croissant
+    - macaron
+    - tarte tatin
+    - paris brest
+    - creme brulee
+    - french patisserie
+    - regional french desserts
+
+socialLinks:
+  - platform: instagram
+    url: https://instagram.com/frenchdesserts
+  - platform: pinterest
+    url: https://pinterest.com/frenchdesserts
+  - platform: facebook
+    url: https://facebook.com/frenchdesserts
+  - platform: twitter
+    url: https://twitter.com/frenchdesserts
+
+# Deployment configuration
+deployment:
+  # Example AWS S3 deployment
+  s3:
+    bucket: frenchdesserts-guide
+    region: eu-west-3
+    prefix: production
+
+  # Alternative GitHub Pages deployment
+  github:
+    repo: dessert-guides/french-desserts
+    branch: gh-pages
+    user: ${GITHUB_USER}
+    token: ${GITHUB_TOKEN}

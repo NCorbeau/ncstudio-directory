@@ -1,0 +1,76 @@
+---
+import { getCollection } from "astro:content";
+import DirectoryLayout from "../../layouts/DirectoryLayout.astro";
+import ListingCard from "../../components/core/ListingCard.astro";
+
+export async function getStaticPaths() {
+  const directories = await getCollection("directories");
+
+  return directories.map((directory) => ({
+    params: { directory: directory.id },
+    props: { directoryData: directory.data },
+  }));
+}
+
+const { directory } = Astro.params;
+const { directoryData } = Astro.props;
+
+// Get listings for this specific directory
+const allListings = await getCollection("listings", ({ data }) => {
+  return data.directory === directory;
+});
+
+// Get featured listings
+const featuredListings = allListings.filter((listing) => listing.data.featured);
+---
+
+<DirectoryLayout
+  title={directoryData.metaTags.title}
+  description={directoryData.metaTags.description}
+  directoryData={directoryData}
+>
+  <section class="hero">
+    <div class="container">
+      <h1>{directoryData.name}</h1>
+      <p>{directoryData.description}</p>
+    </div>
+  </section>
+
+  {
+    featuredListings.length > 0 && (
+      <section class="featured">
+        <div class="container">
+          <h2>Featured Listings</h2>
+          <div class="listing-grid">
+            {featuredListings.map((listing) => (
+              <ListingCard
+                listing={listing.data}
+                url={`/${directory}/${listing.slug}`}
+                theme={directoryData.theme}
+              />
+            ))}
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  <section class="categories">
+    <div class="container">
+      <h2>Browse by Category</h2>
+      <div class="category-grid">
+        {
+          directoryData.categories.map((category) => (
+            <a
+              href={`/${directory}/category/${category.id}`}
+              class="category-card"
+            >
+              <h3>{category.name}</h3>
+              {category.description && <p>{category.description}</p>}
+            </a>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+</DirectoryLayout>

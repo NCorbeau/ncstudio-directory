@@ -1,8 +1,6 @@
 # build output
 dist/
-
-# generated types
-.astro/
+.output/
 
 # dependencies
 node_modules/
@@ -20,5 +18,28 @@ pnpm-debug.log*
 # macOS-specific files
 .DS_Store
 
-# jetbrains setting folder
+# Editor directories and files
+.vscode/
 .idea/
+*.code-workspace
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Temporary files
+.tmp/
+.temp/
+.cache/
+
+# Log files
+logs/
+*.log
+
+# Deployment files
+.netlify/
+.vercel/
+
+# Temporary repo directories created by deploy script
+*-repo/

@@ -1,0 +1,68 @@
+---
+const { directoryId, placeholder = "Search..." } = Astro.props;
+---
+
+<div class="search-container">
+  <form action={`/${directoryId}/search`} method="get" class="search-form">
+    <input 
+      type="text" 
+      name="q" 
+      id="search-input"
+      placeholder={placeholder}
+      autocomplete="off"
+    />
+    <button type="submit" aria-label="Search">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"></circle>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+      </svg>
+    </button>
+  </form>
+</div>
+
+<style>
+  .search-container {
+    width: 100%;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+  
+  .search-form {
+    display: flex;
+    width: 100%;
+    border-radius: 50px;
+    overflow: hidden;
+    border: 2px solid #eee;
+    background-color: white;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  
+  .search-form:focus-within {
+    border-color: var(--primaryColor);
+    box-shadow: 0 0 0 3px rgba(var(--primaryColor-rgb, 51, 102, 204), 0.2);
+  }
+  
+  input {
+    flex: 1;
+    border: none;
+    padding: 1rem 1.5rem;
+    font-size: 1rem;
+    outline: none;
+    width: 100%;
+  }
+  
+  button {
+    background-color: var(--primaryColor);
+    color: white;
+    border: none;
+    padding: 0 1.5rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  button:hover {
+    background-color: var(--primaryColor-dark, #2a549f);
+  }
+</style>

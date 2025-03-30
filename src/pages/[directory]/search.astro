@@ -1,0 +1,262 @@
+---
+import { getCollection } from 'astro:content';
+import DirectoryLayout from '../../layouts/DirectoryLayout.astro';
+import ListingCard from '../../components/core/ListingCard.astro';
+import SearchBar from '../../components/core/SearchBar.astro';
+
+export async function getStaticPaths() {
+  const directories = await getCollection('directories');
+  
+  return directories.map(directory => ({
+    params: { directory: directory.id },
+    props: { directoryData: directory.data }
+  }));
+}
+
+const { directory } = Astro.params;
+const { directoryData } = Astro.props;
+
+// Get search query from URL
+const query = Astro.url.searchParams.get('q') || '';
+
+// Get all listings for this directory
+const allListings = await getCollection('listings', ({ data }) => {
+  return data.directory === directory;
+});
+
+// Define a search function
+function searchListings(listings, searchQuery) {
+  if (!searchQuery) return listings;
+  
+  const lowercaseQuery = searchQuery.toLowerCase();
+  
+  return listings.filter(listing => {
+    const data = listing.data;
+    
+    // Search in title, description, and tags
+    if (data.title.toLowerCase().includes(lowercaseQuery)) return true;
+    if (data.description.toLowerCase().includes(lowercaseQuery)) return true;
+    
+    // Search in tags
+    if (data.tags && data.tags.some(tag => tag.toLowerCase().includes(lowercaseQuery))) {
+      return true;
+    }
+    
+    // Search in address
+    if (data.address && data.address.toLowerCase().includes(lowercaseQuery)) {
+      return true;
+    }
+    
+    // Search in category name
+    const categoryName = directoryData.categories.find(cat => cat.id === data.category)?.name || '';
+    if (categoryName.toLowerCase().includes(lowercaseQuery)) {
+      return true;
+    }
+    
+    return false;
+  });
+}
+
+// Filter listings based on search query
+const filteredListings = searchListings(allListings, query);
+---
+
+<DirectoryLayout
+  title={query ? `Search results for "${query}" | ${directoryData.name}` : `Search | ${directoryData.name}`}
+  description={`Search for listings in ${directoryData.name}`}
+  directoryData={directoryData}
+>
+  <div class="container">
+    <header class="search-header">
+      <h1>{query ? `Search results for "${query}"` : 'Search Listings'}</h1>
+      
+      <div class="search-wrapper">
+        <SearchBar 
+          directoryId={directory}
+          placeholder={`Search ${directoryData.name}...`}
+        />
+      </div>
+    </header>
+    
+    {query && (
+      <div class="search-info">
+        <p>Found {filteredListings.length} result{filteredListings.length !== 1 ? 's' : ''}</p>
+        
+        {filteredListings.length > 0 && (
+          <a href={`/${directory}/search`} class="clear-search">Clear search</a>
+        )}
+      </div>
+    )}
+    
+    {filteredListings.length > 0 ? (
+      <div class="listing-grid">
+        {filteredListings.map(listing => (
+          <ListingCard 
+            listing={listing.data} 
+            url={`/${directory}/${listing.slug.replace(`${directory}/`, '')}`}
+            theme={directoryData.theme}
+          />
+        ))}
+      </div>
+    ) : (
+      <div class="no-results">
+        {query ? (
+          <div>
+            <p>No listings found matching "{query}".</p>
+            <p>Try using different keywords or browse by category.</p>
+            <a href={`/${directory}/`} class="back-link">Back to homepage</a>
+          </div>
+        ) : (
+          <div>
+            <p>Enter a search term above to find listings.</p>
+            <p>You can search by name, description, location, or category.</p>
+          </div>
+        )}
+      </div>
+    )}
+    
+    {!query && (
+      <div class="browse-categories">
+        <h2>Browse by Category</h2>
+        <div class="category-grid">
+          {directoryData.categories.map(category => (
+            <a href={`/${directory}/category/${category.id}`} class="category-card">
+              <h3>{category.name}</h3>
+              {category.description && <p>{category.description}</p>}
+            </a>
+          ))}
+        </div>
+      </div>
+    )}
+  </div>
+</DirectoryLayout>
+
+<style>
+  .container {
+    max-width: var(--max-width, 1200px);
+    margin: 0 auto;
+    padding: 0 1rem;
+  }
+  
+  .search-header {
+    margin-bottom: 2rem;
+    text-align: center;
+  }
+  
+  .search-header h1 {
+    font-size: 2.2rem;
+    margin-bottom: 2rem;
+  }
+  
+  .search-wrapper {
+    max-width: 600px;
+    margin: 0 auto 2rem;
+  }
+  
+  .search-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    font-size: 0.95rem;
+    color: #666;
+  }
+  
+  .clear-search {
+    color: var(--primaryColor);
+    text-decoration: none;
+  }
+  
+  .clear-search:hover {
+    text-decoration: underline;
+  }
+  
+  .listing-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 2rem;
+    margin-bottom: 3rem;
+  }
+  
+  .no-results {
+    text-align: center;
+    padding: 3rem 0;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+  }
+  
+  .no-results p {
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+    color: #666;
+  }
+  
+  .back-link {
+    display: inline-block;
+    margin-top: 1rem;
+    padding: 0.5rem 1.5rem;
+    background-color: var(--primaryColor);
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    font-weight: 500;
+  }
+  
+  .back-link:hover {
+    background-color: var(--primaryColor-dark, #2a549f);
+  }
+  
+  .browse-categories {
+    margin-top: 3rem;
+  }
+  
+  .browse-categories h2 {
+    font-size: 1.8rem;
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+  
+  .category-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+  }
+  
+  .category-card {
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    padding: 1.5rem;
+    text-decoration: none;
+    color: #333;
+    transition: transform 0.2s, box-shadow 0.2s;
+    border: 1px solid #eee;
+  }
+  
+  .category-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  }
+  
+  .category-card h3 {
+    font-size: 1.3rem;
+    margin-bottom: 0.75rem;
+    color: var(--primaryColor);
+  }
+  
+  .category-card p {
+    font-size: 0.95rem;
+    color: #666;
+    margin: 0;
+  }
+  
+  @media (max-width: 768px) {
+    .search-header h1 {
+      font-size: 1.8rem;
+    }
+    
+    .listing-grid,
+    .category-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

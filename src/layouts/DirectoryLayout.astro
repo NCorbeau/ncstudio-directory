@@ -1,0 +1,48 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import Header from '../components/core/Header.astro';
+import Footer from '../components/core/Footer.astro';
+
+// Import the theme-specific components dynamically
+const { directoryData, title, description } = Astro.props;
+const theme = directoryData.theme || 'default';
+
+// Dynamically import theme CSS
+const themeStylesPath = `../styles/themes/${theme}.css`;
+---
+
+<BaseLayout title={title} description={description}>
+  <!-- Add theme-specific CSS -->
+  <link rel="stylesheet" href={themeStylesPath} />
+  
+  <!-- Add inline CSS variables for theme colors -->
+  <style is:inline define:vars={{
+    primaryColor: directoryData.primaryColor,
+    secondaryColor: directoryData.secondaryColor,
+  }}>
+    :root {
+      /* Colors are set via define:vars above */
+      /* Additional theme variables can be set here */
+      --font-primary: system-ui, sans-serif;
+      --max-width: 1200px;
+    }
+  </style>
+
+  <div class={`directory-container theme-${theme}`}>
+    <Header 
+      directoryName={directoryData.name}
+      logo={directoryData.logo}
+      theme={theme}
+    />
+    
+    <main>
+      <slot />
+    </main>
+    
+    <Footer 
+      directoryName={directoryData.name}
+      socialLinks={directoryData.socialLinks}
+      theme={theme}
+    />
+  </div>
+</BaseLayout>

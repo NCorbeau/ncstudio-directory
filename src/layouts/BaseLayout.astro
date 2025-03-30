@@ -1,0 +1,85 @@
+---
+// src/layouts/BaseLayout.astro
+// This is the foundational layout used by all pages across all directories
+
+interface Props {
+  title: string;
+  description: string;
+  image?: string;
+  canonicalUrl?: string;
+}
+
+const { 
+  title, 
+  description, 
+  image = '/default-og-image.jpg',
+  canonicalUrl = Astro.url.href
+} = Astro.props;
+
+// Get the current directory ID from the URL or environment
+const urlParts = Astro.url.pathname.split('/');
+const directoryId = urlParts[1] || import.meta.env.CURRENT_DIRECTORY || 'default';
+---
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    
+    <!-- Open Graph / Social Media -->
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:image" content={new URL(image, Astro.url)} />
+    <meta property="og:type" content="website" />
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={new URL(image, Astro.url)} />
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href={canonicalUrl} />
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href={`/${directoryId}/favicon.svg`} />
+    
+    <!-- Global base styles -->
+    <link rel="stylesheet" href="/styles/global.css" />
+    
+    <!-- Slot for additional head content -->
+    <slot name="head" />
+  </head>
+  <body>
+    <slot />
+    
+    <!-- Basic analytics script (replace with your preferred solution) -->
+    <script is:inline>
+      // Simple page view tracking - you would replace this with your analytics provider
+      document.addEventListener('DOMContentLoaded', () => {
+        const sendPageView = () => {
+          if (typeof window._analytics !== 'undefined') {
+            window._analytics.trackPageView({
+              directoryId: '{ directoryId }',
+              path: window.location.pathname,
+              title: document.title
+            });
+          }
+        };
+        
+        // Track initial page view
+        sendPageView();
+        
+        // Track navigation changes for SPA navigation
+        document.addEventListener('astro:page-load', sendPageView);
+      });
+    </script>
+    
+    <!-- Slot for additional body scripts -->
+    <slot name="after-body" />
+  </body>
+</html>

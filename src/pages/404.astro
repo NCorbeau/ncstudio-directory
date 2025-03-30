@@ -1,0 +1,118 @@
+---
+// src/pages/404.astro
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getCurrentDirectoryId, getDirectoryConfig } from '../utils/directory-helpers';
+
+// Get the current directory from URL or environment
+const currentUrl = Astro.url;
+const directoryId = getCurrentDirectoryId(currentUrl);
+
+// Get directory configuration if available
+let directoryData = null;
+try {
+  directoryData = await getDirectoryConfig(directoryId);
+} catch (error) {
+  console.error('Error loading directory config for 404 page:', error);
+}
+
+// Fallback values if directory not found
+const siteName = directoryData?.name || 'Directory Listing';
+const homeUrl = directoryData ? `/${directoryId}/` : '/';
+---
+
+<BaseLayout
+  title={`Page Not Found | ${siteName}`}
+  description="The page you were looking for could not be found."
+>
+  <main class="not-found">
+    <div class="container">
+      <h1>404</h1>
+      <h2>Page Not Found</h2>
+      <p>The page you were looking for could not be found.</p>
+      <p>It might have been moved, deleted, or never existed in the first place.</p>
+      
+      <div class="actions">
+        <a href={homeUrl} class="button">Go to Homepage</a>
+        <button onclick="window.history.back()" class="button button-outline">Go Back</button>
+      </div>
+    </div>
+  </main>
+</BaseLayout>
+
+<style>
+  .not-found {
+    padding: 6rem 0;
+    text-align: center;
+    min-height: 70vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  h1 {
+    font-size: 8rem;
+    font-weight: 800;
+    margin: 0;
+    line-height: 1;
+    background: linear-gradient(135deg, var(--primaryColor, #3366cc) 0%, var(--secondaryColor, #ff9900) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  h2 {
+    font-size: 2rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  p {
+    font-size: 1.1rem;
+    max-width: 600px;
+    margin: 0 auto 0.5rem;
+    color: #666;
+  }
+  
+  .actions {
+    margin-top: 2rem;
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+  }
+  
+  .button {
+    display: inline-block;
+    padding: 0.75rem 1.5rem;
+    border-radius: 4px;
+    background-color: var(--primaryColor, #3366cc);
+    color: white;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.2s;
+  }
+  
+  .button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+  
+  .button-outline {
+    background-color: transparent;
+    border: 2px solid var(--primaryColor, #3366cc);
+    color: var(--primaryColor, #3366cc);
+  }
+  
+  @media (max-width: 768px) {
+    h1 {
+      font-size: 5rem;
+    }
+    
+    h2 {
+      font-size: 1.5rem;
+    }
+    
+    .actions {
+      flex-direction: column;
+    }
+  }
+</style>

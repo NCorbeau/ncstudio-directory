@@ -1,0 +1,180 @@
+---
+const { directoryName, socialLinks = [], theme = 'default' } = Astro.props;
+const currentPath = Astro.url.pathname;
+const directoryId = currentPath.split('/')[1];
+
+// Get the current year for copyright
+const currentYear = new Date().getFullYear();
+
+// Social media icons mapping
+const socialIcons = {
+  facebook: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg>`,
+  twitter: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z"></path></svg>`,
+  instagram: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.5" y2="6.5"></line></svg>`,
+  linkedin: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"></path><rect x="2" y="9" width="4" height="12"></rect><circle cx="4" cy="4" r="2"></circle></svg>`,
+  youtube: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"></path><polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"></polygon></svg>`,
+  pinterest: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 12h8"></path><path d="M12 8v8"></path><circle cx="12" cy="12" r="10"></circle></svg>`
+};
+---
+
+<footer class={`site-footer theme-${theme}`}>
+  <div class="container">
+    <div class="footer-top">
+      <div class="footer-logo">
+        <h2>{directoryName}</h2>
+        <p>Your comprehensive guide to the best options.</p>
+      </div>
+      
+      <div class="footer-links">
+        <div class="footer-nav">
+          <h3>Navigation</h3>
+          <ul>
+            <li><a href={`/${directoryId}/`}>Home</a></li>
+            <li><a href={`/${directoryId}/search`}>Search</a></li>
+            <li><a href={`/${directoryId}/about`}>About</a></li>
+            <li><a href={`/${directoryId}/contact`}>Contact</a></li>
+          </ul>
+        </div>
+        
+        <div class="footer-legal">
+          <h3>Legal</h3>
+          <ul>
+            <li><a href={`/${directoryId}/privacy`}>Privacy Policy</a></li>
+            <li><a href={`/${directoryId}/terms`}>Terms of Service</a></li>
+            <li><a href={`/${directoryId}/cookies`}>Cookie Policy</a></li>
+          </ul>
+        </div>
+      </div>
+      
+      {socialLinks.length > 0 && (
+        <div class="social-links">
+          <h3>Follow Us</h3>
+          <div class="social-icons">
+            {socialLinks.map(link => (
+              <a 
+                href={link.url} 
+                aria-label={`Follow us on ${link.platform}`}
+                target="_blank" 
+                rel="noopener noreferrer"
+                class={`icon-${link.platform}`}
+              >
+                <Fragment set:html={socialIcons[link.platform.toLowerCase()] || ''} />
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+    
+    <div class="footer-bottom">
+      <p>&copy; {currentYear} {directoryName}. All rights reserved.</p>
+      <p class="attribution">
+        Powered by <a href="https://astro.build" target="_blank" rel="noopener">Astro</a>
+      </p>
+    </div>
+  </div>
+</footer>
+
+<style>
+  .site-footer {
+    background-color: #202020;
+    color: #fff;
+    padding: 4rem 0 2rem;
+    margin-top: 4rem;
+  }
+  
+  .container {
+    max-width: var(--max-width, 1200px);
+    margin: 0 auto;
+    padding: 0 1rem;
+  }
+  
+  .footer-top {
+    display: grid;
+    grid-template-columns: 1.5fr 2fr 1fr;
+    gap: 2rem;
+    margin-bottom: 3rem;
+  }
+  
+  .footer-links {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+  }
+  
+  .footer-logo h2 {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+  }
+  
+  .footer-logo p {
+    opacity: 0.7;
+    max-width: 25ch;
+  }
+  
+  h3 {
+    font-size: 1.1rem;
+    margin-bottom: 1.2rem;
+    font-weight: 600;
+  }
+  
+  ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  
+  li {
+    margin-bottom: 0.75rem;
+  }
+  
+  a {
+    color: rgba(255, 255, 255, 0.7);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+  
+  a:hover {
+    color: white;
+  }
+  
+  .social-icons {
+    display: flex;
+    gap: 1rem;
+  }
+  
+  .social-icons a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: rgba(255, 255, 255, 0.1);
+    transition: background-color 0.2s;
+  }
+  
+  .social-icons a:hover {
+    background-color: var(--primaryColor);
+  }
+  
+  .footer-bottom {
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding-top: 2rem;
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+    opacity: 0.7;
+  }
+  
+  @media (max-width: 768px) {
+    .footer-top {
+      grid-template-columns: 1fr;
+    }
+    
+    .footer-bottom {
+      flex-direction: column;
+      gap: 1rem;
+    }
+  }
+</style>

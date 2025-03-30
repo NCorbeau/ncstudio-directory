@@ -1,0 +1,166 @@
+---
+import { getCollection } from 'astro:content';
+import DirectoryLayout from '../../../layouts/DirectoryLayout.astro';
+import ListingCard from '../../../components/core/ListingCard.astro';
+import SearchBar from '../../../components/core/SearchBar.astro';
+
+export async function getStaticPaths() {
+  const directories = await getCollection('directories');
+  const allListings = await getCollection('listings');
+  
+  const paths = [];
+  
+  for (const directory of directories) {
+    const directoryId = directory.id;
+    const categories = directory.data.categories || [];
+    
+    for (const category of categories) {
+      const categoryId = category.id;
+      const categoryName = category.name;
+      const categoryDescription = category.description || '';
+      
+      // Get listings for this directory and category
+      const categoryListings = allListings.filter(listing => 
+        listing.data.directory === directoryId && 
+        listing.data.category === categoryId
+      );
+      
+      paths.push({
+        params: { directory: directoryId, category: categoryId },
+        props: { 
+          directoryData: directory.data,
+          categoryName,
+          categoryDescription,
+          listings: categoryListings
+        }
+      });
+    }
+  }
+  
+  return paths;
+}
+
+const { directory, category } = Astro.params;
+const { directoryData, categoryName, categoryDescription, listings } = Astro.props;
+---
+
+<DirectoryLayout
+  title={`${categoryName} | ${directoryData.name}`}
+  description={categoryDescription || `Browse ${categoryName} listings in ${directoryData.name}`}
+  directoryData={directoryData}
+>
+  <div class="container">
+    <header class="category-header">
+      <h1>{categoryName}</h1>
+      {categoryDescription && <p class="description">{categoryDescription}</p>}
+      
+      <div class="search-wrapper">
+        <SearchBar 
+          directoryId={directory} 
+          placeholder={`Search in ${categoryName}...`}
+        />
+      </div>
+    </header>
+    
+    <div class="listings-count">
+      <p>Showing {listings.length} result{listings.length !== 1 ? 's' : ''}</p>
+    </div>
+    
+    {listings.length > 0 ? (
+      <div class="listing-grid">
+        {listings.map(listing => (
+          <ListingCard 
+            listing={listing.data} 
+            url={`/${directory}/${listing.slug.replace(`${directory}/`, '')}`}
+            theme={directoryData.theme}
+          />
+        ))}
+      </div>
+    ) : (
+      <div class="no-results">
+        <p>No listings found in this category.</p>
+        <a href={`/${directory}/`} class="back-link">Back to all listings</a>
+      </div>
+    )}
+  </div>
+</DirectoryLayout>
+
+<style>
+  .container {
+    max-width: var(--max-width, 1200px);
+    margin: 0 auto;
+    padding: 0 1rem;
+  }
+  
+  .category-header {
+    margin-bottom: 2rem;
+    text-align: center;
+  }
+  
+  .category-header h1 {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .description {
+    font-size: 1.1rem;
+    color: #555;
+    max-width: 800px;
+    margin: 0 auto 2rem;
+  }
+  
+  .search-wrapper {
+    max-width: 600px;
+    margin: 2rem auto;
+  }
+  
+  .listings-count {
+    margin-bottom: 1.5rem;
+    font-size: 0.95rem;
+    color: #666;
+  }
+  
+  .listing-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 2rem;
+    margin-bottom: 3rem;
+  }
+  
+  .no-results {
+    text-align: center;
+    padding: 3rem 0;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+  }
+  
+  .no-results p {
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+    color: #666;
+  }
+  
+  .back-link {
+    display: inline-block;
+    padding: 0.5rem 1.5rem;
+    background-color: var(--primaryColor);
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    font-weight: 500;
+  }
+  
+  .back-link:hover {
+    background-color: var(--primaryColor-dark, #2a549f);
+  }
+  
+  @media (max-width: 768px) {
+    .category-header h1 {
+      font-size: 2rem;
+    }
+    
+    .listing-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
