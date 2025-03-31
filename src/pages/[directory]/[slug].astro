@@ -1,66 +1,80 @@
 // src/pages/[directory]/[slug].astro
 ---
-import { getCollection } from 'astro:content';
 import DirectoryLayout from '../../layouts/DirectoryLayout.astro';
 import { generateListingSchema } from '../../utils/schema-generator';
+import { 
+  getAllDirectories, 
+  getDirectoryConfig,
+  getDirectoryListings,
+  getListingBySlug
+} from '../../utils/directory-helpers';
 
 // Generate all dynamic routes
 export async function getStaticPaths() {
-  const allListings = await getCollection('listings');
-  const directories = await getCollection('directories');
+  const directories = await getAllDirectories();
+  const paths = [];
   
-  return allListings.map(listing => {
-    const directoryId = listing.data.directory;
-    const directoryData = directories.find(dir => dir.id === directoryId)?.data;
+  for (const directory of directories) {
+    const directoryId = directory.id;
+    const listings = await getDirectoryListings(directoryId);
     
-    if (!directoryData) {
-      console.warn(`Directory data not found for listing: ${listing.slug}`);
-      return null;
+    for (const listing of listings) {
+      const slug = listing.slug.replace(`${directoryId}/`, '');
+      
+      paths.push({
+        params: { 
+          directory: directoryId,
+          slug
+        },
+        props: { 
+          directoryId,
+          slug
+        }
+      });
     }
-    
-    return {
-      params: { 
-        directory: directoryId,
-        slug: listing.slug.replace(`${directoryId}/`, '') // Remove directory prefix from slug if present
-      },
-      props: { 
-        listing,
-        directoryData
-      }
-    };
-  }).filter(Boolean); // Remove any null entries
+  }
+  
+  return paths;
 }
 
-// Get the listing data from props
-const { listing, directoryData } = Astro.props;
-const { directory } = Astro.params;
+// Get params from props
+const { directoryId, slug } = Astro.props;
 
-// Process the markdown content
+// Fetch the directory config and listing data
+const directoryData = await getDirectoryConfig(directoryId);
+const listing = await getListingBySlug(directoryId, slug);
+
+// Handle case where data isn't found
+if (!directoryData || !listing) {
+  return Astro.redirect('/404');
+}
+
+// Get Content from render function
 const { Content } = await listing.render();
 
 // Build the image gallery
 const images = listing.data.images || [];
 
 // Construct the canonical URL
-const canonicalUrl = new URL(`/${directory}/${Astro.params.slug}`, Astro.site || 'http://localhost:3000').toString();
+const canonicalUrl = new URL(`/${directoryId}/${slug}`, Astro.site || 'http://localhost:3000').toString();
 
 // Generate structured data for this listing
-const structuredData = generateListingSchema(directory, listing.data, canonicalUrl);
+const structuredData = generateListingSchema(directoryId, listing.data, canonicalUrl);
 
 // Generate breadcrumbs for this listing
 const breadcrumbs = [
   {
-    name: directoryData.name,
-    url: `/${directory}/`
+    name: directoryData.data.name,
+    url: `/${directoryId}/`
   }
 ];
 
 // Add category breadcrumb if available
 if (listing.data.category) {
-  const categoryName = directoryData.categories.find(cat => cat.id === listing.data.category)?.name || listing.data.category;
+  const categoryName = directoryData.data.categories.find(cat => cat.id === listing.data.category)?.name || listing.data.category;
   breadcrumbs.push({
     name: categoryName,
-    url: `/${directory}/category/${listing.data.category}`
+    url: `/${directoryId}/category/${listing.data.category}`
   });
 }
 
@@ -72,9 +86,9 @@ breadcrumbs.push({
 ---
 
 <DirectoryLayout
-  title={`${listing.data.title} | ${directoryData.name}`}
+  title={`${listing.data.title} | ${directoryData.data.name}`}
   description={listing.data.description}
-  directoryData={directoryData}
+  directoryData={directoryData.data}
   canonicalUrl={canonicalUrl}
   structuredData={structuredData}
   breadcrumbs={breadcrumbs}
@@ -88,8 +102,8 @@ breadcrumbs.push({
         
         {listing.data.category && (
           <div class="category">
-            <a href={`/${directoryData.id}/category/${listing.data.category}`}>
-              {directoryData.categories.find(cat => cat.id === listing.data.category)?.name || listing.data.category}
+            <a href={`/${directoryId}/category/${listing.data.category}`}>
+              {directoryData.data.categories.find(cat => cat.id === listing.data.category)?.name || listing.data.category}
             </a>
           </div>
         )}
@@ -212,7 +226,7 @@ breadcrumbs.push({
         </div>
         
         <div class="content">
-          <Content />
+          <Fragment set:html={Content} />
         </div>
       </div>
     </div>

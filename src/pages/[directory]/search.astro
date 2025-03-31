@@ -1,70 +1,70 @@
+// src/pages/[directory]/search.astro
 ---
-import { getCollection } from 'astro:content';
 import DirectoryLayout from '../../layouts/DirectoryLayout.astro';
 import ListingCard from '../../components/core/ListingCard.astro';
 import SearchBar from '../../components/core/SearchBar.astro';
+import { getAllDirectories, getDirectoryConfig, searchListings } from '../../utils/directory-helpers';
 
+// Generate all dynamic routes
 export async function getStaticPaths() {
-  const directories = await getCollection('directories');
+  const directories = await getAllDirectories();
   
   return directories.map(directory => ({
     params: { directory: directory.id },
-    props: { directoryData: directory.data }
+    props: { directoryId: directory.id }
   }));
 }
 
-const { directory } = Astro.params;
-const { directoryData } = Astro.props;
+// Get directory ID from props
+const { directoryId } = Astro.props;
 
 // Get search query from URL
 const query = Astro.url.searchParams.get('q') || '';
 
-// Get all listings for this directory
-const allListings = await getCollection('listings', ({ data }) => {
-  return data.directory === directory;
-});
+// Fetch directory data
+const directoryData = await getDirectoryConfig(directoryId);
 
-// Define a search function
-function searchListings(listings, searchQuery) {
-  if (!searchQuery) return listings;
-  
-  const lowercaseQuery = searchQuery.toLowerCase();
-  
-  return listings.filter(listing => {
-    const data = listing.data;
-    
-    // Search in title, description, and tags
-    if (data.title.toLowerCase().includes(lowercaseQuery)) return true;
-    if (data.description.toLowerCase().includes(lowercaseQuery)) return true;
-    
-    // Search in tags
-    if (data.tags && data.tags.some(tag => tag.toLowerCase().includes(lowercaseQuery))) {
-      return true;
-    }
-    
-    // Search in address
-    if (data.address && data.address.toLowerCase().includes(lowercaseQuery)) {
-      return true;
-    }
-    
-    // Search in category name
-    const categoryName = directoryData.categories.find(cat => cat.id === data.category)?.name || '';
-    if (categoryName.toLowerCase().includes(lowercaseQuery)) {
-      return true;
-    }
-    
-    return false;
-  });
+// Handle case where directory isn't found
+if (!directoryData) {
+  return Astro.redirect('/404');
 }
 
-// Filter listings based on search query
-const filteredListings = searchListings(allListings, query);
+// Search for listings if there's a query
+const filteredListings = query 
+  ? await searchListings(directoryId, query)
+  : [];
+
+// Construct canonical URL (without query parameter for base URL)
+const baseUrl = new URL(`/${directoryId}/search`, Astro.site || 'http://localhost:3000').toString();
+const canonicalUrl = query ? `${baseUrl}?q=${encodeURIComponent(query)}` : baseUrl;
+
+// Generate breadcrumbs
+const breadcrumbs = [
+  {
+    name: directoryData.data.name,
+    url: `/${directoryId}/`
+  },
+  {
+    name: 'Search',
+    url: baseUrl
+  }
+];
+
+// Add search query to breadcrumbs if present
+if (query) {
+  breadcrumbs.push({
+    name: `Results for "${query}"`,
+    url: canonicalUrl
+  });
+}
 ---
 
 <DirectoryLayout
-  title={query ? `Search results for "${query}" | ${directoryData.name}` : `Search | ${directoryData.name}`}
-  description={`Search for listings in ${directoryData.name}`}
-  directoryData={directoryData}
+  title={query ? `Search results for "${query}" | ${directoryData.data.name}` : `Search | ${directoryData.data.name}`}
+  description={`Search for listings in ${directoryData.data.name}`}
+  directoryData={directoryData.data}
+  canonicalUrl={canonicalUrl}
+  breadcrumbs={breadcrumbs}
 >
   <div class="container">
     <header class="search-header">
@@ -72,8 +72,9 @@ const filteredListings = searchListings(allListings, query);
       
       <div class="search-wrapper">
         <SearchBar 
-          directoryId={directory}
-          placeholder={`Search ${directoryData.name}...`}
+          directoryId={directoryId}
+          placeholder={`Search ${directoryData.data.name}...`}
+          initialQuery={query}
         />
       </div>
     </header>
@@ -83,35 +84,35 @@ const filteredListings = searchListings(allListings, query);
         <p>Found {filteredListings.length} result{filteredListings.length !== 1 ? 's' : ''}</p>
         
         {filteredListings.length > 0 && (
-          <a href={`/${directory}/search`} class="clear-search">Clear search</a>
+          <a href={`/${directoryId}/search`} class="clear-search">Clear search</a>
         )}
       </div>
     )}
     
-    {filteredListings.length > 0 ? (
+    {query && filteredListings.length > 0 ? (
       <div class="listing-grid">
         {filteredListings.map(listing => (
           <ListingCard 
             listing={listing.data} 
-            url={`/${directory}/${listing.slug.replace(`${directory}/`, '')}`}
-            theme={directoryData.theme}
+            url={`/${directoryId}/${listing.slug.replace(`${directoryId}/`, '')}`}
+            theme={directoryData.data.theme}
           />
         ))}
       </div>
+    ) : query ? (
+      <div class="no-results">
+        <div>
+          <p>No listings found matching "{query}".</p>
+          <p>Try using different keywords or browse by category.</p>
+          <a href={`/${directoryId}/`} class="back-link">Back to homepage</a>
+        </div>
+      </div>
     ) : (
       <div class="no-results">
-        {query ? (
-          <div>
-            <p>No listings found matching "{query}".</p>
-            <p>Try using different keywords or browse by category.</p>
-            <a href={`/${directory}/`} class="back-link">Back to homepage</a>
-          </div>
-        ) : (
-          <div>
-            <p>Enter a search term above to find listings.</p>
-            <p>You can search by name, description, location, or category.</p>
-          </div>
-        )}
+        <div>
+          <p>Enter a search term above to find listings.</p>
+          <p>You can search by name, description, location, or category.</p>
+        </div>
       </div>
     )}
     
@@ -119,8 +120,8 @@ const filteredListings = searchListings(allListings, query);
       <div class="browse-categories">
         <h2>Browse by Category</h2>
         <div class="category-grid">
-          {directoryData.categories.map(category => (
-            <a href={`/${directory}/category/${category.id}`} class="category-card">
+          {directoryData.data.categories.map(category => (
+            <a href={`/${directoryId}/category/${category.id}`} class="category-card">
               <h3>{category.name}</h3>
               {category.description && <p>{category.description}</p>}
             </a>

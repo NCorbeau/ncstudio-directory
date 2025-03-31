@@ -1,4 +1,13 @@
-import { getCollection } from 'astro:content';
+// src/utils/directory-helpers.js
+import { 
+  getDirectory, 
+  getDirectories, 
+  getListings, 
+  getListing,
+  getCategoryListings,
+  getLandingPages,
+  searchListings as searchNocoDBListings
+} from '../lib/nocodb';
 
 /**
  * Get the current directory ID from the URL or environment variable
@@ -28,10 +37,7 @@ export function getCurrentDirectoryId(url) {
  */
 export async function getDirectoryConfig(directoryId) {
   try {
-    const directories = await getCollection('directories');
-    const directory = directories.find(dir => dir.id === directoryId);
-    
-    return directory ? directory.data : null;
+    return await getDirectory(directoryId);
   } catch (error) {
     console.error(`Error loading directory config for ${directoryId}:`, error);
     return null;
@@ -45,14 +51,25 @@ export async function getDirectoryConfig(directoryId) {
  */
 export async function getDirectoryListings(directoryId) {
   try {
-    const allListings = await getCollection('listings', ({ data }) => {
-      return data.directory === directoryId;
-    });
-    
-    return allListings;
+    return await getListings(directoryId);
   } catch (error) {
     console.error(`Error loading listings for directory ${directoryId}:`, error);
     return [];
+  }
+}
+
+/**
+ * Get a specific listing by slug
+ * @param {string} directoryId - The directory ID
+ * @param {string} slug - The listing slug
+ * @returns {Promise<object|null>} The listing or null if not found
+ */
+export async function getListingBySlug(directoryId, slug) {
+  try {
+    return await getListing(directoryId, slug);
+  } catch (error) {
+    console.error(`Error loading listing ${slug} for directory ${directoryId}:`, error);
+    return null;
   }
 }
 
@@ -64,11 +81,7 @@ export async function getDirectoryListings(directoryId) {
  */
 export async function getCategoryListings(directoryId, categoryId) {
   try {
-    const allListings = await getCollection('listings', ({ data }) => {
-      return data.directory === directoryId && data.category === categoryId;
-    });
-    
-    return allListings;
+    return await getCategoryListings(directoryId, categoryId);
   } catch (error) {
     console.error(`Error loading category listings for ${directoryId}/${categoryId}:`, error);
     return [];
@@ -105,38 +118,36 @@ export async function searchListings(directoryId, query) {
   if (!query) return [];
   
   try {
-    const allListings = await getDirectoryListings(directoryId);
-    const directoryConfig = await getDirectoryConfig(directoryId);
-    
-    const lowercaseQuery = query.toLowerCase();
-    
-    return allListings.filter(listing => {
-      const data = listing.data;
-      
-      // Search in title, description, and tags
-      if (data.title.toLowerCase().includes(lowercaseQuery)) return true;
-      if (data.description.toLowerCase().includes(lowercaseQuery)) return true;
-      
-      // Search in tags
-      if (data.tags && data.tags.some(tag => tag.toLowerCase().includes(lowercaseQuery))) {
-        return true;
-      }
-      
-      // Search in address
-      if (data.address && data.address.toLowerCase().includes(lowercaseQuery)) {
-        return true;
-      }
-      
-      // Search in category name
-      const categoryName = directoryConfig?.categories.find(cat => cat.id === data.category)?.name || '';
-      if (categoryName.toLowerCase().includes(lowercaseQuery)) {
-        return true;
-      }
-      
-      return false;
-    });
+    return await searchNocoDBListings(directoryId, query);
   } catch (error) {
     console.error(`Error searching listings for ${directoryId}:`, error);
+    return [];
+  }
+}
+
+/**
+ * Get landing pages for a directory
+ * @param {string} directoryId - The directory ID
+ * @returns {Promise<Array>} Array of landing pages
+ */
+export async function getDirectoryLandingPages(directoryId) {
+  try {
+    return await getLandingPages(directoryId);
+  } catch (error) {
+    console.error(`Error loading landing pages for directory ${directoryId}:`, error);
+    return [];
+  }
+}
+
+/**
+ * Get all directory configurations
+ * @returns {Promise<Array>} Array of directory configurations
+ */
+export async function getAllDirectories() {
+  try {
+    return await getDirectories();
+  } catch (error) {
+    console.error('Error loading all directories:', error);
     return [];
   }
 }

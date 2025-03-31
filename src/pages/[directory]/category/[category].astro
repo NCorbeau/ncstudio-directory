@@ -1,39 +1,34 @@
 // src/pages/[directory]/category/[category].astro
 ---
-import { getCollection } from 'astro:content';
 import DirectoryLayout from '../../../layouts/DirectoryLayout.astro';
 import ListingCard from '../../../components/core/ListingCard.astro';
 import SearchBar from '../../../components/core/SearchBar.astro';
 import { generateCategorySchema } from '../../../utils/schema-generator';
+import { 
+  getAllDirectories, 
+  getDirectoryConfig, 
+  getCategoryListings 
+} from '../../../utils/directory-helpers';
 
+// Generate all dynamic routes
 export async function getStaticPaths() {
-  const directories = await getCollection('directories');
-  const allListings = await getCollection('listings');
-  
+  const directories = await getAllDirectories();
   const paths = [];
   
   for (const directory of directories) {
     const directoryId = directory.id;
-    const categories = directory.data.categories || [];
+    const directoryData = directory.data;
     
-    for (const category of categories) {
-      const categoryId = category.id;
-      const categoryName = category.name;
-      const categoryDescription = category.description || '';
-      
-      // Get listings for this directory and category
-      const categoryListings = allListings.filter(listing => 
-        listing.data.directory === directoryId && 
-        listing.data.category === categoryId
-      );
-      
+    // Generate a path for each category in this directory
+    for (const category of directoryData.categories || []) {
       paths.push({
-        params: { directory: directoryId, category: categoryId },
+        params: { 
+          directory: directoryId,
+          category: category.id
+        },
         props: { 
-          directoryData: directory.data,
-          categoryName,
-          categoryDescription,
-          listings: categoryListings
+          directoryId,
+          categoryId: category.id
         }
       });
     }
@@ -42,26 +37,45 @@ export async function getStaticPaths() {
   return paths;
 }
 
-const { directory, category } = Astro.params;
-const { directoryData, categoryName, categoryDescription, listings } = Astro.props;
+// Get parameters from props
+const { directoryId, categoryId } = Astro.props;
+
+// Fetch directory data
+const directoryConfig = await getDirectoryConfig(directoryId);
+
+// Handle case where directory config isn't found
+if (!directoryConfig) {
+  return Astro.redirect('/404');
+}
+
+// Get category data from directory config
+const categoryData = directoryConfig.data.categories.find(cat => cat.id === categoryId);
+
+// Handle case where category isn't found
+if (!categoryData) {
+  return Astro.redirect(`/${directoryId}/`);
+}
+
+// Fetch listings for this category
+const listings = await getCategoryListings(directoryId, categoryId);
+
+// Generate page metadata
+const categoryName = categoryData.name;
+const categoryDescription = categoryData.description || '';
+const title = `${categoryName} | ${directoryConfig.data.name}`;
+const description = categoryDescription || `Browse ${categoryName} listings in ${directoryConfig.data.name}`;
 
 // Construct canonical URL
-const canonicalUrl = new URL(`/${directory}/category/${category}`, Astro.site || 'http://localhost:3000').toString();
+const canonicalUrl = new URL(`/${directoryId}/category/${categoryId}`, Astro.site || 'http://localhost:3000').toString();
 
 // Generate structured data for category page
-const categoryData = {
-  id: category,
-  name: categoryName,
-  description: categoryDescription
-};
-
-const structuredData = generateCategorySchema(directory, directoryData, categoryData, canonicalUrl);
+const structuredData = generateCategorySchema(directoryId, directoryConfig.data, categoryData, canonicalUrl);
 
 // Generate breadcrumbs for this category
 const breadcrumbs = [
   {
-    name: directoryData.name,
-    url: `/${directory}/`
+    name: directoryConfig.data.name,
+    url: `/${directoryId}/`
   },
   {
     name: categoryName,
@@ -71,9 +85,9 @@ const breadcrumbs = [
 ---
 
 <DirectoryLayout
-  title={`${categoryName} | ${directoryData.name}`}
-  description={categoryDescription || `Browse ${categoryName} listings in ${directoryData.name}`}
-  directoryData={directoryData}
+  title={title}
+  description={description}
+  directoryData={directoryConfig.data}
   canonicalUrl={canonicalUrl}
   structuredData={structuredData}
   breadcrumbs={breadcrumbs}
@@ -85,7 +99,7 @@ const breadcrumbs = [
       
       <div class="search-wrapper">
         <SearchBar 
-          directoryId={directory} 
+          directoryId={directoryId} 
           placeholder={`Search in ${categoryName}...`}
         />
       </div>
@@ -100,15 +114,15 @@ const breadcrumbs = [
         {listings.map(listing => (
           <ListingCard 
             listing={listing.data} 
-            url={`/${directory}/${listing.slug.replace(`${directory}/`, '')}`}
-            theme={directoryData.theme}
+            url={`/${directoryId}/${listing.slug.replace(`${directoryId}/`, '')}`}
+            theme={directoryConfig.data.theme}
           />
         ))}
       </div>
     ) : (
       <div class="no-results">
         <p>No listings found in this category.</p>
-        <a href={`/${directory}/`} class="back-link">Back to all listings</a>
+        <a href={`/${directoryId}/`} class="back-link">Back to all listings</a>
       </div>
     )}
   </div>

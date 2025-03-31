@@ -1,5 +1,6 @@
+// src/components/core/SearchBar.astro
 ---
-const { directoryId, placeholder = "Search..." } = Astro.props;
+const { directoryId, placeholder = "Search...", initialQuery = "" } = Astro.props;
 ---
 
 <div class="search-container">
@@ -10,6 +11,7 @@ const { directoryId, placeholder = "Search..." } = Astro.props;
       id="search-input"
       placeholder={placeholder}
       autocomplete="off"
+      value={initialQuery}
     />
     <button type="submit" aria-label="Search">
       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -20,11 +22,92 @@ const { directoryId, placeholder = "Search..." } = Astro.props;
   </form>
 </div>
 
+<script>
+  // Enable live search suggestions if desired
+  document.addEventListener('DOMContentLoaded', () => {
+    const searchInput = document.getElementById('search-input');
+    
+    if (searchInput) {
+      searchInput.focus();
+      
+      // Optional: Add search suggestions or live search functionality here
+      /*
+      searchInput.addEventListener('input', async (e) => {
+        const query = e.target.value;
+        if (query.length >= 2) {
+          // Fetch suggestions from an API endpoint
+          // This would require creating a serverless function or endpoint
+          // that connects to your NocoDB instance
+          try {
+            const directoryId = searchInput.closest('form').action.split('/').slice(-2)[0];
+            const response = await fetch(`/api/search-suggestions?directory=${directoryId}&q=${query}`);
+            const suggestions = await response.json();
+            
+            // Display suggestions
+            displaySuggestions(suggestions);
+          } catch (error) {
+            console.error('Error fetching search suggestions:', error);
+          }
+        }
+      });
+      */
+    }
+  });
+  
+  // Optional: Function to display search suggestions
+  /*
+  function displaySuggestions(suggestions) {
+    // Remove existing suggestions
+    const existingSuggestions = document.querySelector('.search-suggestions');
+    if (existingSuggestions) {
+      existingSuggestions.remove();
+    }
+    
+    // If no suggestions, exit
+    if (!suggestions || suggestions.length === 0) {
+      return;
+    }
+    
+    // Create suggestions container
+    const suggestionsContainer = document.createElement('div');
+    suggestionsContainer.className = 'search-suggestions';
+    
+    // Add each suggestion
+    suggestions.forEach(suggestion => {
+      const item = document.createElement('div');
+      item.className = 'suggestion-item';
+      item.textContent = suggestion.title;
+      
+      // Handle click on suggestion
+      item.addEventListener('click', () => {
+        // Set input value to suggestion
+        const searchInput = document.getElementById('search-input');
+        if (searchInput) {
+          searchInput.value = suggestion.title;
+          
+          // Submit the form
+          searchInput.closest('form').submit();
+        }
+      });
+      
+      suggestionsContainer.appendChild(item);
+    });
+    
+    // Add to DOM
+    const searchContainer = document.querySelector('.search-container');
+    if (searchContainer) {
+      searchContainer.appendChild(suggestionsContainer);
+    }
+  }
+  */
+</script>
+
 <style>
   .search-container {
     width: 100%;
     max-width: 600px;
     margin: 0 auto;
+    position: relative;
   }
   
   .search-form {
@@ -60,9 +143,37 @@ const { directoryId, placeholder = "Search..." } = Astro.props;
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: background-color 0.2s;
   }
   
   button:hover {
     background-color: var(--primaryColor-dark, #2a549f);
   }
+  
+  /* Optional: Styling for search suggestions */
+  /*
+  .search-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background-color: white;
+    border-radius: 0 0 8px 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    margin-top: 5px;
+    max-height: 300px;
+    overflow-y: auto;
+    z-index: 10;
+  }
+  
+  .suggestion-item {
+    padding: 0.75rem 1.5rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  
+  .suggestion-item:hover {
+    background-color: #f5f5f5;
+  }
+  */
 </style>
