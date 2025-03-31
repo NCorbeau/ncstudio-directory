@@ -4,9 +4,10 @@ import {
   getDirectories, 
   getListings, 
   getListing,
-  getCategoryListings,
   getLandingPages,
-  searchListings as searchNocoDBListings
+  getCategoryListings,
+  getFeaturedListings,
+  searchListings
 } from '../lib/nocodb';
 
 /**
@@ -22,8 +23,8 @@ export function getCurrentDirectoryId(url) {
   // Fallback to environment variable if available
   if (directoryFromUrl) {
     return directoryFromUrl;
-  } else if (import.meta.env.CURRENT_DIRECTORY) {
-    return import.meta.env.CURRENT_DIRECTORY;
+  } else if (import.meta.env.CURRENT_DIRECTORY || process.env.CURRENT_DIRECTORY) {
+    return import.meta.env.CURRENT_DIRECTORY || process.env.CURRENT_DIRECTORY;
   }
   
   // Default fallback
@@ -74,58 +75,6 @@ export async function getListingBySlug(directoryId, slug) {
 }
 
 /**
- * Get listings for a specific category in a directory
- * @param {string} directoryId - The directory ID
- * @param {string} categoryId - The category ID
- * @returns {Promise<Array>} Array of listings for the category
- */
-export async function getCategoryListings(directoryId, categoryId) {
-  try {
-    return await getCategoryListings(directoryId, categoryId);
-  } catch (error) {
-    console.error(`Error loading category listings for ${directoryId}/${categoryId}:`, error);
-    return [];
-  }
-}
-
-/**
- * Get featured listings for a directory
- * @param {string} directoryId - The directory ID
- * @param {number} limit - Maximum number of listings to return
- * @returns {Promise<Array>} Array of featured listings
- */
-export async function getFeaturedListings(directoryId, limit = 6) {
-  try {
-    const allListings = await getDirectoryListings(directoryId);
-    const featuredListings = allListings
-      .filter(listing => listing.data.featured)
-      .slice(0, limit);
-    
-    return featuredListings;
-  } catch (error) {
-    console.error(`Error loading featured listings for ${directoryId}:`, error);
-    return [];
-  }
-}
-
-/**
- * Search listings in a directory
- * @param {string} directoryId - The directory ID
- * @param {string} query - The search query
- * @returns {Promise<Array>} Array of matching listings
- */
-export async function searchListings(directoryId, query) {
-  if (!query) return [];
-  
-  try {
-    return await searchNocoDBListings(directoryId, query);
-  } catch (error) {
-    console.error(`Error searching listings for ${directoryId}:`, error);
-    return [];
-  }
-}
-
-/**
  * Get landing pages for a directory
  * @param {string} directoryId - The directory ID
  * @returns {Promise<Array>} Array of landing pages
@@ -138,6 +87,30 @@ export async function getDirectoryLandingPages(directoryId) {
     return [];
   }
 }
+
+/**
+ * Get listings for a specific category in a directory
+ * @param {string} directoryId - The directory ID
+ * @param {string} categoryId - The category ID
+ * @returns {Promise<Array>} Array of listings for the category
+ */
+export { getCategoryListings };
+
+/**
+ * Get featured listings for a directory
+ * @param {string} directoryId - The directory ID
+ * @param {number} limit - Maximum number of listings to return
+ * @returns {Promise<Array>} Array of featured listings
+ */
+export { getFeaturedListings };
+
+/**
+ * Search listings in a directory
+ * @param {string} directoryId - The directory ID
+ * @param {string} query - The search query
+ * @returns {Promise<Array>} Array of matching listings
+ */
+export { searchListings };
 
 /**
  * Get all directory configurations
@@ -153,39 +126,63 @@ export async function getAllDirectories() {
 }
 
 /**
- * Get related listings based on category and tags
+ * Get recent listings for a directory
  * @param {string} directoryId - The directory ID
- * @param {object} currentListing - The current listing
+ * @param {number} limit - Maximum number of listings to return
+ * @returns {Promise<Array>} Array of recent listings
+ */
+export async function getRecentListings(directoryId, limit = 4) {
+  try {
+    const allListings = await getListings(directoryId);
+    
+    // Sort by updatedAt date (newest first)
+    const sortedListings = [...allListings].sort((a, b) => {
+      const dateA = a.data.updatedAt ? new Date(a.data.updatedAt) : new Date(0);
+      const dateB = b.data.updatedAt ? new Date(b.data.updatedAt) : new Date(0);
+      return dateB - dateA;
+    });
+    
+    // Return the most recent listings
+    return sortedListings.slice(0, limit);
+  } catch (error) {
+    console.error(`Error loading recent listings for ${directoryId}:`, error);
+    return [];
+  }
+}
+
+/**
+ * Get related listings for a specific listing
+ * @param {string} directoryId - The directory ID
+ * @param {object} listing - The listing to find related items for
  * @param {number} limit - Maximum number of listings to return
  * @returns {Promise<Array>} Array of related listings
  */
-export async function getRelatedListings(directoryId, currentListing, limit = 3) {
+export async function getRelatedListings(directoryId, listing, limit = 3) {
   try {
-    const allListings = await getDirectoryListings(directoryId);
-    
-    // Filter out the current listing
-    const otherListings = allListings.filter(listing => 
-      listing.slug !== currentListing.slug
+    // Get all listings except the current one
+    const allListings = await getListings(directoryId);
+    const otherListings = allListings.filter(item => 
+      item.slug !== listing.slug
     );
     
     // Calculate relevance score for each listing
-    const scoredListings = otherListings.map(listing => {
+    const scoredListings = otherListings.map(item => {
       let score = 0;
       
       // Same category gets highest score
-      if (listing.data.category === currentListing.data.category) {
+      if (item.data.category === listing.data.category) {
         score += 5;
       }
       
       // Matching tags add to score
-      if (listing.data.tags && currentListing.data.tags) {
-        const matchingTags = listing.data.tags.filter(tag => 
-          currentListing.data.tags.includes(tag)
+      if (item.data.tags && listing.data.tags) {
+        const matchingTags = item.data.tags.filter(tag => 
+          listing.data.tags.includes(tag)
         );
         score += matchingTags.length * 2;
       }
       
-      return { listing, score };
+      return { listing: item, score };
     });
     
     // Sort by score and take top results

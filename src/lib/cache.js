@@ -1,6 +1,6 @@
-// src/lib/cache.js
 /**
  * Simple in-memory cache with TTL (Time To Live) support
+ * This helps reduce API calls to NocoDB during development and build
  */
 class MemoryCache {
     constructor() {

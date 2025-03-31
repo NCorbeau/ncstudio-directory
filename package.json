@@ -2,6 +2,7 @@
   "name": "ncstudio-directory",
   "type": "module",
   "version": "0.1.0",
+  "private": true,
   "scripts": {
     "dev": "astro dev",
     "start": "astro dev",
@@ -9,29 +10,21 @@
     "preview": "astro preview",
     "astro": "astro",
     "build:all": "node scripts/build-all.js",
-    "deploy": "node scripts/deploy.js",
-    "deploy:manual": "node scripts/deploy.js manual",
-    "deploy:ftp": "node scripts/deploy.js ftp",
-    "deploy:ssh": "node scripts/deploy.js ssh",
-    "deploy:s3": "node scripts/deploy.js s3",
-    "deploy:gcs": "node scripts/deploy.js gcs",
-    "deploy:github": "node scripts/deploy.js github"
+    "build:selective": "node scripts/selective-build.js",
+    "build:directory": "node scripts/selective-build.js"
   },
   "dependencies": {
     "@astrojs/check": "^0.4.1",
-    "@aws-sdk/client-s3": "^3.515.0",
-    "@google-cloud/storage": "^7.7.0",
-    "astro": "^5.5.2",
-    "dotenv": "^16.4.7",
+    "astro": "^5.5.6",
+    "dotenv": "^16.4.5",
     "js-yaml": "^4.1.0",
-    "ftp": "^0.3.10",
-    "ssh2": "^1.15.0",
+    "marked": "^9.1.5",
     "typescript": "^5.3.3",
     "zod": "^3.22.4"
   },
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
-    "@types/node": "^20.11.19",
-    "@types/ssh2": "^1.11.19"
+    "@types/marked": "^5.0.2",
+    "@types/node": "^20.11.19"
   }
 }

@@ -1,12 +1,11 @@
-// src/lib/nocodb.js
 /**
  * NocoDB API client for fetching data with caching
  */
 import { cachedFetch, cacheTTL } from './cache';
 
 // NocoDB API configuration
-const NOCODB_API_URL = import.meta.env.NOCODB_API_URL || 'https://your-nocodb-instance.com/api/v1';
-const NOCODB_AUTH_TOKEN = import.meta.env.NOCODB_AUTH_TOKEN;
+const NOCODB_API_URL = import.meta.env.NOCODB_API_URL || process.env.NOCODB_API_URL || 'https://your-nocodb-instance.com/api/v1';
+const NOCODB_AUTH_TOKEN = import.meta.env.NOCODB_AUTH_TOKEN || process.env.NOCODB_AUTH_TOKEN;
 
 // Base headers for API requests
 const headers = {
@@ -24,7 +23,7 @@ const headers = {
 async function fetchFromNocoDB(endpoint, params = {}, ttl = cacheTTL.directories) {
   // Build query string from params
   const queryString = Object.keys(params)
-    .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`)
+    .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(typeof params[key] === 'object' ? JSON.stringify(params[key]) : params[key])}`)
     .join('&');
   
   const url = `${NOCODB_API_URL}${endpoint}${queryString ? `?${queryString}` : ''}`;
@@ -71,9 +70,9 @@ export async function getDirectories() {
 export async function getDirectory(id) {
   try {
     const response = await fetchFromNocoDB(`/tables/directories/rows/find-one`, {
-      where: JSON.stringify({
+      where: {
         id: { eq: id }
-      })
+      }
     }, cacheTTL.directories);
     
     if (!response) return null;
@@ -108,9 +107,9 @@ export async function getDirectory(id) {
  */
 export async function getListings(directoryId) {
   const response = await fetchFromNocoDB('/tables/listings/rows', {
-    where: JSON.stringify({
+    where: {
       directory: { eq: directoryId }
-    })
+    }
   }, cacheTTL.listings);
   
   // Transform to match expected format with rendered markdown content
@@ -143,17 +142,63 @@ export async function getListings(directoryId) {
 }
 
 /**
- * Get listings for a specific category in a directory
+ * Get a specific listing by directory and slug
+ * @param {string} directoryId - Directory ID
+ * @param {string} slug - Listing slug
+ * @returns {Promise<object|null>} - Listing data or null if not found
+ */
+export async function getListing(directoryId, slug) {
+  try {
+    const response = await fetchFromNocoDB('/tables/listings/rows/find-one', {
+      where: {
+        directory: { eq: directoryId },
+        slug: { eq: slug }
+      }
+    }, cacheTTL.listings);
+    
+    if (!response) return null;
+    
+    // Convert markdown content to HTML
+    const renderedContent = await renderMarkdown(response.content);
+    
+    return {
+      slug: `${response.directory}/${response.slug}`,
+      data: {
+        title: response.title,
+        description: response.description,
+        directory: response.directory,
+        category: response.category,
+        featured: response.featured === 1 || response.featured === true,
+        images: JSON.parse(response.images || '[]'),
+        address: response.address,
+        website: response.website,
+        phone: response.phone,
+        rating: response.rating,
+        tags: JSON.parse(response.tags || '[]'),
+        openingHours: JSON.parse(response.openingHours || '[]'),
+        customFields: JSON.parse(response.customFields || '{}')
+      },
+      // Add a render function that returns the pre-rendered content
+      render: () => ({ Content: renderedContent })
+    };
+  } catch (error) {
+    console.error(`Error fetching listing ${directoryId}/${slug}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Get listings for a specific category
  * @param {string} directoryId - Directory ID
  * @param {string} categoryId - Category ID
  * @returns {Promise<Array>} - Array of listings for the category
  */
 export async function getCategoryListings(directoryId, categoryId) {
   const response = await fetchFromNocoDB('/tables/listings/rows', {
-    where: JSON.stringify({
+    where: {
       directory: { eq: directoryId },
       category: { eq: categoryId }
-    })
+    }
   }, cacheTTL.categories);
   
   // Transform to match expected format with rendered markdown content
@@ -191,66 +236,70 @@ export async function getCategoryListings(directoryId, categoryId) {
  * @returns {Promise<Array>} - Array of matching listings
  */
 export async function searchListings(directoryId, query) {
-  // For simple implementations, we can fetch all and filter
-  // For production, you would implement a proper search API endpoint
-  const allListings = await getListings(directoryId);
-  const lowercaseQuery = query.toLowerCase();
-  
-  return allListings.filter(listing => {
-    const data = listing.data;
-    return (
-      data.title.toLowerCase().includes(lowercaseQuery) ||
-      data.description.toLowerCase().includes(lowercaseQuery) ||
-      (data.tags && data.tags.some(tag => tag.toLowerCase().includes(lowercaseQuery))) ||
-      (data.address && data.address.toLowerCase().includes(lowercaseQuery))
-    );
-  });
-}
-
-/**
- * Get a specific listing by directory and slug
- * @param {string} directoryId - Directory ID
- * @param {string} slug - Listing slug
- * @returns {Promise<object|null>} - Listing data or null if not found
- */
-export async function getListing(directoryId, slug) {
-  try {
-    const response = await fetchFromNocoDB('/tables/listings/rows/find-one', {
-      where: JSON.stringify({
-        directory: { eq: directoryId },
-        slug: { eq: slug }
-      })
-    }, cacheTTL.listings);
-    
-    if (!response) return null;
-    
-    // Convert markdown content to HTML
-    const renderedContent = await renderMarkdown(response.content);
-    
-    return {
-      slug: `${response.directory}/${response.slug}`,
-      data: {
-        title: response.title,
-        description: response.description,
-        directory: response.directory,
-        category: response.category,
-        featured: response.featured === 1 || response.featured === true,
-        images: JSON.parse(response.images || '[]'),
-        address: response.address,
-        website: response.website,
-        phone: response.phone,
-        rating: response.rating,
-        tags: JSON.parse(response.tags || '[]'),
-        openingHours: JSON.parse(response.openingHours || '[]'),
-        customFields: JSON.parse(response.customFields || '{}')
-      },
-      // Add a render function that returns the pre-rendered content
-      render: () => ({ Content: renderedContent })
-    };
-  } catch (error) {
-    console.error(`Error fetching listing ${directoryId}/${slug}:`, error);
-    return null;
+  if (!query || query.trim() === '') {
+    return [];
   }
+  
+  // For NocoDB, we need to create a more complex query
+  // This will search in title, description, and tags
+  const searchCondition = {
+    _or: [
+      { title: { like: `%${query}%` } },
+      { description: { like: `%${query}%` } },
+      // Tags and other JSON fields can't be searched directly in SQL
+      // So we'll fetch all and filter client-side
+    ]
+  };
+  
+  const response = await fetchFromNocoDB('/tables/listings/rows', {
+    where: {
+      directory: { eq: directoryId },
+      ...searchCondition
+    }
+  }, cacheTTL.search);
+  
+  // For JSON fields like tags, we need to filter client-side
+  const allResults = await Promise.all(response.list.map(async listing => {
+    // Convert markdown content to HTML
+    const renderedContent = await renderMarkdown(listing.content);
+    
+    // Parse JSON fields
+    const tags = JSON.parse(listing.tags || '[]');
+    
+    // Additional client-side filtering for JSON fields
+    const tagsMatch = tags.some(tag => 
+      tag.toLowerCase().includes(query.toLowerCase())
+    );
+    
+    // Include if it matched the SQL query or tags match
+    return {
+      matchesTags: tagsMatch,
+      listing: {
+        slug: `${listing.directory}/${listing.slug}`,
+        data: {
+          title: listing.title,
+          description: listing.description,
+          directory: listing.directory,
+          category: listing.category,
+          featured: listing.featured === 1 || listing.featured === true,
+          images: JSON.parse(listing.images || '[]'),
+          address: listing.address,
+          website: listing.website,
+          phone: listing.phone,
+          rating: listing.rating,
+          tags: tags,
+          openingHours: JSON.parse(listing.openingHours || '[]'),
+          customFields: JSON.parse(listing.customFields || '{}')
+        },
+        render: () => ({ Content: renderedContent })
+      }
+    };
+  }));
+  
+  // Return all matches (from SQL or client-side filtering)
+  return allResults
+    .filter(result => result.matchesTags || true) // Include SQL matches or tag matches
+    .map(result => result.listing);
 }
 
 /**
@@ -260,9 +309,9 @@ export async function getListing(directoryId, slug) {
  */
 export async function getLandingPages(directoryId) {
   const response = await fetchFromNocoDB('/tables/landing_pages/rows', {
-    where: JSON.stringify({
+    where: {
       directory: { eq: directoryId }
-    })
+    }
   }, cacheTTL.landingPages);
   
   // Transform to match expected format with rendered markdown content
@@ -284,6 +333,49 @@ export async function getLandingPages(directoryId) {
       render: () => ({ Content: renderedContent })
     };
   }));
+}
+
+/**
+ * Get featured listings for a directory
+ * @param {string} directoryId - Directory ID
+ * @param {number} limit - Maximum number of listings to return
+ * @returns {Promise<Array>} - Array of featured listings
+ */
+export async function getFeaturedListings(directoryId, limit = 6) {
+  const response = await fetchFromNocoDB('/tables/listings/rows', {
+    where: {
+      directory: { eq: directoryId },
+      featured: { eq: true }
+    }
+  }, cacheTTL.listings);
+  
+  // Transform and limit results
+  const listings = await Promise.all(response.list.map(async listing => {
+    // Convert markdown content to HTML
+    const renderedContent = await renderMarkdown(listing.content);
+    
+    return {
+      slug: `${listing.directory}/${listing.slug}`,
+      data: {
+        title: listing.title,
+        description: listing.description,
+        directory: listing.directory,
+        category: listing.category,
+        featured: true,
+        images: JSON.parse(listing.images || '[]'),
+        address: listing.address,
+        website: listing.website,
+        phone: listing.phone,
+        rating: listing.rating,
+        tags: JSON.parse(listing.tags || '[]'),
+        openingHours: JSON.parse(listing.openingHours || '[]'),
+        customFields: JSON.parse(listing.customFields || '{}')
+      },
+      render: () => ({ Content: renderedContent })
+    };
+  }));
+  
+  return listings.slice(0, limit);
 }
 
 /**

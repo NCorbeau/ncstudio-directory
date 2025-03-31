@@ -1,9 +1,15 @@
-/// src/pages/[directory]/search.astro
 ---
 import DirectoryLayout from '../../layouts/DirectoryLayout.astro';
 import ListingCard from '../../components/core/ListingCard.astro';
 import SearchBar from '../../components/core/SearchBar.astro';
-import { getAllDirectories, getDirectoryConfig, searchListings } from '../../utils/directory-helpers';
+import { 
+  getAllDirectories, 
+  getDirectoryConfig, 
+  getFeaturedListings,
+  getRecentListings,
+  getDirectoryLandingPages
+} from '../../utils/directory-helpers';
+import { generateDirectoryHomeSchema } from '../../utils/schema-generator';
 
 // Generate all dynamic routes
 export async function getStaticPaths() {
@@ -18,9 +24,6 @@ export async function getStaticPaths() {
 // Get directory ID from props
 const { directoryId } = Astro.props;
 
-// Get search query from URL
-const query = Astro.url.searchParams.get('q') || '';
-
 // Fetch directory data
 const directoryData = await getDirectoryConfig(directoryId);
 
@@ -29,19 +32,11 @@ if (!directoryData) {
   return Astro.redirect('/404');
 }
 
-// Search for listings if there's a query
-const filteredListings = query 
-  ? await searchListings(directoryId, query)
-  : [];
-
 // Fetch featured listings
 const featuredListings = await getFeaturedListings(directoryId, 6);
 
 // Fetch recent listings
-const allListings = await getDirectoryListings(directoryId);
-const recentListings = [...allListings]
-  .sort((a, b) => new Date(b.data.updatedAt || '') - new Date(a.data.updatedAt || ''))
-  .slice(0, 4);
+const recentListings = await getRecentListings(directoryId, 4);
 
 // Fetch landing pages
 const landingPages = await getDirectoryLandingPages(directoryId);
@@ -120,7 +115,7 @@ const structuredData = generateDirectoryHomeSchema(directoryData.data, canonical
         </div>
         
         <div class="listing-grid">
-          {recentListings.slice(0, 4).map(listing => (
+          {recentListings.map(listing => (
             <ListingCard 
               listing={listing.data} 
               url={`/${directoryId}/${listing.slug.replace(`${directoryId}/`, '')}`}
