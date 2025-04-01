@@ -1,12 +1,12 @@
-/**
- * Selective build script for multi-directory project
- * This script builds only the specified directory, or all directories if none is specified
- */
-
+// scripts/selective-build.js
 import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
-import yaml from 'js-yaml';
+import dotenv from 'dotenv';
+import { getDirectories, getDirectory } from '../src/lib/nocodb.js';
+
+// Load environment variables
+dotenv.config();
 
 // Directory to save builds
 const BUILD_DIR = path.resolve('./dist');
@@ -33,7 +33,7 @@ const DEPENDENCIES = {
 };
 
 // Get directories to build based on dependencies
-function getDirectoriesToBuild(changedPath) {
+async function getDirectoriesToBuild(changedPath) {
   // If specific directory provided and no deps, just build that one
   if (directoryToBuild && directoryToBuild !== 'all') {
     return [directoryToBuild];
@@ -44,7 +44,7 @@ function getDirectoriesToBuild(changedPath) {
     for (const [pattern, directories] of Object.entries(DEPENDENCIES)) {
       if (changedPath.includes(pattern)) {
         if (directories.includes('all')) {
-          return getAllDirectories();
+          return await getAllDirectories();
         }
         return directories;
       }
@@ -52,38 +52,43 @@ function getDirectoriesToBuild(changedPath) {
   }
   
   // Default: build all directories
-  return getAllDirectories();
+  return await getAllDirectories();
 }
 
-// Get all directory IDs from content/directories folder or config
-function getAllDirectories() {
-  // If we're using NocoDB, we'll need to look at our directory configs
-  // Either in environment variables or a local cache
-  const directoriesEnv = process.env.DIRECTORIES;
-  if (directoriesEnv) {
-    return directoriesEnv.split(',');
-  }
-  
-  // Fallback to checking directories in the codebase
+// Get all directory IDs from NocoDB
+async function getAllDirectories() {
   try {
-    const dirFilePattern = /.*\.yml$/;
-    const directoriesPath = path.resolve('./src/content/directories');
-    if (fs.existsSync(directoriesPath)) {
-      return fs.readdirSync(directoriesPath)
-        .filter(file => dirFilePattern.test(file))
-        .map(file => path.basename(file, path.extname(file)));
-    }
+    const directories = await getDirectories();
+    return directories.map(dir => dir.id);
   } catch (error) {
-    console.warn('Error reading directories from filesystem:', error);
+    console.error('Error fetching directories from NocoDB:', error);
+    
+    // Fallback to environment variable if available
+    const directoriesEnv = process.env.DIRECTORIES;
+    if (directoriesEnv) {
+      return directoriesEnv.split(',');
+    }
+    
+    // Hardcoded fallback as last resort
+    return ['french-desserts', 'dog-parks-warsaw'];
   }
-  
-  // Hardcoded fallback
-  return ['french-desserts', 'dog-parks-warsaw'];
 }
 
 // Function to build a specific directory
 async function buildDirectory(directoryId) {
   console.log(`Building directory: ${directoryId}...`);
+  
+  // First, check if the directory exists in NocoDB
+  try {
+    const directoryExists = await getDirectory(directoryId);
+    if (!directoryExists) {
+      console.error(`Directory ${directoryId} not found in NocoDB`);
+      return false;
+    }
+  } catch (error) {
+    console.error(`Error checking directory ${directoryId} in NocoDB:`, error);
+    return false;
+  }
   
   // Set the current directory as an environment variable for the build
   process.env.CURRENT_DIRECTORY = directoryId;
@@ -106,7 +111,7 @@ async function buildDirectory(directoryId) {
 // Build all specified directories
 async function runSelectiveBuild() {
   const changedPath = process.env.CHANGED_PATH || '';
-  const directoriesToBuild = getDirectoriesToBuild(changedPath);
+  const directoriesToBuild = await getDirectoriesToBuild(changedPath);
   
   console.log(`Will build the following directories: ${directoriesToBuild.join(', ')}`);
   

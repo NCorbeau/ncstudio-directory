@@ -1,10 +1,11 @@
 ---
+// src/layouts/DirectoryLayout.astro
 import BaseLayout from './BaseLayout.astro';
 import Header from '../components/core/Header.astro';
 import Footer from '../components/core/Footer.astro';
 import { generateBreadcrumbSchema, generateDirectoryHomeSchema } from '../utils/schema-generator';
 
-// Import the theme-specific components dynamically
+// Get props for the layout
 const { 
   directoryData, 
   title, 
@@ -15,6 +16,7 @@ const {
   breadcrumbs = []
 } = Astro.props;
 
+// Get the current theme from directory data
 const theme = directoryData.theme || 'default';
 
 // Dynamically import theme CSS
@@ -58,6 +60,27 @@ if (isHomePage && directoryData) {
     combinedStructuredData = homeSchema;
   }
 }
+
+// Helper function to convert hex to RGB for CSS variables
+function hexToRgb(hex) {
+  // Remove the hash if it exists
+  hex = hex.replace('#', '');
+  
+  // Parse the hex values
+  const r = parseInt(hex.substring(0, 2), 16);
+  const g = parseInt(hex.substring(2, 4), 16);
+  const b = parseInt(hex.substring(4, 6), 16);
+  
+  // Return as RGB string
+  return `${r}, ${g}, ${b}`;
+}
+
+// Simple CSS variables based on directory settings
+const cssVars = {
+  primaryColor: directoryData.primaryColor || '',
+  secondaryColor: directoryData.secondaryColor || '',
+  primaryColorRgb: directoryData.primaryColor ? hexToRgb(directoryData.primaryColor) : ''
+};
 ---
 
 <BaseLayout 
@@ -71,11 +94,7 @@ if (isHomePage && directoryData) {
   <link rel="stylesheet" href={themeStylesPath} />
   
   <!-- Add inline CSS variables for theme colors -->
-  <style is:inline define:vars={{
-    primaryColor: directoryData.primaryColor,
-    secondaryColor: directoryData.secondaryColor,
-    primaryColorRgb: hexToRgb(directoryData.primaryColor || '#3366cc')
-  }}>
+  <style is:inline define:vars={cssVars}>
     :root {
       /* Colors are set via define:vars above */
       /* Additional theme variables can be set here */
@@ -102,21 +121,3 @@ if (isHomePage && directoryData) {
     />
   </div>
 </BaseLayout>
-
-<script>
-  // Helper functions for the component
-</script>
-
-{/* Helper function to convert hex to RGB for CSS variables */}
-{function hexToRgb(hex) {
-  // Remove the hash if it exists
-  hex = hex.replace('#', '');
-  
-  // Parse the hex values
-  const r = parseInt(hex.substring(0, 2), 16);
-  const g = parseInt(hex.substring(2, 4), 16);
-  const b = parseInt(hex.substring(4, 6), 16);
-  
-  // Return as RGB string
-  return `${r}, ${g}, ${b}`;
-}}

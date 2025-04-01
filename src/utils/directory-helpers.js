@@ -8,7 +8,7 @@ import {
   getCategoryListings,
   getFeaturedListings,
   searchListings
-} from '../lib/nocodb';
+} from '../lib/nocodb.js';
 
 /**
  * Get the current directory ID from the URL or environment variable

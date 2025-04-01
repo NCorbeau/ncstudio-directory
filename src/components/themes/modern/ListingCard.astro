@@ -1,0 +1,260 @@
+---
+// src/components/themes/modern/ListingCard.astro
+const { listing, url } = Astro.props;
+
+// Format the first image as the thumbnail
+const thumbnail = listing.images && listing.images.length > 0 
+  ? listing.images[0] 
+  : '/placeholder-image.jpg';
+
+// Get category name if available
+let categoryName = '';
+if (listing.category) {
+  try {
+    const { getCollection } = await import('astro:content');
+    const directory = await getCollection('directories', ({ id }) => id === listing.directory);
+    if (directory.length > 0) {
+      const category = directory[0].data.categories.find(c => c.id === listing.category);
+      categoryName = category?.name || '';
+    }
+  } catch (error) {
+    console.error('Error loading category name:', error);
+  }
+}
+---
+
+<div class="listing-card">
+  <a href={url} class="card-link">
+    <div class="card-image">
+      <img src={thumbnail} alt={listing.title} loading="lazy" />
+      
+      {listing.featured && (
+        <span class="featured-badge">Featured</span>
+      )}
+    </div>
+    
+    <div class="card-content">
+      <div class="card-meta-top">
+        {categoryName && (
+          <span class="card-category">{categoryName}</span>
+        )}
+        
+        {typeof listing.rating === 'number' && (
+          <span class="card-rating" style={`--rating: ${listing.rating}`}>
+            <span class="rating-value">{listing.rating.toFixed(1)}</span>
+            <span class="stars"></span>
+          </span>
+        )}
+      </div>
+      
+      <h3 class="card-title">{listing.title}</h3>
+      <p class="card-description">{listing.description}</p>
+      
+      <div class="card-footer">
+        {listing.address && (
+          <div class="card-address">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+              <circle cx="12" cy="10" r="3"></circle>
+            </svg>
+            <span>{listing.address.split(',')[0]}</span>
+          </div>
+        )}
+        
+        {listing.tags && listing.tags.length > 0 && (
+          <div class="card-tags">
+            {listing.tags.slice(0, 2).map(tag => (
+              <span class="tag">{tag}</span>
+            ))}
+            
+            {listing.tags.length > 2 && (
+              <span class="tag-more">+{listing.tags.length - 2}</span>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  </a>
+</div>
+
+<style>
+  .listing-card {
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+    background-color: white;
+    transition: transform 0.3s, box-shadow 0.3s;
+    height: 100%;
+  }
+  
+  .listing-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.2);
+  }
+  
+  .card-link {
+    display: flex;
+    flex-direction: column;
+    color: inherit;
+    text-decoration: none;
+    height: 100%;
+  }
+  
+  .card-image {
+    height: 220px;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .card-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s;
+  }
+  
+  .listing-card:hover .card-image img {
+    transform: scale(1.05);
+  }
+  
+  .featured-badge {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    background-color: var(--primaryColor, #0070f3);
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.35rem 0.9rem;
+    border-radius: 30px;
+    z-index: 1;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+  }
+  
+  .card-content {
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+  }
+  
+  .card-meta-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+  
+  .card-category {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--primaryColor, #0070f3);
+    margin-right: auto;
+  }
+  
+  .card-rating {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+  
+  .rating-value {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--textColor, #111111);
+  }
+  
+  .stars {
+    position: relative;
+    display: inline-block;
+    font-size: 0.9rem;
+    width: 5em;
+  }
+  
+  .stars::before {
+    content: "★★★★★";
+    letter-spacing: 3px;
+    color: #e0e0e0;
+  }
+  
+  .stars::after {
+    content: "★★★★★";
+    letter-spacing: 3px;
+    color: #ffb400;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: calc(var(--rating) / 5 * 100%);
+    overflow: hidden;
+  }
+  
+  .card-title {
+    font-size: 1.35rem;
+    margin: 0 0 0.75rem;
+    font-weight: 700;
+    color: var(--textColor, #111111);
+  }
+  
+  .card-description {
+    font-size: 0.95rem;
+    color: var(--textColorLight, #555555);
+    margin-bottom: 1.5rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    line-height: 1.5;
+    flex-grow: 1;
+  }
+  
+  .card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: auto;
+    font-size: 0.85rem;
+  }
+  
+  .card-address {
+    display: flex;
+    align-items: center;
+    color: var(--textColorLight, #555555);
+    gap: 0.4rem;
+    max-width: 60%;
+  }
+  
+  .card-address svg {
+    flex-shrink: 0;
+    color: var(--primaryColor, #0070f3);
+  }
+  
+  .card-address span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .card-tags {
+    display: flex;
+    gap: 0.5rem;
+  }
+  
+  .tag {
+    font-size: 0.75rem;
+    background-color: rgba(var(--primaryColor-rgb, 0, 112, 243), 0.1);
+    color: var(--primaryColor, #0070f3);
+    padding: 0.2rem 0.6rem;
+    border-radius: 20px;
+    font-weight: 500;
+  }
+  
+  .tag-more {
+    font-size: 0.75rem;
+    color: var(--textColorLight, #555555);
+  }
+  
+  @media (max-width: 768px) {
+    .card-image {
+      height: 180px;
+    }
+  }

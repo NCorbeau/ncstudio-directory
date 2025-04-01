@@ -1,7 +1,12 @@
+// scripts/build-all.js
 import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
-import yaml from 'js-yaml';
+import dotenv from 'dotenv';
+import { getDirectories, getDirectory } from '../src/lib/nocodb.js';
+
+// Load environment variables
+dotenv.config();
 
 // Directory to save builds
 const BUILD_DIR = path.resolve('./dist');
@@ -19,50 +24,59 @@ async function buildDirectory(directoryId) {
   process.env.CURRENT_DIRECTORY = directoryId;
   
   // Run Astro build with specific output
-  execSync(`astro build --outDir ./dist/${directoryId}`, { 
-    stdio: 'inherit',
-    env: {...process.env}
-  });
-  
-  console.log(`Build complete for ${directoryId}`);
-  
-  // Get the domain from the directory config
-  const configPath = path.resolve(`./src/content/directories/${directoryId}.yml`);
-  const directoryConfig = yaml.load(fs.readFileSync(configPath, 'utf8'));
-  
-  // Create a CNAME file for GitHub Pages (optional)
-  if (directoryConfig.domain) {
-    fs.writeFileSync(
-      path.resolve(`./dist/${directoryId}/CNAME`),
-      directoryConfig.domain
-    );
+  try {
+    execSync(`astro build --outDir ./dist/${directoryId}`, { 
+      stdio: 'inherit',
+      env: {...process.env}
+    });
+    
+    console.log(`Build complete for ${directoryId}`);
+    
+    // Get the domain from NocoDB
+    const directoryConfig = await getDirectory(directoryId);
+    const domain = directoryConfig?.data?.domain;
+    
+    // Create a CNAME file for GitHub Pages (optional)
+    if (domain) {
+      fs.writeFileSync(
+        path.resolve(`./dist/${directoryId}/CNAME`),
+        domain
+      );
+      console.log(`Created CNAME file with domain: ${domain}`);
+    }
+    
+    return { id: directoryId, domain, success: true };
+  } catch (error) {
+    console.error(`Error building ${directoryId}:`, error);
+    return { id: directoryId, domain: null, success: false };
   }
-  
-  return directoryConfig.domain;
 }
 
-// Get all directory IDs from content/directories folder
-const directoriesPath = path.resolve('./src/content/directories');
-const directoryFiles = fs.readdirSync(directoriesPath)
-  .filter(file => file.endsWith('.yml') || file.endsWith('.yaml'));
-
-const directoryIds = directoryFiles.map(file => path.basename(file, path.extname(file)));
-
-// Build each directory
+// Build all directories fetched from NocoDB
 async function buildAll() {
-  const results = [];
-  
-  for (const id of directoryIds) {
-    const domain = await buildDirectory(id);
-    results.push({ id, domain });
-  }
-  
-  // Output build results
-  console.log('\n=== Build Results ===');
-  console.table(results);
-  
-  // Create an index file in the dist directory that lists all built sites
-  const indexHtml = `
+  try {
+    console.log('Fetching directories from NocoDB...');
+    const directories = await getDirectories();
+    
+    if (!directories || directories.length === 0) {
+      throw new Error('No directories found in NocoDB');
+    }
+    
+    console.log(`Found ${directories.length} directories to build`);
+    
+    const results = [];
+    
+    for (const directory of directories) {
+      const result = await buildDirectory(directory.id);
+      results.push(result);
+    }
+    
+    // Output build results
+    console.log('\n=== Build Results ===');
+    console.table(results);
+    
+    // Create an index file in the dist directory that lists all built sites
+    const indexHtml = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -76,25 +90,42 @@ async function buildAll() {
     li { margin: 1rem 0; padding: 1rem; border: 1px solid #eee; border-radius: 4px; }
     a { color: #0066cc; text-decoration: none; }
     a:hover { text-decoration: underline; }
+    .success { color: green; }
+    .failure { color: red; }
   </style>
 </head>
 <body>
   <h1>Generated Directory Sites</h1>
   <ul>
-    ${results.map(({ id, domain }) => `
+    ${results.map(({ id, domain, success }) => `
       <li>
-        <strong>${id}</strong><br>
-        Domain: ${domain || 'Not specified'}<br>
-        <a href="./${id}/">View Local Build</a>
+        <strong>${id}</strong> 
+        <span class="${success ? 'success' : 'failure'}">[${success ? 'Success' : 'Failed'}]</span><br>
+        ${domain ? `Domain: ${domain}<br>` : ''}
+        ${success ? `<a href="./${id}/">View Local Build</a>` : 'Build failed'}
       </li>
     `).join('')}
   </ul>
 </body>
 </html>
-  `;
-  
-  fs.writeFileSync(path.resolve(`${BUILD_DIR}/index.html`), indexHtml);
-  console.log('\nBuild index created at dist/index.html');
+    `;
+    
+    fs.writeFileSync(path.resolve(`${BUILD_DIR}/index.html`), indexHtml);
+    console.log('\nBuild index created at dist/index.html');
+    
+    // Report failures if any
+    const failures = results.filter(r => !r.success);
+    if (failures.length > 0) {
+      console.error(`Failed to build ${failures.length} directories`);
+      process.exit(1);
+    }
+  } catch (error) {
+    console.error('Build process failed:', error);
+    process.exit(1);
+  }
 }
 
-buildAll().catch(console.error);
+buildAll().catch(error => {
+  console.error('Unhandled error in build process:', error);
+  process.exit(1);
+});

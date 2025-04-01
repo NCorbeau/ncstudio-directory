@@ -1,0 +1,152 @@
+/* src/styles/themes/elegant.css */
+
+.theme-elegant {
+    --card-border-radius: 4px;
+    --header-background: var(--primaryColor, #9c7c38);
+    --text-on-primary: white;
+    
+    /* Typography */
+    --font-primary: Georgia, serif;
+    --font-secondary: system-ui, sans-serif;
+    
+    /* Page structure */
+    --max-width: 1200px;
+    
+    /* Font properties */
+    font-family: var(--font-secondary);
+    line-height: 1.7;
+  }
+  
+  /* Header modifications */
+  .theme-elegant .site-header {
+    background-color: var(--backgroundColor, #fcfcfc);
+    color: var(--textColor, #2c3e50);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    box-shadow: none;
+  }
+  
+  .theme-elegant .site-header .container {
+    padding: 1rem 2rem;
+  }
+  
+  .theme-elegant .site-name {
+    font-family: var(--font-primary);
+    font-size: 1.8rem;
+    color: var(--primaryColor, #9c7c38);
+  }
+  
+  .theme-elegant .main-nav a {
+    font-family: var(--font-primary);
+    font-size: 0.95rem;
+  }
+  
+  .theme-elegant .main-nav a:after {
+    height: 1px;
+  }
+  
+  /* Hero section */
+  .theme-elegant .hero {
+    background-color: var(--primaryColor, #9c7c38);
+    background-image: linear-gradient(to right, var(--primaryColor, #9c7c38), var(--secondaryColor, #2c3e50));
+    padding: 5rem 0;
+  }
+  
+  .theme-elegant .hero h1 {
+    font-family: var(--font-primary);
+    font-size: 3.5rem;
+    margin-bottom: 1.5rem;
+    font-weight: 400;
+  }
+  
+  .theme-elegant .hero .lead {
+    font-size: 1.3rem;
+    max-width: 700px;
+  }
+  
+  /* Section styling */
+  .theme-elegant .section-header h2 {
+    font-family: var(--font-primary);
+    font-size: 2.2rem;
+    font-weight: 400;
+    position: relative;
+    display: inline-block;
+  }
+  
+  .theme-elegant .section-header h2:after {
+    content: '';
+    position: absolute;
+    width: 60px;
+    height: 2px;
+    background-color: var(--primaryColor, #9c7c38);
+    bottom: -10px;
+    left: 0;
+  }
+  
+  /* Cards and grids */
+  .theme-elegant .listing-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    gap: 2rem;
+  }
+  
+  .theme-elegant .category-card {
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    transition: transform 0.3s, box-shadow 0.3s;
+    padding: 2rem;
+  }
+  
+  .theme-elegant .category-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+  }
+  
+  .theme-elegant .category-card h3 {
+    font-family: var(--font-primary);
+    font-size: 1.5rem;
+    color: var(--primaryColor, #9c7c38);
+    margin-bottom: 1rem;
+    font-weight: 400;
+  }
+  
+  /* Buttons */
+  .theme-elegant .button,
+  .theme-elegant button[type="submit"] {
+    background-color: var(--primaryColor, #9c7c38);
+    border-radius: 4px;
+    padding: 0.75rem 2rem;
+    font-family: var(--font-primary);
+    letter-spacing: 0.5px;
+    font-size: 0.95rem;
+  }
+  
+  .theme-elegant .search-form button {
+    border-radius: 0 4px 4px 0;
+  }
+  
+  /* Footer */
+  .theme-elegant .site-footer {
+    background-color: var(--secondaryColor, #2c3e50);
+    color: rgba(255, 255, 255, 0.8);
+  }
+  
+  .theme-elegant .footer-logo h2 {
+    font-family: var(--font-primary);
+    font-weight: 400;
+  }
+  
+  .theme-elegant .footer-bottom {
+    opacity: 0.6;
+    font-size: 0.85rem;
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    .theme-elegant .listing-grid {
+      grid-template-columns: 1fr;
+    }
+    
+    .theme-elegant .hero h1 {
+      font-size: 2.5rem;
+    }
+  }

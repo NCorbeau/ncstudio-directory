@@ -1,5 +1,6 @@
 /**
  * NocoDB API client for fetching data with caching
+ * Includes field mapping to handle NocoDB naming conventions
  */
 import { cachedFetch, cacheTTL } from './cache';
 
@@ -13,6 +14,118 @@ const headers = {
   'Content-Type': 'application/json'
 };
 
+// Table and field mapping to handle NocoDB naming conventions
+const TABLES = {
+  directories: 'Directories',
+  listings: 'Listings',
+  landingPages: 'Landing Pages'
+};
+
+// Field mappings from NocoDB convention to JavaScript convention
+const FIELD_MAPPINGS = {
+  // Directories table
+  'Identifier': 'id',
+  'Name': 'name',
+  'Description': 'description',
+  'Domain': 'domain',
+  'Theme': 'theme',
+  'Primary Color': 'primaryColor',
+  'Secondary Color': 'secondaryColor',
+  'Logo': 'logo',
+  'Categories': 'categories',
+  'Meta Tags': 'metaTags',
+  'Social Links': 'socialLinks',
+  'Deployment': 'deployment',
+  
+  // Listings table
+  'Title': 'title',
+  'Content': 'content',
+  'Slug': 'slug',
+  'Directory': 'directory',
+  'Category': 'category',
+  'Featured': 'featured',
+  'Images': 'images',
+  'Address': 'address',
+  'Website': 'website',
+  'Phone': 'phone',
+  'Rating': 'rating',
+  'Tags': 'tags',
+  'Opening Hours': 'openingHours',
+  'Custom Fields': 'customFields',
+  'CreatedAt': 'createdAt',
+  'UpdatedAt': 'updatedAt',
+  
+  // Landing Pages table
+  'Featured Image': 'featuredImage',
+  'Keywords': 'keywords',
+  'Related Categories': 'relatedCategories'
+};
+
+// Reverse mapping for queries (JavaScript to NocoDB)
+const REVERSE_FIELD_MAPPINGS = Object.entries(FIELD_MAPPINGS)
+  .reduce((map, [key, value]) => {
+    map[value] = key;
+    return map;
+  }, {});
+
+/**
+ * Map fields from NocoDB naming to JavaScript naming
+ * @param {object} data - Data from NocoDB
+ * @returns {object} - Data with JavaScript naming
+ */
+function mapNocoCdbToJs(data) {
+  if (!data) return null;
+  
+  const result = {};
+  
+  Object.entries(data).forEach(([key, value]) => {
+    const jsKey = FIELD_MAPPINGS[key] || key;
+    result[jsKey] = value;
+  });
+  
+  return result;
+}
+
+/**
+ * Map a query field from JavaScript naming to NocoDB naming
+ * @param {string} field - Field name in JavaScript naming
+ * @returns {string} - Field name in NocoDB naming
+ */
+function mapJsFieldToNocoCdb(field) {
+  return REVERSE_FIELD_MAPPINGS[field] || field;
+}
+
+/**
+ * Map query conditions from JavaScript naming to NocoDB naming
+ * @param {object} conditions - Query conditions with JavaScript naming
+ * @returns {object} - Query conditions with NocoDB naming
+ */
+function mapQueryConditions(conditions) {
+  if (!conditions) return conditions;
+  
+  const result = {};
+  
+  Object.entries(conditions).forEach(([key, value]) => {
+    if (key === '_or' || key === '_and') {
+      // Handle logical operators
+      result[key] = value.map(mapQueryConditions);
+    } else {
+      // Handle regular field conditions
+      const nocoKey = mapJsFieldToNocoCdb(key);
+      
+      if (typeof value === 'object' && value !== null) {
+        // Handle operators like eq, neq, like, etc.
+        result[nocoKey] = value;
+      } else {
+        // Handle direct value
+        result[nocoKey] = value;
+      }
+    }
+  });
+  
+  return result;
+}
+
 /**
  * Fetch data from NocoDB with caching
  * @param {string} endpoint - API endpoint
@@ -21,6 +134,11 @@ const headers = {
  * @returns {Promise<any>} - Response data
  */
 async function fetchFromNocoDB(endpoint, params = {}, ttl = cacheTTL.directories) {
+  // Map conditions to NocoDB naming if present
+  if (params.where) {
+    params.where = mapQueryConditions(params.where);
+  }
+  
   // Build query string from params
   const queryString = Object.keys(params)
     .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(typeof params[key] === 'object' ? JSON.stringify(params[key]) : params[key])}`)
@@ -29,7 +147,19 @@ async function fetchFromNocoDB(endpoint, params = {}, ttl = cacheTTL.directories
   const url = `${NOCODB_API_URL}${endpoint}${queryString ? `?${queryString}` : ''}`;
   
   try {
-    return await cachedFetch(url, { headers }, ttl);
+    const response = await cachedFetch(url, { headers }, ttl);
+    
+    // Handle list response (map each item)
+    if (response.list && Array.isArray(response.list)) {
+      response.list = response.list.map(mapNocoCdbToJs);
+    }
+    
+    // Handle single object response
+    else if (response && typeof response === 'object') {
+      return mapNocoCdbToJs(response);
+    }
+    
+    return response;
   } catch (error) {
     console.error('Error fetching from NocoDB:', error);
     throw error;
@@ -41,7 +171,7 @@ async function fetchFromNocoDB(endpoint, params = {}, ttl = cacheTTL.directories
  * @returns {Promise<Array>} - Array of directory configurations
  */
 export async function getDirectories() {
-  const response = await fetchFromNocoDB('/tables/directories/rows', {}, cacheTTL.directories);
+  const response = await fetchFromNocoDB(`/tables/${TABLES.directories}/rows`, {}, cacheTTL.directories);
   
   // Transform the response to match the expected format
   return response.list.map(directory => ({
@@ -69,7 +199,7 @@ export async function getDirectories() {
  */
 export async function getDirectory(id) {
   try {
-    const response = await fetchFromNocoDB(`/tables/directories/rows/find-one`, {
+    const response = await fetchFromNocoDB(`/tables/${TABLES.directories}/rows/find-one`, {
       where: {
         id: { eq: id }
       }
@@ -106,7 +236,7 @@ export async function getDirectory(id) {
  * @returns {Promise<Array>} - Array of listings
  */
 export async function getListings(directoryId) {
-  const response = await fetchFromNocoDB('/tables/listings/rows', {
+  const response = await fetchFromNocoDB(`/tables/${TABLES.listings}/rows`, {
     where: {
       directory: { eq: directoryId }
     }
@@ -149,7 +279,7 @@ export async function getListings(directoryId) {
  */
 export async function getListing(directoryId, slug) {
   try {
-    const response = await fetchFromNocoDB('/tables/listings/rows/find-one', {
+    const response = await fetchFromNocoDB(`/tables/${TABLES.listings}/rows/find-one`, {
       where: {
         directory: { eq: directoryId },
         slug: { eq: slug }
@@ -194,7 +324,7 @@ export async function getListing(directoryId, slug) {
  * @returns {Promise<Array>} - Array of listings for the category
  */
 export async function getCategoryListings(directoryId, categoryId) {
-  const response = await fetchFromNocoDB('/tables/listings/rows', {
+  const response = await fetchFromNocoDB(`/tables/${TABLES.listings}/rows`, {
     where: {
       directory: { eq: directoryId },
       category: { eq: categoryId }
@@ -251,7 +381,7 @@ export async function searchListings(directoryId, query) {
     ]
   };
   
-  const response = await fetchFromNocoDB('/tables/listings/rows', {
+  const response = await fetchFromNocoDB(`/tables/${TABLES.listings}/rows`, {
     where: {
       directory: { eq: directoryId },
       ...searchCondition
@@ -308,7 +438,7 @@ export async function searchListings(directoryId, query) {
  * @returns {Promise<Array>} - Array of landing pages
  */
 export async function getLandingPages(directoryId) {
-  const response = await fetchFromNocoDB('/tables/landing_pages/rows', {
+  const response = await fetchFromNocoDB(`/tables/${TABLES.landingPages}/rows`, {
     where: {
       directory: { eq: directoryId }
     }
@@ -342,7 +472,7 @@ export async function getLandingPages(directoryId) {
  * @returns {Promise<Array>} - Array of featured listings
  */
 export async function getFeaturedListings(directoryId, limit = 6) {
-  const response = await fetchFromNocoDB('/tables/listings/rows', {
+  const response = await fetchFromNocoDB(`/tables/${TABLES.listings}/rows`, {
     where: {
       directory: { eq: directoryId },
       featured: { eq: true }
@@ -386,7 +516,7 @@ export function clearCache(type) {
   if (typeof globalThis.__memoryCache !== 'undefined') {
     // If a specific type is requested, only clear those caches
     if (type) {
-      const cachePattern = new RegExp(`/tables/${type}/`);
+      const cachePattern = new RegExp(`/tables/${TABLES[type] || type}/`);
       
       Object.keys(globalThis.__memoryCache.cache).forEach(key => {
         if (cachePattern.test(key)) {

@@ -1,5 +1,7 @@
 ---
+// src/components/core/ListingCard.astro
 // Generic listing card component that adapts to the current theme
+
 const { listing, url, theme = 'default' } = Astro.props;
 
 // Import theme-specific card if it exists, otherwise use default
@@ -7,6 +9,7 @@ let ThemeCard;
 try {
   ThemeCard = await import(`../themes/${theme}/ListingCard.astro`);
 } catch (e) {
+  console.warn(`Theme card for "${theme}" not found, using default instead.`);
   ThemeCard = await import(`../themes/default/ListingCard.astro`);
 }
 ---
