@@ -1,0 +1,10 @@
+# Redirect domain aliases to primary domains
+https://www.frenchdesserts-guide.com/* https://frenchdesserts-guide.com/:splat 301!
+https://www.dogparkswarsaw.com/* https://dogparkswarsaw.com/:splat 301!
+
+# Handle directory redirects for domain-specific traffic
+/* /french-desserts/:splat 200  Host=frenchdesserts-guide.com
+/* /dog-parks-warsaw/:splat 200  Host=dogparkswarsaw.com
+
+# Default redirect for homepage on main domain
+/ /directory-selector/ 200

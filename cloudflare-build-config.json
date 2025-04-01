@@ -1,0 +1,19 @@
+{
+    "build": {
+      "command": "npm run build:all",
+      "output_directory": "dist",
+      "root_dir": "/"
+    },
+    "headers": {
+      "/*": {
+        "X-Frame-Options": "DENY",
+        "X-Content-Type-Options": "nosniff"
+      }
+    },
+    "routes": [
+      { "pattern": "/*", "script": null }
+    ],
+    "environment_variables": {
+      "NODE_VERSION": "18"
+    }
+  }

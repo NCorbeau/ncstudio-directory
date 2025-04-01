@@ -3,33 +3,43 @@ import { defineConfig } from 'astro/config';
 // Get the current directory from environment variable (set by build script)
 const currentDirectory = process.env.CURRENT_DIRECTORY || 'default';
 
-// Import the directory configuration
-import fs from 'fs';
-import yaml from 'js-yaml';
-let directoryConfig = {};
-
-try {
-  const configPath = `./src/content/directories/${currentDirectory}.yml`;
-  directoryConfig = yaml.load(fs.readFileSync(configPath, 'utf8'));
-} catch (e) {
-  console.warn(`No configuration found for directory: ${currentDirectory}, using defaults`);
+// Determine site URL based on directory and environment
+function getSiteUrl(directoryId) {
+  // In production, each directory has its own domain
+  if (process.env.CF_PAGES && process.env.CF_PAGES_BRANCH === 'main') {
+    switch(directoryId) {
+      case 'french-desserts':
+        return 'https://frenchdesserts-guide.com';
+      case 'dog-parks-warsaw':
+        return 'https://dogparkswarsaw.com';
+      default:
+        return 'https://multi-directory-generator.pages.dev';
+    }
+  }
+  
+  // In preview/development, use the multi-directory approach
+  return process.env.CF_PAGES
+    ? 'https://multi-directory-generator.pages.dev'
+    : 'http://localhost:3000';
 }
 
 // https://astro.build/config
 export default defineConfig({
-  site: directoryConfig.domain || 'http://localhost:3000',
-  base: '/',
-  outDir: `./dist/${currentDirectory}`,
+  site: getSiteUrl(currentDirectory),
+  base: currentDirectory === 'default' ? '/' : `/${currentDirectory}`,
+  outDir: currentDirectory === 'default' 
+    ? './dist'
+    : `./dist/${currentDirectory}`,
   build: {
-    // Only include pages for the current directory
-    excludePages: ['**/*']
-      .concat([`src/pages/[directory]/**`]) // Exclude all dynamic directory pages
-      .concat([`src/pages/${currentDirectory}/**`]), // Include only current directory
+    format: 'directory',
+    assets: '_assets'
   },
   vite: {
     define: {
-      'import.meta.env.CURRENT_DIRECTORY': JSON.stringify(currentDirectory),
-      'import.meta.env.DIRECTORY_CONFIG': JSON.stringify(directoryConfig),
+      'import.meta.env.CURRENT_DIRECTORY': JSON.stringify(currentDirectory)
     },
-  },
+    ssr: {
+      noExternal: ['marked']
+    }
+  }
 });

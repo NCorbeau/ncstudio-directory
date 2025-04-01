@@ -1,5 +1,5 @@
 {
-  "name": "ncstudio-directory",
+  "name": "multi-directory-generator",
   "type": "module",
   "version": "0.1.0",
   "private": true,
@@ -11,7 +11,8 @@
     "astro": "astro",
     "build:all": "node scripts/build-all.js",
     "build:selective": "node scripts/selective-build.js",
-    "build:directory": "node scripts/selective-build.js"
+    "build:directory": "node scripts/selective-build.js",
+    "build:cloudflare": "node scripts/cloudflare-build.js"
   },
   "dependencies": {
     "@astrojs/check": "^0.4.1",
