@@ -2,7 +2,7 @@
 import DirectoryLayout from '../../layouts/DirectoryLayout.astro';
 import ListingCard from '../../components/core/ListingCard.astro';
 import SearchBar from '../../components/core/SearchBar.astro';
-import { getAllDirectories, getDirectoryConfig, searchListings } from '../../utils/directory-helpers';
+import { getAllDirectories, getDirectoryConfig, searchDirectoryListings } from '../../utils/directory-helpers';
 
 // Generate all dynamic routes
 export async function getStaticPaths() {
@@ -30,7 +30,7 @@ if (!directoryData) {
 
 // Search for listings if there's a query
 const filteredListings = query 
-  ? await searchListings(directoryId, query)
+  ? await searchDirectoryListings(directoryId, query)
   : [];
 
 // Construct canonical URL (without query parameter for base URL)

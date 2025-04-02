@@ -1,4 +1,3 @@
-// Updated src/layouts/BaseLayout.astro
 ---
 // src/layouts/BaseLayout.astro
 // This is the foundational layout used by all pages across all directories
@@ -7,23 +6,25 @@ import { getCurrentDirectoryId } from '../utils/directory-helpers';
 
 interface Props {
   title: string;
-  description: string;
+  description?: string; // Make description optional
   image?: string;
   canonicalUrl?: string;
-  structuredData?: object | null; // Add structured data prop
+  structuredData?: object | null;
 }
 
 const { 
   title, 
-  description, 
+  description = "Discover the best options in our comprehensive directory.", // Add default value
   image = '/default-og-image.jpg',
   canonicalUrl = Astro.url.href,
-  structuredData = null // Default to null if not provided
+  structuredData = null
 } = Astro.props;
 
 // Get the current directory ID from the URL or environment
 const urlParts = Astro.url.pathname.split('/');
 const directoryId = urlParts[1] || import.meta.env.CURRENT_DIRECTORY || 'default';
+
+console.log("BaseLayout props:", { title, description }); // Debug log
 ---
 
 <!DOCTYPE html>

@@ -16,13 +16,15 @@ try {
 }
 
 // Fallback values if directory not found
-const siteName = directoryData?.name || 'Directory Listing';
-const homeUrl = directoryData ? `/${directoryId}/` : '/';
+const siteName = directoryData?.data?.name || 'Directory Listing';
+const description = directoryData?.data?.description || 'Discover the best options in our comprehensive directory.';
+
+console.log('Description:', description);
 ---
 
 <BaseLayout
   title={`Page Not Found | ${siteName}`}
-  description="The page you were looking for could not be found."
+  description={description}
 >
   <main class="not-found">
     <div class="container">
@@ -32,7 +34,7 @@ const homeUrl = directoryData ? `/${directoryId}/` : '/';
       <p>It might have been moved, deleted, or never existed in the first place.</p>
       
       <div class="actions">
-        <a href={homeUrl} class="button">Go to Homepage</a>
+        <a href={`/${directoryId}/`} class="button">Go to Homepage</a>
         <button onclick="window.history.back()" class="button button-outline">Go Back</button>
       </div>
     </div>

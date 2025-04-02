@@ -5,8 +5,8 @@ import {
   getListings, 
   getListing,
   getLandingPages,
-  getCategoryListings,
-  getFeaturedListings,
+  getCategoryListings as fetchCategoryListings, // Rename to avoid confusion
+  getFeaturedListings as fetchFeaturedListings, // Rename to avoid confusion
   searchListings
 } from '../lib/nocodb.js';
 
@@ -16,19 +16,27 @@ import {
  * @returns {string} The directory ID
  */
 export function getCurrentDirectoryId(url) {
+  // Defensive check for url parameter
+  if (!url) {
+    console.error('getCurrentDirectoryId: URL is undefined');
+    return process.env.CURRENT_DIRECTORY || 'default';
+  }
+
   // Try to get directory from URL path
-  const urlParts = url.pathname.split('/');
-  const directoryFromUrl = urlParts[1];
-  
-  // Fallback to environment variable if available
-  if (directoryFromUrl) {
-    return directoryFromUrl;
-  } else if (import.meta.env.CURRENT_DIRECTORY || process.env.CURRENT_DIRECTORY) {
-    return import.meta.env.CURRENT_DIRECTORY || process.env.CURRENT_DIRECTORY;
+  try {
+    const urlParts = url.pathname.split('/');
+    const directoryFromUrl = urlParts[1];
+    
+    // Fallback to environment variable if available
+    if (directoryFromUrl) {
+      return directoryFromUrl;
+    } 
+  } catch (error) {
+    console.error('Error parsing URL in getCurrentDirectoryId:', error);
   }
   
-  // Default fallback
-  return 'default';
+  // Return from environment or default
+  return process.env.CURRENT_DIRECTORY || 'default';
 }
 
 /**
@@ -37,6 +45,11 @@ export function getCurrentDirectoryId(url) {
  * @returns {Promise<object|null>} The directory configuration or null if not found
  */
 export async function getDirectoryConfig(directoryId) {
+  if (!directoryId) {
+    console.error('getDirectoryConfig: directoryId is undefined');
+    return null;
+  }
+
   try {
     return await getDirectory(directoryId);
   } catch (error) {
@@ -51,6 +64,11 @@ export async function getDirectoryConfig(directoryId) {
  * @returns {Promise<Array>} Array of listings for the directory
  */
 export async function getDirectoryListings(directoryId) {
+  if (!directoryId) {
+    console.error('getDirectoryListings: directoryId is undefined');
+    return [];
+  }
+
   try {
     return await getListings(directoryId);
   } catch (error) {
@@ -66,6 +84,11 @@ export async function getDirectoryListings(directoryId) {
  * @returns {Promise<object|null>} The listing or null if not found
  */
 export async function getListingBySlug(directoryId, slug) {
+  if (!directoryId || !slug) {
+    console.error(`getListingBySlug: Invalid parameters - directoryId: ${directoryId}, slug: ${slug}`);
+    return null;
+  }
+
   try {
     return await getListing(directoryId, slug);
   } catch (error) {
@@ -80,6 +103,11 @@ export async function getListingBySlug(directoryId, slug) {
  * @returns {Promise<Array>} Array of landing pages
  */
 export async function getDirectoryLandingPages(directoryId) {
+  if (!directoryId) {
+    console.error('getDirectoryLandingPages: directoryId is undefined');
+    return [];
+  }
+
   try {
     return await getLandingPages(directoryId);
   } catch (error) {
@@ -90,19 +118,39 @@ export async function getDirectoryLandingPages(directoryId) {
 
 /**
  * Get listings for a specific category in a directory
- * @param {string} directoryId - The directory ID
- * @param {string} categoryId - The category ID
- * @returns {Promise<Array>} Array of listings for the category
+ * Using the imported function, not creating a recursive call
  */
-export { getCategoryListings };
+export async function getCategoryListings(directoryId, categoryId) {
+  if (!directoryId || !categoryId) {
+    console.error(`getCategoryListings: Invalid parameters - directoryId: ${directoryId}, categoryId: ${categoryId}`);
+    return [];
+  }
+
+  try {
+    return await fetchCategoryListings(directoryId, categoryId); // Using renamed import
+  } catch (error) {
+    console.error(`Error loading category listings for ${directoryId}/${categoryId}:`, error);
+    return [];
+  }
+}
 
 /**
  * Get featured listings for a directory
- * @param {string} directoryId - The directory ID
- * @param {number} limit - Maximum number of listings to return
- * @returns {Promise<Array>} Array of featured listings
+ * Using the imported function, not creating a recursive call
  */
-export { getFeaturedListings };
+export async function getFeaturedListings(directoryId, limit = 6) {
+  if (!directoryId) {
+    console.error('getFeaturedListings: directoryId is undefined');
+    return [];
+  }
+
+  try {
+    return await fetchFeaturedListings(directoryId, limit); // Using renamed import
+  } catch (error) {
+    console.error(`Error loading featured listings for ${directoryId}:`, error);
+    return [];
+  }
+}
 
 /**
  * Search listings in a directory
@@ -110,7 +158,19 @@ export { getFeaturedListings };
  * @param {string} query - The search query
  * @returns {Promise<Array>} Array of matching listings
  */
-export { searchListings };
+export async function searchDirectoryListings(directoryId, query) {
+  if (!directoryId) {
+    console.error('searchDirectoryListings: directoryId is undefined');
+    return [];
+  }
+
+  try {
+    return await searchListings(directoryId, query);
+  } catch (error) {
+    console.error(`Error searching listings for ${directoryId}:`, error);
+    return [];
+  }
+}
 
 /**
  * Get all directory configurations
@@ -132,6 +192,11 @@ export async function getAllDirectories() {
  * @returns {Promise<Array>} Array of recent listings
  */
 export async function getRecentListings(directoryId, limit = 4) {
+  if (!directoryId) {
+    console.error('getRecentListings: directoryId is undefined');
+    return [];
+  }
+
   try {
     const allListings = await getListings(directoryId);
     
@@ -158,6 +223,11 @@ export async function getRecentListings(directoryId, limit = 4) {
  * @returns {Promise<Array>} Array of related listings
  */
 export async function getRelatedListings(directoryId, listing, limit = 3) {
+  if (!directoryId || !listing) {
+    console.error('getRelatedListings: Missing required parameters');
+    return [];
+  }
+
   try {
     // Get all listings except the current one
     const allListings = await getListings(directoryId);

@@ -1,24 +1,29 @@
 /**
- * NocoDB API client for fetching data with caching
+ * NocoDB v2 API client for fetching data with caching
  * Handles field mapping between NocoDB conventions and JavaScript conventions
  */
-import { cachedFetch, cacheTTL } from './cache';
+import { cachedFetch, cacheTTL } from './cache.js';
+import dotenv from 'dotenv';
 
+dotenv.config();
 // NocoDB API configuration
-const NOCODB_API_URL = import.meta.env.NOCODB_API_URL || process.env.NOCODB_API_URL || 'https://your-nocodb-instance.com/api/v1';
-const NOCODB_AUTH_TOKEN = import.meta.env.NOCODB_AUTH_TOKEN || process.env.NOCODB_AUTH_TOKEN;
+const NOCODB_API_URL = import.meta.env?.NOCODB_API_URL || process.env?.NOCODB_API_URL || 'https://nocodb.ncstudio.click/api/v2';
+const NOCODB_AUTH_TOKEN = import.meta.env?.NOCODB_AUTH_TOKEN || process.env?.NOCODB_AUTH_TOKEN;
 
-// Base headers for API requests
+// Base headers for API requests - updated for v2 API
 const headers = {
-  'xc-auth': NOCODB_AUTH_TOKEN,
+  'xc-token': NOCODB_AUTH_TOKEN,
   'Content-Type': 'application/json'
 };
 
+console.log('NOCODB_API_URL:', NOCODB_API_URL);
+console.log('NOCODB_AUTH_TOKEN:', NOCODB_AUTH_TOKEN);
+
 // Table mapping to handle NocoDB naming conventions
 const TABLES = {
-  directories: 'Directories',
-  listings: 'Listings',
-  landingPages: 'Landing Pages'
+  directories: 'm823s0ww0l4mekb',
+  listings: 'mbrnluso1gxfwd4',
+  landingPages: 'mbrnluso1gxfwd4'
 };
 
 // Field mappings from NocoDB convention to JavaScript convention
@@ -32,12 +37,12 @@ const FIELD_MAPPINGS = {
   'Description': 'description',
   'Domain': 'domain',
   'Theme': 'theme',
-  'Primary Color': 'primaryColor',
-  'Secondary Color': 'secondaryColor',
+  'Primary_Color': 'primaryColor',
+  'Secondary_Color': 'secondaryColor',
   'Logo': 'logo',
   'Categories': 'categories',
-  'Meta Tags': 'metaTags',
-  'Social Links': 'socialLinks',
+  'Meta_Tags': 'metaTags',
+  'Social_Links': 'socialLinks',
   'Deployment': 'deployment',
   
   // Listings table
@@ -53,15 +58,15 @@ const FIELD_MAPPINGS = {
   'Phone': 'phone',
   'Rating': 'rating',
   'Tags': 'tags',
-  'Opening Hours': 'openingHours',
-  'Custom Fields': 'customFields',
-  'Created At': 'createdAt',
-  'Updated At': 'updatedAt',
+  'Opening_Hours': 'openingHours',
+  'Custom_Fields': 'customFields',
+  'Created_At': 'createdAt',
+  'Updated_At': 'updatedAt',
   
   // Landing Pages table
-  'Featured Image': 'featuredImage',
+  'Featured_Image': 'featuredImage',
   'Keywords': 'keywords',
-  'Related Categories': 'relatedCategories'
+  'Related_Categories': 'relatedCategories'
 };
 
 // Reverse mapping for queries (JavaScript to NocoDB)
@@ -99,52 +104,72 @@ function mapJsFieldToNocoDb(field) {
 }
 
 /**
- * Map query conditions from JavaScript naming to NocoDB naming
+ * Map query conditions from JavaScript naming to NocoDB naming for v2 API
  * @param {object} conditions - Query conditions with JavaScript naming
- * @returns {object} - Query conditions with NocoDB naming
+ * @returns {string} - Query conditions formatted for NocoDB v2 API
  */
 function mapQueryConditions(conditions) {
-  if (!conditions) return conditions;
+  if (!conditions) return null;
   
-  const result = {};
-  
-  Object.entries(conditions).forEach(([key, value]) => {
-    if (key === '_or' || key === '_and') {
-      // Handle logical operators
-      result[key] = value.map(mapQueryConditions);
-    } else {
-      // Handle regular field conditions
+  // Handle simple conditions
+  if (typeof conditions === 'object' && !conditions._or && !conditions._and) {
+    // Format for v2 API: (field,eq,value)
+    const formattedConditions = Object.entries(conditions).map(([key, value]) => {
       const nocoKey = mapJsFieldToNocoDb(key);
       
       if (typeof value === 'object' && value !== null) {
         // Handle operators like eq, neq, like, etc.
-        result[nocoKey] = value;
+        const op = Object.keys(value)[0];
+        return `(${nocoKey},${op},${value[op]})`;
       } else {
-        // Handle direct value
-        result[nocoKey] = value;
+        // Handle direct value (assume equality)
+        return `(${nocoKey},eq,${value})`;
       }
-    }
-  });
+    });
+    
+    return formattedConditions.join('~and');
+  }
+  
+  // Handle logical operators
+  let result = '';
+  
+  if (conditions._and) {
+    const andConditions = conditions._and.map(cond => mapQueryConditions(cond));
+    result = andConditions.join('~and');
+  } else if (conditions._or) {
+    const orConditions = conditions._or.map(cond => mapQueryConditions(cond));
+    result = orConditions.join('~or');
+  }
   
   return result;
 }
 
 /**
- * Fetch data from NocoDB with caching
+ * Fetch data from NocoDB v2 API with caching
  * @param {string} endpoint - API endpoint
  * @param {object} params - Query parameters
  * @param {number} ttl - Time to live in seconds
  * @returns {Promise<any>} - Response data
  */
 async function fetchFromNocoDB(endpoint, params = {}, ttl = cacheTTL.directories) {
-  // Map conditions to NocoDB naming if present
+  // Format query parameters for v2 API
+  const queryParams = {};
+  
+  // Map 'where' conditions if present to v2 format
   if (params.where) {
-    params.where = mapQueryConditions(params.where);
+    queryParams.where = mapQueryConditions(params.where);
   }
   
-  // Build query string from params
-  const queryString = Object.keys(params)
-    .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(typeof params[key] === 'object' ? JSON.stringify(params[key]) : params[key])}`)
+  // Handle other parameters with direct mapping
+  ['fields', 'sort', 'offset', 'limit'].forEach(param => {
+    if (params[param]) {
+      queryParams[param] = params[param];
+    }
+  });
+  
+  // Build query string
+  const queryString = Object.keys(queryParams)
+    .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(typeof queryParams[key] === 'object' ? JSON.stringify(queryParams[key]) : queryParams[key])}`)
     .join('&');
   
   const url = `${NOCODB_API_URL}${endpoint}${queryString ? `?${queryString}` : ''}`;
@@ -154,11 +179,14 @@ async function fetchFromNocoDB(endpoint, params = {}, ttl = cacheTTL.directories
     
     // Handle list response (map each item)
     if (response.list && Array.isArray(response.list)) {
-      response.list = response.list.map(mapNocoDbToJs);
+      return {
+        list: response.list.map(mapNocoDbToJs),
+        pageInfo: response.pageInfo
+      };
     }
     
     // Handle single object response
-    else if (response && typeof response === 'object') {
+    if (response && typeof response === 'object') {
       return mapNocoDbToJs(response);
     }
     
@@ -174,7 +202,7 @@ async function fetchFromNocoDB(endpoint, params = {}, ttl = cacheTTL.directories
  * @returns {Promise<Array>} - Array of directory configurations
  */
 export async function getDirectories() {
-  const response = await fetchFromNocoDB(`/tables/${TABLES.directories}/rows`, {}, cacheTTL.directories);
+  const response = await fetchFromNocoDB(`/tables/${TABLES.directories}/records`, {}, cacheTTL.directories);
   
   // Transform the response to match the expected format
   return response.list.map(directory => ({
@@ -202,30 +230,37 @@ export async function getDirectories() {
  */
 export async function getDirectory(id) {
   try {
-    const response = await fetchFromNocoDB(`/tables/${TABLES.directories}/rows/find-one`, {
+    // In v2 API, use the specific recordId endpoint
+    const response = await fetchFromNocoDB(`/tables/${TABLES.directories}/records`, {
       where: {
         // Use Identifier column instead of Id
         id: { eq: id }
-      }
+      },
+      limit: 1
     }, cacheTTL.directories);
     
-    if (!response) return null;
+    // If no results, return null
+    if (!response.list || response.list.length === 0) {
+      return null;
+    }
+    
+    const directory = response.list[0];
     
     // Transform to expected format
     return {
-      id: response.id, // This is now from Identifier field
+      id: directory.id,
       data: {
-        name: response.name,
-        description: response.description,
-        domain: response.domain,
-        theme: response.theme || 'default',
-        primaryColor: response.primaryColor || '#3366cc',
-        secondaryColor: response.secondaryColor,
-        logo: response.logo,
-        categories: JSON.parse(response.categories || '[]'),
-        metaTags: JSON.parse(response.metaTags || '{}'),
-        socialLinks: JSON.parse(response.socialLinks || '[]'),
-        deployment: JSON.parse(response.deployment || '{}')
+        name: directory.name,
+        description: directory.description,
+        domain: directory.domain,
+        theme: directory.theme || 'default',
+        primaryColor: directory.primaryColor || '#3366cc',
+        secondaryColor: directory.secondaryColor,
+        logo: directory.logo,
+        categories: JSON.parse(directory.categories || '[]'),
+        metaTags: JSON.parse(directory.metaTags || '{}'),
+        socialLinks: JSON.parse(directory.socialLinks || '[]'),
+        deployment: JSON.parse(directory.deployment || '{}')
       }
     };
   } catch (error) {
@@ -240,7 +275,7 @@ export async function getDirectory(id) {
  * @returns {Promise<Array>} - Array of listings
  */
 export async function getListings(directoryId) {
-  const response = await fetchFromNocoDB(`/tables/${TABLES.listings}/rows`, {
+  const response = await fetchFromNocoDB(`/tables/${TABLES.listings}/records`, {
     where: {
       directory: { eq: directoryId }
     }
@@ -283,34 +318,37 @@ export async function getListings(directoryId) {
  */
 export async function getListing(directoryId, slug) {
   try {
-    const response = await fetchFromNocoDB(`/tables/${TABLES.listings}/rows/find-one`, {
-      where: {
-        directory: { eq: directoryId },
-        slug: { eq: slug }
-      }
+    const response = await fetchFromNocoDB(`/tables/${TABLES.listings}/records`, {
+      where: `(Directory,eq,${directoryId})~and(Slug,eq,${slug})`,
+      limit: 1
     }, cacheTTL.listings);
     
-    if (!response) return null;
+    // If no results, return null
+    if (!response.list || response.list.length === 0) {
+      return null;
+    }
+    
+    const listing = response.list[0];
     
     // Convert markdown content to HTML
-    const renderedContent = await renderMarkdown(response.content);
+    const renderedContent = await renderMarkdown(listing.content);
     
     return {
-      slug: `${response.directory}/${response.slug}`,
+      slug: `${listing.directory}/${listing.slug}`,
       data: {
-        title: response.title,
-        description: response.description,
-        directory: response.directory,
-        category: response.category,
-        featured: response.featured === 1 || response.featured === true,
-        images: JSON.parse(response.images || '[]'),
-        address: response.address,
-        website: response.website,
-        phone: response.phone,
-        rating: response.rating,
-        tags: JSON.parse(response.tags || '[]'),
-        openingHours: JSON.parse(response.openingHours || '[]'),
-        customFields: JSON.parse(response.customFields || '{}')
+        title: listing.title,
+        description: listing.description,
+        directory: listing.directory,
+        category: listing.category,
+        featured: listing.featured === 1 || listing.featured === true,
+        images: JSON.parse(listing.images || '[]'),
+        address: listing.address,
+        website: listing.website,
+        phone: listing.phone,
+        rating: listing.rating,
+        tags: JSON.parse(listing.tags || '[]'),
+        openingHours: JSON.parse(listing.openingHours || '[]'),
+        customFields: JSON.parse(listing.customFields || '{}')
       },
       // Add a render function that returns the pre-rendered content
       render: () => ({ Content: renderedContent })
@@ -328,11 +366,8 @@ export async function getListing(directoryId, slug) {
  * @returns {Promise<Array>} - Array of listings for the category
  */
 export async function getCategoryListings(directoryId, categoryId) {
-  const response = await fetchFromNocoDB(`/tables/${TABLES.listings}/rows`, {
-    where: {
-      directory: { eq: directoryId },
-      category: { eq: categoryId }
-    }
+  const response = await fetchFromNocoDB(`/tables/${TABLES.listings}/records`, {
+    where: `(Directory,eq,${directoryId})~and(Category,eq,${categoryId})`
   }, cacheTTL.categories);
   
   // Transform to match expected format with rendered markdown content
@@ -374,23 +409,12 @@ export async function searchListings(directoryId, query) {
     return [];
   }
   
-  // For NocoDB, we need to create a more complex query
+  // For NocoDB v2, we need to create a more complex query
   // This will search in title, description, and content
-  const searchCondition = {
-    _or: [
-      { title: { like: `%${query}%` } },
-      { description: { like: `%${query}%` } },
-      { content: { like: `%${query}%` } }
-      // Tags and other JSON fields can't be searched directly in SQL
-      // So we'll fetch all and filter client-side
-    ]
-  };
+  const whereCondition = `(Directory,eq,${directoryId})~and((Title,like,%${query}%)~or(Description,like,%${query}%)~or(Content,like,%${query}%))`;
   
-  const response = await fetchFromNocoDB(`/tables/${TABLES.listings}/rows`, {
-    where: {
-      directory: { eq: directoryId },
-      ...searchCondition
-    }
+  const response = await fetchFromNocoDB(`/tables/${TABLES.listings}/records`, {
+    where: whereCondition
   }, cacheTTL.search);
   
   // For JSON fields like tags, we need to filter client-side
@@ -443,7 +467,7 @@ export async function searchListings(directoryId, query) {
  * @returns {Promise<Array>} - Array of landing pages
  */
 export async function getLandingPages(directoryId) {
-  const response = await fetchFromNocoDB(`/tables/${TABLES.landingPages}/rows`, {
+  const response = await fetchFromNocoDB(`/tables/${TABLES.landingPages}/records`, {
     where: {
       directory: { eq: directoryId }
     }
@@ -477,11 +501,9 @@ export async function getLandingPages(directoryId) {
  * @returns {Promise<Array>} - Array of featured listings
  */
 export async function getFeaturedListings(directoryId, limit = 6) {
-  const response = await fetchFromNocoDB(`/tables/${TABLES.listings}/rows`, {
-    where: {
-      directory: { eq: directoryId },
-      featured: { eq: true }
-    }
+  const response = await fetchFromNocoDB(`/tables/${TABLES.listings}/records`, {
+    where: `(Directory,eq,${directoryId})~and(Featured,eq,1)`,
+    limit
   }, cacheTTL.listings);
   
   // Transform and limit results
@@ -510,7 +532,7 @@ export async function getFeaturedListings(directoryId, limit = 6) {
     };
   }));
   
-  return listings.slice(0, limit);
+  return listings;
 }
 
 /**
@@ -520,14 +542,15 @@ export async function getFeaturedListings(directoryId, limit = 6) {
  * @returns {Promise<Array>} - Array of recent listings
  */
 export async function getRecentListings(directoryId, limit = 4) {
-  const response = await fetchFromNocoDB(`/tables/${TABLES.listings}/rows`, {
+  const response = await fetchFromNocoDB(`/tables/${TABLES.listings}/records`, {
     where: {
       directory: { eq: directoryId }
     },
-    sort: ['-updatedAt']
+    sort: '-Updated_At',
+    limit
   }, cacheTTL.listings);
   
-  // Transform and limit results
+  // Transform results
   const listings = await Promise.all(response.list.map(async listing => {
     // Convert markdown content to HTML
     const renderedContent = await renderMarkdown(listing.content);
@@ -554,7 +577,7 @@ export async function getRecentListings(directoryId, limit = 4) {
     };
   }));
   
-  return listings.slice(0, limit);
+  return listings;
 }
 
 /**
@@ -648,23 +671,3 @@ async function renderMarkdown(markdown) {
     return () => `<p>Error rendering content</p>`;
   }
 }
-
-/**
- * Cache durations for different types of content
- */
-export const cacheTTL = {
-  // Directory configurations rarely change
-  directories: 3600, // 1 hour
-  
-  // Listings may be updated more frequently
-  listings: 300,     // 5 minutes
-  
-  // Category listings may change as new items are added
-  categories: 600,   // 10 minutes
-  
-  // Search results should be relatively fresh
-  search: 60,        // 1 minute
-  
-  // Landing pages are typically static content
-  landingPages: 3600 // 1 hour
-};
