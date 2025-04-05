@@ -1,0 +1,248 @@
+/* src/styles/themes/modern.css */
+
+.theme-modern {
+    --card-border-radius: 16px;
+    --header-background: var(--backgroundColor, #ffffff);
+    --text-on-primary: white;
+    
+    /* Typography */
+    --font-primary: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    --font-secondary: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    
+    /* Page structure */
+    --max-width: 1300px;
+    
+    /* Font properties */
+    font-family: var(--font-primary);
+    line-height: 1.6;
+  }
+  
+  /* Header modifications */
+  .theme-modern .site-header {
+    background-color: var(--header-background);
+    color: var(--textColor, #111111);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  }
+  
+  .theme-modern .site-header .container {
+    padding: 0.75rem 2rem;
+  }
+  
+  .theme-modern .site-name {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primaryColor, #0070f3);
+  }
+  
+  .theme-modern .main-nav a {
+    font-weight: 500;
+    position: relative;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    transition: background-color 0.2s;
+  }
+  
+  .theme-modern .main-nav a:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+  }
+  
+  .theme-modern .main-nav a:after {
+    display: none;
+  }
+  
+  .theme-modern .main-nav a.active {
+    color: var(--primaryColor, #0070f3);
+    font-weight: 600;
+  }
+  
+  /* Hero section */
+  .theme-modern .hero {
+    background-color: var(--backgroundColor, #ffffff);
+    background-image: radial-gradient(circle at 10% 80%, rgba(0, 112, 243, 0.1), transparent 25%),
+                      radial-gradient(circle at 90% 30%, rgba(255, 0, 128, 0.1), transparent 20%);
+    padding: 6rem 0;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .theme-modern .hero h1 {
+    font-weight: 800;
+    font-size: 3.5rem;
+    margin-bottom: 1.5rem;
+    background: linear-gradient(90deg, var(--primaryColor, #0070f3), var(--secondaryColor, #ff0080));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  .theme-modern .hero .lead {
+    font-size: 1.25rem;
+    max-width: 700px;
+    color: var(--textColor, #111111);
+  }
+  
+  .theme-modern .search-container {
+    margin-top: 3rem;
+  }
+  
+  .theme-modern .search-form {
+    border-radius: 16px;
+    border: none;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+    padding: 0.5rem;
+  }
+  
+  .theme-modern .search-form input {
+    font-size: 1.1rem;
+    padding: 1rem 1.5rem;
+  }
+  
+  .theme-modern .search-form button {
+    background-color: var(--primaryColor, #0070f3);
+    border-radius: 12px;
+    padding: 0.75rem 1.5rem;
+    transition: transform 0.2s;
+  }
+  
+  .theme-modern .search-form button:hover {
+    transform: scale(1.05);
+  }
+  
+  /* Section styling */
+  .theme-modern .section-header {
+    text-align: center;
+    margin-bottom: 3rem;
+  }
+  
+  .theme-modern .section-header h2 {
+    font-size: 2.5rem;
+    font-weight: 700;
+  }
+  
+  .theme-modern .view-all {
+    font-weight: 600;
+  }
+  
+  /* Cards and grids */
+  .theme-modern .listing-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 2rem;
+  }
+  
+  .theme-modern .listing-card {
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+    border: none;
+    transition: transform 0.3s, box-shadow 0.3s;
+  }
+  
+  .theme-modern .listing-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.2);
+  }
+  
+  .theme-modern .category-card {
+    border-radius: 16px;
+    border: none;
+    padding: 2rem;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+    transition: transform 0.3s, box-shadow 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .theme-modern .category-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.2);
+  }
+  
+  .theme-modern .category-card::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 100px;
+    height: 100px;
+    background: linear-gradient(135deg, transparent 50%, rgba(var(--primaryColor-rgb, 0, 112, 243), 0.1) 50%);
+    border-radius: 0 0 16px 0;
+    transition: all 0.3s;
+  }
+  
+  .theme-modern .category-card:hover::after {
+    background: linear-gradient(135deg, transparent 50%, rgba(var(--primaryColor-rgb, 0, 112, 243), 0.2) 50%);
+  }
+  
+  .theme-modern .category-card h3 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--textColor, #111111);
+  }
+  
+  /* Buttons */
+  .theme-modern .button,
+  .theme-modern button[type="submit"] {
+    background-color: var(--primaryColor, #0070f3);
+    border-radius: 12px;
+    padding: 0.75rem 1.5rem;
+    font-weight: 600;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  
+  .theme-modern .button:hover,
+  .theme-modern button[type="submit"]:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(var(--primaryColor-rgb, 0, 112, 243), 0.4);
+  }
+  
+  .theme-modern .cta-button {
+    background-color: var(--primaryColor, #0070f3);
+    border-radius: 30px;
+    padding: 1rem 2.5rem;
+    font-weight: 600;
+    font-size: 1.1rem;
+    letter-spacing: 0.5px;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  
+  .theme-modern .cta-button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 30px rgba(var(--primaryColor-rgb, 0, 112, 243), 0.5);
+  }
+  
+  /* Footer */
+  .theme-modern .site-footer {
+    background-color: var(--textColor, #111111);
+    padding: 5rem 0 2rem;
+  }
+  
+  .theme-modern .footer-logo h2 {
+    font-weight: 700;
+  }
+  
+  .theme-modern .footer-bottom {
+    opacity: 0.7;
+  }
+  
+  .theme-modern .social-icons a {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    transition: transform 0.2s, background-color 0.2s;
+  }
+  
+  .theme-modern .social-icons a:hover {
+    transform: translateY(-3px);
+    background-color: var(--primaryColor, #0070f3);
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    .theme-modern .hero h1 {
+      font-size: 2.5rem;
+    }
+    
+    .theme-modern .section-header h2 {
+      font-size: 2rem;
+    }
+  }

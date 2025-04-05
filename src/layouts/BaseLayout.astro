@@ -24,7 +24,6 @@ const {
 const urlParts = Astro.url.pathname.split('/');
 const directoryId = urlParts[1] || import.meta.env.CURRENT_DIRECTORY || 'default';
 
-console.log("BaseLayout props:", { title, description }); // Debug log
 ---
 
 <!DOCTYPE html>
@@ -55,7 +54,7 @@ console.log("BaseLayout props:", { title, description }); // Debug log
     <link rel="icon" type="image/svg+xml" href={`/${directoryId}/favicon.svg`} />
     
     <!-- Global base styles -->
-    <link rel="stylesheet" href="/styles/global.css" />
+    <link rel="stylesheet" href={`/${directoryId}/styles/global.css`} />
     
     <!-- Structured Data / JSON-LD -->
     {structuredData && (

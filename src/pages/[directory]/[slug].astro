@@ -55,7 +55,7 @@ const { Content } = await listing.render();
 const images = listing.data.images || [];
 
 // Construct the canonical URL
-const canonicalUrl = new URL(`/${directoryId}/${slug}`, Astro.site || 'http://localhost:3000').toString();
+const canonicalUrl = new URL(`/${directoryId}/${slug}`, Astro.site || 'http://localhost:4321').toString();
 
 // Generate structured data for this listing
 const structuredData = generateListingSchema(directoryId, listing.data, canonicalUrl);

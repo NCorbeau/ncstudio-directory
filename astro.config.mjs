@@ -34,7 +34,7 @@ async function getSiteUrl(directoryId) {
   // In preview/development, use the multi-directory approach
   return process.env.CF_PAGES
     ? 'https://ncstudio-directory.pages.dev'
-    : 'http://localhost:3000';
+    : 'http://localhost:4321';
 }
 
 export default defineConfig({
@@ -53,6 +53,9 @@ export default defineConfig({
     },
     ssr: {
       noExternal: ['marked']
+    },
+    build: {
+      sourcemap: true
     }
   }
 });

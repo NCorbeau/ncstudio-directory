@@ -18,7 +18,8 @@ export async function getStaticPaths() {
 const { directoryId } = Astro.props;
 
 // Get search query from URL
-const query = Astro.url.searchParams.get('q') || '';
+const url = new URL(Astro.request.url);
+const query = url.searchParams.get('q') || '';
 
 // Fetch directory data
 const directoryData = await getDirectoryConfig(directoryId);
@@ -34,7 +35,7 @@ const filteredListings = query
   : [];
 
 // Construct canonical URL (without query parameter for base URL)
-const baseUrl = new URL(`/${directoryId}/search`, Astro.site || 'http://localhost:3000').toString();
+const baseUrl = new URL(`/${directoryId}/search`, Astro.site || 'http://localhost:4321').toString();
 const canonicalUrl = query ? `${baseUrl}?q=${encodeURIComponent(query)}` : baseUrl;
 
 // Generate breadcrumbs

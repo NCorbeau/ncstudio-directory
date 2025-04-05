@@ -3,9 +3,11 @@
  * Handles field mapping between NocoDB conventions and JavaScript conventions
  */
 import { cachedFetch, cacheTTL } from './cache.js';
+
 import dotenv from 'dotenv';
 
 dotenv.config();
+
 // NocoDB API configuration
 const NOCODB_API_URL = import.meta.env?.NOCODB_API_URL || process.env?.NOCODB_API_URL || 'https://nocodb.ncstudio.click/api/v2';
 const NOCODB_AUTH_TOKEN = import.meta.env?.NOCODB_AUTH_TOKEN || process.env?.NOCODB_AUTH_TOKEN;
@@ -22,7 +24,7 @@ console.log('NOCODB_AUTH_TOKEN:', NOCODB_AUTH_TOKEN);
 // Table mapping to handle NocoDB naming conventions
 const TABLES = {
   directories: 'm823s0ww0l4mekb',
-  listings: 'mbrnluso1gxfwd4',
+  listings: 'mvy1lrp2wr35vo0',
   landingPages: 'mbrnluso1gxfwd4'
 };
 
@@ -49,7 +51,7 @@ const FIELD_MAPPINGS = {
   'Title': 'title',
   'Content': 'content',
   'Slug': 'slug',
-  'Directory': 'directory',
+  'Directory Identifier': 'directory',
   'Category': 'category',
   'Featured': 'featured',
   'Images': 'images',

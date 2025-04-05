@@ -1,0 +1,28 @@
+/* Default theme styling */
+.theme-default {
+    --card-border-radius: 8px;
+    --header-background: var(--primaryColor);
+    --text-on-primary: white;
+    
+    /* Typography */
+    font-family: var(--font-primary);
+    line-height: 1.6;
+  }
+  
+  .theme-default .listing-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 2rem;
+  }
+  
+  .theme-default .listing-card {
+    border-radius: var(--card-border-radius);
+    border: 1px solid #eee;
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  
+  .theme-default .listing-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  }
