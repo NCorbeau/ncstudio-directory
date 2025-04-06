@@ -27,8 +27,10 @@ function getChangedFiles() {
       // Get base branch to compare against
       const baseBranch = process.env.CF_PAGES_BRANCH === 'main' ? 
         'origin/main~1' : 'origin/main';
+      console.log(`Base branch for comparison: ${baseBranch}`);
       
       // Get changed files between latest commit and base branch
+      console.log('git diff --name-only', baseBranch, 'HEAD');
       const output = execSync(`git diff --name-only ${baseBranch} HEAD`, 
         { encoding: 'utf8' });
       
