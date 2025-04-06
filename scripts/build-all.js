@@ -4,7 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
 import { getDirectories, getDirectory } from '../src/lib/nocodb.js';
-import { cleanupNestedDirectories } from './cleanup-build.js';
+import { cleanupNestedDirectories, fixDistDirectory } from './cleanup-build.js';
 
 // Load environment variables
 dotenv.config();
@@ -55,16 +55,18 @@ async function buildDirectory(directoryId) {
   // Set the current directory as an environment variable for the build
   process.env.CURRENT_DIRECTORY = directoryId;
   
-  // Run Astro build with specific output
   try {
+    // Run Astro build with specific output
     execSync(`astro build --outDir ./dist/${directoryId}`, { 
       stdio: 'inherit',
       env: {...process.env}
     });
     
+    // Clean up nested directories
+    cleanupNestedDirectories(directoryId);
+    
     // Add this line to copy public assets after the build
     copyPublicAssetsToDirectory(directoryId);
-    // cleanupNestedDirectories(directoryId);
     
     console.log(`Build complete for ${directoryId}`);
     
@@ -106,6 +108,10 @@ async function buildAll() {
       const result = await buildDirectory(directory.id);
       results.push(result);
     }
+    
+    // After building all directories, fix the entire dist structure
+    console.log("\nFixing directory structure...");
+    fixDistDirectory();
     
     // Output build results
     console.log('\n=== Build Results ===');

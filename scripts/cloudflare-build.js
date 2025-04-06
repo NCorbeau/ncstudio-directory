@@ -12,7 +12,7 @@ import dotenv from 'dotenv';
 import { getDirectories } from '../src/lib/nocodb.js';
 import { generateAllSitemaps } from './generate-sitemaps.js';
 import { generateAllRobots } from './generate-robots.js';
-import { cleanupNestedDirectories } from './cleanup-build.js';
+import { cleanupNestedDirectories, fixDistDirectory } from './cleanup-build.js';
 
 // Load environment variables
 dotenv.config();
@@ -208,7 +208,10 @@ async function buildAllDirectories() {
   // Run the normal build-all script
   execSync('node scripts/build-all.js', { stdio: 'inherit' });
   
-  // After building all directories, copy public assets to each directory
+  // After building all directories, fix the directory structure
+  fixDistDirectory();
+  
+  // Now copy public assets to each directory
   // First get a list of all directories in the dist folder
   const directories = fs.readdirSync(BUILD_DIR)
     .filter(dir => {
@@ -222,7 +225,6 @@ async function buildAllDirectories() {
   // Copy public assets to each directory
   for (const dir of directories) {
     copyPublicAssetsToDirectory(dir);
-    // cleanupNestedDirectories(dir);
   }
   
   // Copy public files to build folder
@@ -272,6 +274,9 @@ async function buildSelectiveDirectories(directories) {
         stdio: 'inherit',
         env: {...process.env}
       });
+      
+      // Clean up nested directories
+      cleanupNestedDirectories(dir);
       
       // Add this line to copy public assets after each directory build
       copyPublicAssetsToDirectory(dir);

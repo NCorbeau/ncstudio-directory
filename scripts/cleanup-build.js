@@ -1,5 +1,5 @@
 // scripts/cleanup-build.js
-// This script removes unwanted nested directories in the build output
+// This script removes unwanted nested directories in the build output and fixes cross-contamination
 
 import fs from "fs";
 import path from "path";
@@ -19,52 +19,20 @@ export function cleanupNestedDirectories(directoryId) {
     return;
   }
 
-  // Get the directories we need to check for nesting
-  const allDirectories = fs.readdirSync("./dist").filter((dir) => {
-    const dirPath = path.join("./dist", dir);
-    return (
-      fs.statSync(dirPath).isDirectory() &&
-      dir !== "directory-selector" &&
-      dir !== "functions" &&
-      !dir.startsWith(".")
-    );
-  });
+  // Look specifically for the nested duplicate directory
+  const nestedDirPath = path.join(distDir, directoryId);
 
-  // For each possible nested directory
-  for (const nestedDirName of allDirectories) {
-    const nestedDirPath = path.join(distDir, nestedDirName);
-
-    // If this nested directory exists, we need to clean it up
-    if (
-      fs.existsSync(nestedDirPath) &&
-      fs.statSync(nestedDirPath).isDirectory()
-    ) {
-      // Only proceed if this is truly a nested duplicate, not just a coincidentally named folder
-      const categoryDir = path.join(nestedDirPath, "category");
-      const categoryDirExists =
-        fs.existsSync(categoryDir) && fs.statSync(categoryDir).isDirectory();
-
-      // If it has a category subfolder, it's likely our duplicate structure
-      if (categoryDirExists) {
-        console.log(`Found nested directory: ${nestedDirPath}`);
-
-        // Option 1: Delete the nested directory
-        fs.rmSync(nestedDirPath, { recursive: true, force: true });
-        console.log(`Removed nested directory: ${nestedDirPath}`);
-
-        // Option 2: Alternative approach - move files up if the nested dir is the same as current dir
-        // if (nestedDirName === directoryId) {
-        //   // Move all files from nested dir to parent dir
-        //   moveFilesUp(nestedDirPath, distDir);
-        //   console.log(`Moved files from ${nestedDirPath} to ${distDir}`);
-        // } else {
-        //   // Different directory, just remove it
-        //   fs.rmSync(nestedDirPath, { recursive: true, force: true });
-        //   console.log(`Removed nested directory: ${nestedDirPath}`);
-        // }
-      }
-    }
+  // If this nested directory exists, we need to clean it up
+  if (fs.existsSync(nestedDirPath) && fs.statSync(nestedDirPath).isDirectory()) {
+    console.log(`Found nested directory: ${nestedDirPath}`);
+    
+    // Move all files from nested directory up to parent
+    moveFilesUp(nestedDirPath, distDir);
+    console.log(`Moved files from ${nestedDirPath} to ${distDir}`);
   }
+
+  // Remove other directory content that doesn't belong here (cross-contamination)
+  removeOtherDirectoryContent(distDir, directoryId);
 
   console.log(`Cleanup complete for ${directoryId}`);
 }
@@ -83,22 +51,97 @@ function moveFilesUp(sourceDir, targetDir) {
     const sourcePath = path.join(sourceDir, item);
     const targetPath = path.join(targetDir, item);
 
-    // Skip if the target already exists
-    if (fs.existsSync(targetPath)) {
-      console.log(`Target already exists, skipping: ${targetPath}`);
-      continue;
-    }
-
-    // If it's a directory, create it in the target and move its contents recursively
-    if (fs.statSync(sourcePath).isDirectory()) {
-      fs.mkdirSync(targetPath, { recursive: true });
-      moveFilesUp(sourcePath, targetPath);
-    } else {
-      // Move the file
-      fs.copyFileSync(sourcePath, targetPath);
+    try {
+      // If it's a directory, create it in the target and move its contents recursively
+      if (fs.statSync(sourcePath).isDirectory()) {
+        if (!fs.existsSync(targetPath)) {
+          fs.mkdirSync(targetPath, { recursive: true });
+        }
+        moveFilesUp(sourcePath, targetPath);
+      } else {
+        // Move the file, but first ensure the target directory exists
+        const targetDir = path.dirname(targetPath);
+        if (!fs.existsSync(targetDir)) {
+          fs.mkdirSync(targetDir, { recursive: true });
+        }
+        
+        // Copy the file (don't worry if it already exists)
+        try {
+          fs.copyFileSync(sourcePath, targetPath);
+        } catch (err) {
+          // If file already exists, this is fine
+          if (err.code !== 'EEXIST') {
+            console.warn(`Warning: Could not copy ${sourcePath} to ${targetPath}: ${err.message}`);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn(`Warning: Error processing ${sourcePath}: ${err.message}`);
     }
   }
 
   // Clean up the source directory after moving everything
-  fs.rmSync(sourceDir, { recursive: true, force: true });
+  try {
+    fs.rmSync(sourceDir, { recursive: true, force: true });
+  } catch (err) {
+    console.warn(`Warning: Could not remove directory ${sourceDir}: ${err.message}`);
+  }
+}
+
+/**
+ * Remove content from other directories (fix cross-contamination)
+ * @param {string} distDir - The dist directory for the current directory
+ * @param {string} directoryId - Current directory ID
+ */
+function removeOtherDirectoryContent(distDir, directoryId) {
+  // Get a list of all our directory IDs (this should be more dynamically determined)
+  const knownDirectories = ['dog-parks-warsaw', 'french-desserts'];
+  
+  // Remove other directories that don't belong here
+  knownDirectories.forEach(otherId => {
+    if (otherId !== directoryId) {
+      const otherDirPath = path.join(distDir, otherId);
+      if (fs.existsSync(otherDirPath) && fs.statSync(otherDirPath).isDirectory()) {
+        console.log(`Removing cross-contaminated directory ${otherDirPath}`);
+        fs.rmSync(otherDirPath, { recursive: true, force: true });
+      }
+    }
+  });
+}
+
+/**
+ * Fix the entire dist directory
+ * This can be called as a standalone function after a complete build
+ */
+export function fixDistDirectory() {
+  console.log("Fixing the entire dist directory structure...");
+  
+  const distDir = path.resolve('./dist');
+  if (!fs.existsSync(distDir)) {
+    console.warn('Dist directory does not exist, nothing to fix.');
+    return;
+  }
+  
+  // Get all directories in dist (except special ones)
+  const directories = fs.readdirSync(distDir).filter(dir => {
+    const dirPath = path.join(distDir, dir);
+    return fs.statSync(dirPath).isDirectory() && 
+      dir !== 'directory-selector' &&
+      dir !== 'functions' &&
+      !dir.startsWith('.');
+  });
+  
+  console.log(`Found directories to fix: ${directories.join(', ')}`);
+  
+  // Process each directory
+  directories.forEach(directoryId => {
+    cleanupNestedDirectories(directoryId);
+  });
+  
+  console.log("Fixed all directories!");
+}
+
+// If script is run directly, fix all directories
+if (process.argv[1] === import.meta.url) {
+  fixDistDirectory();
 }

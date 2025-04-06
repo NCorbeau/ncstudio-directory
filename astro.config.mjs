@@ -40,17 +40,16 @@ async function getSiteUrl(directoryId) {
 export default defineConfig({
   site: await getSiteUrl(currentDirectory),
   
-  // Use empty base for all cases to prevent double-nesting
+  // Use empty base for Cloudflare Pages
   base: '/',
   
-  // Keep this setting so each directory gets its own folder in dist
+  // Important: Don't double-nest pages - put them directly in the directory
   outDir: currentDirectory === 'default' 
     ? './dist'
     : `./dist/${currentDirectory}`,
   
   build: {
-    format: 'directory',
-    assets: '_assets'
+    format: 'directory'
   },
   vite: {
     define: {

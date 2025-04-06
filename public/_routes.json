@@ -1,0 +1,47 @@
+{
+    "version": 1,
+    "include": [
+      "/*"
+    ],
+    "exclude": [
+      "/api/*"
+    ],
+    "routes": [
+      {
+        "src": "/",
+        "dest": "/directory-selector/index.html"
+      },
+      {
+        "src": "/dog-parks-warsaw",
+        "dest": "/dog-parks-warsaw/index.html"
+      },
+      {
+        "src": "/dog-parks-warsaw/",
+        "dest": "/dog-parks-warsaw/index.html"
+      },
+      {
+        "src": "/dog-parks-warsaw/*",
+        "dest": "/dog-parks-warsaw/:splat"
+      },
+      {
+        "src": "/french-desserts",
+        "dest": "/french-desserts/index.html"
+      },
+      {
+        "src": "/french-desserts/",
+        "dest": "/french-desserts/index.html"
+      },
+      {
+        "src": "/french-desserts/*",
+        "dest": "/french-desserts/:splat"
+      },
+      {
+        "src": "/api/search",
+        "dest": "/api/search.js"
+      },
+      {
+        "src": "/api/webhook",
+        "dest": "/api/webhook.js"
+      }
+    ]
+  }
