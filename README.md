@@ -27,8 +27,8 @@ This project is a template generator for creating multiple web directories, each
 
 ```bash
 # Clone repository
-git clone https://github.com/yourusername/multi-directory-generator.git
-cd multi-directory-generator
+git clone https://github.com/yourusername/ncstudio-directory.git
+cd ncstudio-directory
 
 # Install dependencies
 npm install

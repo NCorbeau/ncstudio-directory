@@ -3,21 +3,36 @@
 // This is the foundational layout used by all pages across all directories
 
 import { getCurrentDirectoryId } from '../utils/directory-helpers';
+import SEO from '../components/core/SEO.astro';
 
 interface Props {
   title: string;
-  description?: string; // Make description optional
+  description?: string;
   image?: string;
   canonicalUrl?: string;
   structuredData?: object | null;
+  directoryData: any;
+  publishedDate?: string;
+  modifiedDate?: string;
+  author?: string;
+  type?: 'website' | 'article' | 'place' | 'product' | 'profile';
+  noindex?: boolean;
+  keywords?: string[];
 }
 
 const { 
   title, 
-  description = "Discover the best options in our comprehensive directory.", // Add default value
-  image = '/default-og-image.jpg',
+  description = "Discover the best options in our comprehensive directory.", // Default value
+  image,
   canonicalUrl = Astro.url.href,
-  structuredData = null
+  structuredData = null,
+  directoryData,
+  publishedDate,
+  modifiedDate,
+  author,
+  type = 'website',
+  noindex = false,
+  keywords = []
 } = Astro.props;
 
 // Get the current directory ID from the URL or environment
@@ -29,37 +44,26 @@ const directoryId = urlParts[1] || import.meta.env.CURRENT_DIRECTORY || 'default
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{title}</title>
-    <meta name="description" content={description} />
-    
-    <!-- Open Graph / Social Media -->
-    <meta property="og:title" content={title} />
-    <meta property="og:description" content={description} />
-    <meta property="og:url" content={canonicalUrl} />
-    <meta property="og:image" content={new URL(image, Astro.url)} />
-    <meta property="og:type" content="website" />
-    
-    <!-- Twitter Card -->
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content={title} />
-    <meta name="twitter:description" content={description} />
-    <meta name="twitter:image" content={new URL(image, Astro.url)} />
-    
-    <!-- Canonical URL -->
-    <link rel="canonical" href={canonicalUrl} />
+    <SEO
+      title={title}
+      description={description}
+      canonicalUrl={canonicalUrl}
+      image={image}
+      directoryData={directoryData}
+      structuredData={structuredData}
+      publishedDate={publishedDate}
+      modifiedDate={modifiedDate}
+      author={author}
+      type={type}
+      noindex={noindex}
+      keywords={keywords}
+    />
     
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href={`/${directoryId}/favicon.svg`} />
     
     <!-- Global base styles -->
     <link rel="stylesheet" href={`/${directoryId}/styles/global.css`} />
-    
-    <!-- Structured Data / JSON-LD -->
-    {structuredData && (
-      <script type="application/ld+json" set:html={JSON.stringify(structuredData)} />
-    )}
     
     <!-- Slot for additional head content -->
     <slot name="head" />

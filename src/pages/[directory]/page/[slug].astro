@@ -1,0 +1,273 @@
+---
+import DirectoryLayout from '../../../layouts/DirectoryLayout.astro';
+import { generateBreadcrumbSchema } from '../../../utils/schema-generator';
+import { 
+  getAllDirectories, 
+  getDirectoryConfig,
+  getDirectoryLandingPages,
+  getLandingPageBySlug
+} from '../../../utils/directory-helpers';
+
+// Generate all dynamic routes for landing pages
+export async function getStaticPaths() {
+  const directories = await getAllDirectories();
+  const paths = [];
+  
+  for (const directory of directories) {
+    const directoryId = directory.id;
+    const landingPages = await getDirectoryLandingPages(directoryId);
+    
+    for (const page of landingPages) {
+      const slug = page.slug.replace(`${directoryId}/`, '');
+      
+      paths.push({
+        params: { 
+          directory: directoryId,
+          slug
+        },
+        props: { 
+          directoryId,
+          slug
+        }
+      });
+    }
+  }
+  
+  return paths;
+}
+
+// Get params from props
+const { directoryId, slug } = Astro.props;
+
+// Fetch the directory config and landing page data
+const directoryData = await getDirectoryConfig(directoryId);
+const landingPage = await getLandingPageBySlug(directoryId, slug);
+
+// Handle case where data isn't found
+if (!directoryData || !landingPage) {
+  return Astro.redirect('/404');
+}
+
+// Get Content from render function
+const { Content } = await landingPage.render();
+
+// Construct the canonical URL
+const canonicalUrl = new URL(`/${directoryId}/page/${slug}`, Astro.site || 'http://localhost:4321').toString();
+
+// Generate structured data for this page
+const structuredData = {
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "name": landingPage.data.title,
+  "description": landingPage.data.description,
+  "url": canonicalUrl,
+  "image": landingPage.data.featuredImage || null
+};
+
+// Generate breadcrumbs for this page
+const breadcrumbs = [
+  {
+    name: directoryData.data.name,
+    url: `/${directoryId}/`
+  },
+  {
+    name: landingPage.data.title,
+    url: canonicalUrl
+  }
+];
+---
+
+<DirectoryLayout
+  title={`${landingPage.data.title} | ${directoryData.data.name}`}
+  description={landingPage.data.description}
+  directoryData={directoryData.data}
+  canonicalUrl={canonicalUrl}
+  structuredData={structuredData}
+  breadcrumbs={breadcrumbs}
+  image={landingPage.data.featuredImage}
+>
+  <article class="landing-page">
+    <div class="container">
+      <header class="page-header">
+        <h1>{landingPage.data.title}</h1>
+        <p class="description">{landingPage.data.description}</p>
+        
+        {landingPage.data.keywords && landingPage.data.keywords.length > 0 && (
+          <div class="keywords">
+            {landingPage.data.keywords.map(keyword => (
+              <span class="keyword">{keyword}</span>
+            ))}
+          </div>
+        )}
+      </header>
+      
+      {landingPage.data.featuredImage && (
+        <div class="featured-image">
+          <img 
+            src={landingPage.data.featuredImage}
+            alt={`Featured image for ${landingPage.data.title}`}
+          />
+        </div>
+      )}
+      
+      <div class="content">
+        <Fragment set:html={Content} />
+      </div>
+      
+      {landingPage.data.relatedCategories && landingPage.data.relatedCategories.length > 0 && (
+        <div class="related-categories">
+          <h2>Related Categories</h2>
+          <div class="category-grid">
+            {landingPage.data.relatedCategories.map(categoryId => {
+              const category = directoryData.data.categories.find(c => c.id === categoryId);
+              if (!category) return null;
+              
+              return (
+                <a href={`/${directoryId}/category/${category.id}`} class="category-card">
+                  <h3>{category.name}</h3>
+                  {category.description && <p>{category.description}</p>}
+                </a>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  </article>
+</DirectoryLayout>
+
+<style>
+  .container {
+    max-width: var(--max-width, 1200px);
+    margin: 0 auto;
+    padding: 0 1rem;
+  }
+  
+  .page-header {
+    margin-bottom: 2rem;
+  }
+  
+  .page-header h1 {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .description {
+    font-size: 1.1rem;
+    color: #555;
+    margin-bottom: 1rem;
+  }
+  
+  .keywords {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+  
+  .keyword {
+    background-color: #f5f5f5;
+    color: #555;
+    padding: 0.3rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.9rem;
+  }
+  
+  .featured-image {
+    margin-bottom: 2rem;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  
+  .featured-image img {
+    width: 100%;
+    height: auto;
+    max-height: 400px;
+    object-fit: cover;
+  }
+  
+  .content {
+    font-size: 1.1rem;
+    line-height: 1.7;
+    margin-bottom: 3rem;
+  }
+  
+  .content h2 {
+    font-size: 1.8rem;
+    margin: 2rem 0 1rem;
+  }
+  
+  .content h3 {
+    font-size: 1.4rem;
+    margin: 1.5rem 0 1rem;
+  }
+  
+  .content p {
+    margin-bottom: 1.5rem;
+  }
+  
+  .content img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 4px;
+    margin: 1.5rem 0;
+  }
+  
+  .content ul, 
+  .content ol {
+    margin: 1rem 0;
+    padding-left: 1.5rem;
+  }
+  
+  .related-categories h2 {
+    font-size: 1.8rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .category-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 1.5rem;
+  }
+  
+  .category-card {
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    padding: 1.5rem;
+    text-decoration: none;
+    color: #333;
+    transition: transform 0.2s, box-shadow 0.2s;
+    border: 1px solid #eee;
+  }
+  
+  .category-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  }
+  
+  .category-card h3 {
+    font-size: 1.3rem;
+    margin-bottom: 0.75rem;
+    color: var(--primaryColor);
+  }
+  
+  .category-card p {
+    font-size: 0.95rem;
+    color: #666;
+    margin: 0;
+  }
+  
+  @media (max-width: 768px) {
+    .page-header h1 {
+      font-size: 2rem;
+    }
+    
+    .featured-image {
+      height: auto;
+    }
+    
+    .category-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

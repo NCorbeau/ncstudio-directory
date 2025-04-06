@@ -2,7 +2,7 @@
 import DirectoryLayout from '../../layouts/DirectoryLayout.astro';
 import ListingCard from '../../components/core/ListingCard.astro';
 import SearchBar from '../../components/core/SearchBar.astro';
-import { getAllDirectories, getDirectoryConfig, searchDirectoryListings } from '../../utils/directory-helpers';
+import { getAllDirectories, getDirectoryConfig } from '../../utils/directory-helpers';
 
 // Generate all dynamic routes
 export async function getStaticPaths() {
@@ -17,10 +17,6 @@ export async function getStaticPaths() {
 // Get directory ID from props
 const { directoryId } = Astro.props;
 
-// Get search query from URL
-const url = new URL(Astro.request.url);
-const query = url.searchParams.get('q') || '';
-
 // Fetch directory data
 const directoryData = await getDirectoryConfig(directoryId);
 
@@ -29,14 +25,13 @@ if (!directoryData) {
   return Astro.redirect('/404');
 }
 
-// Search for listings if there's a query
-const filteredListings = query 
-  ? await searchDirectoryListings(directoryId, query)
-  : [];
+// We'll determine query and listings client-side
+const initialQuery = '';
+const filteredListings = [];
 
 // Construct canonical URL (without query parameter for base URL)
 const baseUrl = new URL(`/${directoryId}/search`, Astro.site || 'http://localhost:4321').toString();
-const canonicalUrl = query ? `${baseUrl}?q=${encodeURIComponent(query)}` : baseUrl;
+const canonicalUrl = baseUrl;
 
 // Generate breadcrumbs
 const breadcrumbs = [
@@ -49,18 +44,10 @@ const breadcrumbs = [
     url: baseUrl
   }
 ];
-
-// Add search query to breadcrumbs if present
-if (query) {
-  breadcrumbs.push({
-    name: `Results for "${query}"`,
-    url: canonicalUrl
-  });
-}
 ---
 
 <DirectoryLayout
-  title={query ? `Search results for "${query}" | ${directoryData.data.name}` : `Search | ${directoryData.data.name}`}
+  title={`Search | ${directoryData.data.name}`}
   description={`Search for listings in ${directoryData.data.name}`}
   directoryData={directoryData.data}
   canonicalUrl={canonicalUrl}
@@ -68,69 +55,219 @@ if (query) {
 >
   <div class="container">
     <header class="search-header">
-      <h1>{query ? `Search results for "${query}"` : 'Search Listings'}</h1>
+      <h1 id="search-title">Search Listings</h1>
       
       <div class="search-wrapper">
         <SearchBar 
           directoryId={directoryId}
           placeholder={`Search ${directoryData.data.name}...`}
-          initialQuery={query}
+          initialQuery={initialQuery}
         />
       </div>
     </header>
     
-    {query && (
-      <div class="search-info">
-        <p>Found {filteredListings.length} result{filteredListings.length !== 1 ? 's' : ''}</p>
-        
-        {filteredListings.length > 0 && (
-          <a href={`/${directoryId}/search`} class="clear-search">Clear search</a>
-        )}
-      </div>
-    )}
+    <div id="search-info" class="search-info" style="display: none;">
+      <p id="results-count">Found 0 results</p>
+      <a href={`/${directoryId}/search`} class="clear-search">Clear search</a>
+    </div>
     
-    {query && filteredListings.length > 0 ? (
-      <div class="listing-grid">
-        {filteredListings.map(listing => (
-          <ListingCard 
-            listing={listing.data} 
-            url={`/${directoryId}/${listing.slug.replace(`${directoryId}/`, '')}`}
-            theme={directoryData.data.theme}
-          />
-        ))}
-      </div>
-    ) : query ? (
-      <div class="no-results">
-        <div>
-          <p>No listings found matching "{query}".</p>
-          <p>Try using different keywords or browse by category.</p>
-          <a href={`/${directoryId}/`} class="back-link">Back to homepage</a>
-        </div>
-      </div>
-    ) : (
+    <div id="no-query-message">
       <div class="no-results">
         <div>
           <p>Enter a search term above to find listings.</p>
           <p>You can search by name, description, location, or category.</p>
         </div>
       </div>
-    )}
+    </div>
     
-    {!query && (
-      <div class="browse-categories">
-        <h2>Browse by Category</h2>
-        <div class="category-grid">
-          {directoryData.data.categories.map(category => (
-            <a href={`/${directoryId}/category/${category.id}`} class="category-card">
-              <h3>{category.name}</h3>
-              {category.description && <p>{category.description}</p>}
-            </a>
-          ))}
+    <div id="results-container" class="listing-grid" style="display: none;">
+      <!-- Results will be inserted here by JavaScript -->
+    </div>
+    
+    <div id="no-results-message" style="display: none;">
+      <div class="no-results">
+        <div>
+          <p>No listings found matching your search.</p>
+          <p>Try using different keywords or browse by category.</p>
+          <a href={`/${directoryId}/`} class="back-link">Back to homepage</a>
         </div>
       </div>
-    )}
+    </div>
+    
+    <div id="browse-categories" class="browse-categories">
+      <h2>Browse by Category</h2>
+      <div class="category-grid">
+        {directoryData.data.categories.map(category => (
+          <a href={`/${directoryId}/category/${category.id}`} class="category-card">
+            <h3>{category.name}</h3>
+            {category.description && <p>{category.description}</p>}
+          </a>
+        ))}
+      </div>
+    </div>
   </div>
 </DirectoryLayout>
+
+<script define:vars={{ directoryId }}>
+  // Function to parse URL parameters
+  function getQueryParam(param) {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get(param);
+  }
+  
+  // Function to fetch search results
+  async function fetchSearchResults(query) {
+    try {
+      const response = await fetch(`/api/search?directory=${directoryId}&q=${encodeURIComponent(query)}`);
+      
+      if (!response.ok) {
+        throw new Error(`Search request failed: ${response.status}`);
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching search results:', error);
+      return { results: [] };
+    }
+  }
+  
+  // Function to render a listing card
+  function renderListingCard(listing) {
+    const cardElement = document.createElement('div');
+    cardElement.className = 'listing-card';
+    
+    // Create the URL for the listing
+    const listingUrl = `/${directoryId}/${listing.slug.replace(`${directoryId}/`, '')}`;
+    
+    // Format the image
+    const thumbnail = listing.data.images && listing.data.images.length > 0 
+      ? listing.data.images[0] 
+      : '/placeholder-image.jpg';
+    
+    // Build the HTML for the card (simplified version - customize as needed)
+    cardElement.innerHTML = `
+      <a href="${listingUrl}" class="card-link">
+        <div class="card-image">
+          <img src="${thumbnail}" alt="${listing.data.title}" loading="lazy" />
+          ${listing.data.featured ? '<span class="featured-badge">Featured</span>' : ''}
+        </div>
+        
+        <div class="card-content">
+          <h3 class="card-title">${listing.data.title}</h3>
+          <p class="card-description">${listing.data.description}</p>
+          
+          ${listing.data.rating ? `
+            <div class="card-rating" style="--rating: ${listing.data.rating}">
+              <span class="stars"></span>
+              <span class="rating-value">${listing.data.rating.toFixed(1)}</span>
+            </div>
+          ` : ''}
+          
+          ${listing.data.address ? `
+            <div class="card-address">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                <circle cx="12" cy="10" r="3"></circle>
+              </svg>
+              <span>${listing.data.address.split(',')[0]}</span>
+            </div>
+          ` : ''}
+        </div>
+      </a>
+    `;
+    
+    return cardElement;
+  }
+  
+  // Function to update the UI based on search results
+  function updateSearchUI(query, results) {
+    const searchTitle = document.getElementById('search-title');
+    const searchInfo = document.getElementById('search-info');
+    const resultsCount = document.getElementById('results-count');
+    const resultsContainer = document.getElementById('results-container');
+    const noQueryMessage = document.getElementById('no-query-message');
+    const noResultsMessage = document.getElementById('no-results-message');
+    const browseCategories = document.getElementById('browse-categories');
+    
+    // Update title
+    searchTitle.textContent = query ? `Search results for "${query}"` : 'Search Listings';
+    
+    // Show/hide elements based on query and results
+    if (query) {
+      searchInfo.style.display = 'flex';
+      resultsCount.textContent = `Found ${results.length} result${results.length !== 1 ? 's' : ''}`;
+      noQueryMessage.style.display = 'none';
+      browseCategories.style.display = 'none';
+      
+      if (results.length > 0) {
+        resultsContainer.style.display = 'grid';
+        noResultsMessage.style.display = 'none';
+        
+        // Clear previous results
+        resultsContainer.innerHTML = '';
+        
+        // Add new results
+        results.forEach(listing => {
+          resultsContainer.appendChild(renderListingCard(listing));
+        });
+      } else {
+        resultsContainer.style.display = 'none';
+        noResultsMessage.style.display = 'block';
+      }
+    } else {
+      searchInfo.style.display = 'none';
+      resultsContainer.style.display = 'none';
+      noResultsMessage.style.display = 'none';
+      noQueryMessage.style.display = 'block';
+      browseCategories.style.display = 'block';
+    }
+    
+    // Update URL if needed (without reloading the page)
+    const url = new URL(window.location);
+    if (query) {
+      url.searchParams.set('q', query);
+    } else {
+      url.searchParams.delete('q');
+    }
+    window.history.replaceState({}, '', url);
+  }
+  
+  // Main function to handle search
+  async function handleSearch() {
+    const query = getQueryParam('q');
+    
+    if (query) {
+      // Update search input with query from URL
+      const searchInput = document.getElementById('search-input');
+      if (searchInput) {
+        searchInput.value = query;
+      }
+      
+      // Fetch and display results
+      const data = await fetchSearchResults(query);
+      updateSearchUI(query, data.results || []);
+    } else {
+      // No query, show initial state
+      updateSearchUI('', []);
+    }
+  }
+  
+  // Run search when page loads
+  document.addEventListener('DOMContentLoaded', handleSearch);
+  
+  // Handle form submission
+  document.addEventListener('submit', (event) => {
+    if (event.target.closest('.search-form')) {
+      event.preventDefault();
+      const searchInput = document.getElementById('search-input');
+      if (searchInput && searchInput.value.trim()) {
+        const url = new URL(window.location);
+        url.searchParams.set('q', searchInput.value.trim());
+        window.location.href = url.toString();
+      }
+    }
+  });
+</script>
 
 <style>
   .container {
@@ -248,6 +385,128 @@ if (query) {
     font-size: 0.95rem;
     color: #666;
     margin: 0;
+  }
+  
+  /* Listing card styles */
+  .listing-card {
+    border-radius: var(--card-border-radius, 8px);
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    background-color: white;
+    transition: transform 0.3s, box-shadow 0.3s;
+    height: 100%;
+  }
+  
+  .listing-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 20px rgba(0, 0, 0, 0.15);
+  }
+  
+  .card-link {
+    display: block;
+    color: inherit;
+    text-decoration: none;
+    height: 100%;
+  }
+  
+  .card-image {
+    height: 200px;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .card-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s;
+  }
+  
+  .listing-card:hover .card-image img {
+    transform: scale(1.05);
+  }
+  
+  .featured-badge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background-color: var(--primaryColor);
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 500;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    z-index: 1;
+  }
+  
+  .card-content {
+    padding: 1.5rem;
+  }
+  
+  .card-title {
+    font-size: 1.25rem;
+    margin: 0 0 0.5rem;
+    font-weight: 600;
+    color: #333;
+  }
+  
+  .card-description {
+    font-size: 0.9rem;
+    color: #666;
+    margin-bottom: 1rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    line-height: 1.5;
+  }
+  
+  .card-rating {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-bottom: 1rem;
+  }
+  
+  .stars {
+    position: relative;
+    display: inline-block;
+    font-size: 0.9rem;
+    width: 5em;
+  }
+  
+  .stars::before {
+    content: "★★★★★";
+    color: #ddd;
+  }
+  
+  .stars::after {
+    content: "★★★★★";
+    color: #ffc107;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: calc(var(--rating) / 5 * 100%);
+    overflow: hidden;
+  }
+  
+  .rating-value {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: #666;
+  }
+  
+  .card-address {
+    display: flex;
+    align-items: center;
+    font-size: 0.85rem;
+    color: #666;
+    gap: 0.4rem;
+  }
+  
+  .card-address svg {
+    flex-shrink: 0;
+    color: #999;
   }
   
   @media (max-width: 768px) {

@@ -1,19 +1,40 @@
 {
-    "build": {
-      "command": "npm run build:all",
-      "output_directory": "dist",
-      "root_dir": "/"
+  "build": {
+    "command": "npm run build:cloudflare",
+    "output_directory": "dist",
+    "root_dir": "/"
+  },
+  "headers": {
+    "/*": {
+      "X-Frame-Options": "DENY",
+      "X-Content-Type-Options": "nosniff",
+      "Referrer-Policy": "strict-origin-when-cross-origin",
+      "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+      "X-XSS-Protection": "1; mode=block"
     },
-    "headers": {
-      "/*": {
-        "X-Frame-Options": "DENY",
-        "X-Content-Type-Options": "nosniff"
-      }
+    "/assets/*": {
+      "Cache-Control": "public, max-age=31536000, immutable"
     },
-    "routes": [
-      { "pattern": "/*", "script": null }
-    ],
-    "environment_variables": {
-      "NODE_VERSION": "18"
+    "/*.jpg": {
+      "Cache-Control": "public, max-age=31536000, immutable"
+    },
+    "/*.jpeg": {
+      "Cache-Control": "public, max-age=31536000, immutable"
+    },
+    "/*.png": {
+      "Cache-Control": "public, max-age=31536000, immutable"
+    },
+    "/*.svg": {
+      "Cache-Control": "public, max-age=31536000, immutable"
+    },
+    "/*.webp": {
+      "Cache-Control": "public, max-age=31536000, immutable"
+    },
+    "/api/*": {
+      "Cache-Control": "no-cache"
     }
+  },
+  "environment_variables": {
+    "NODE_VERSION": "18"
   }
+}

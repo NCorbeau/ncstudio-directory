@@ -7,7 +7,9 @@ import {
   getLandingPages,
   getCategoryListings as fetchCategoryListings, // Rename to avoid confusion
   getFeaturedListings as fetchFeaturedListings, // Rename to avoid confusion
-  searchListings
+  getRecentListings as fetchRecentListings, // Rename to avoid confusion
+  searchListings,
+  getRelatedListings as fetchRelatedListings // Rename to avoid confusion
 } from '../lib/nocodb.js';
 
 /**
@@ -117,6 +119,34 @@ export async function getDirectoryLandingPages(directoryId) {
 }
 
 /**
+ * Get a specific landing page by slug
+ * @param {string} directoryId - The directory ID
+ * @param {string} slug - The landing page slug
+ * @returns {Promise<object|null>} The landing page or null if not found
+ */
+export async function getLandingPageBySlug(directoryId, slug) {
+  if (!directoryId || !slug) {
+    console.error(`getLandingPageBySlug: Invalid parameters - directoryId: ${directoryId}, slug: ${slug}`);
+    return null;
+  }
+
+  try {
+    const landingPages = await getLandingPages(directoryId);
+    
+    // Find the landing page with the matching slug
+    const landingPage = landingPages.find(page => {
+      const pageSlug = page.slug.replace(`${directoryId}/`, '');
+      return pageSlug === slug;
+    });
+    
+    return landingPage || null;
+  } catch (error) {
+    console.error(`Error loading landing page ${slug} for directory ${directoryId}:`, error);
+    return null;
+  }
+}
+
+/**
  * Get listings for a specific category in a directory
  * Using the imported function, not creating a recursive call
  */
@@ -198,17 +228,7 @@ export async function getRecentListings(directoryId, limit = 4) {
   }
 
   try {
-    const allListings = await getListings(directoryId);
-    
-    // Sort by updatedAt date (newest first)
-    const sortedListings = [...allListings].sort((a, b) => {
-      const dateA = a.data.updatedAt ? new Date(a.data.updatedAt) : new Date(0);
-      const dateB = b.data.updatedAt ? new Date(b.data.updatedAt) : new Date(0);
-      return dateB - dateA;
-    });
-    
-    // Return the most recent listings
-    return sortedListings.slice(0, limit);
+    return await fetchRecentListings(directoryId, limit); // Using renamed import
   } catch (error) {
     console.error(`Error loading recent listings for ${directoryId}:`, error);
     return [];
@@ -229,39 +249,7 @@ export async function getRelatedListings(directoryId, listing, limit = 3) {
   }
 
   try {
-    // Get all listings except the current one
-    const allListings = await getListings(directoryId);
-    const otherListings = allListings.filter(item => 
-      item.slug !== listing.slug
-    );
-    
-    // Calculate relevance score for each listing
-    const scoredListings = otherListings.map(item => {
-      let score = 0;
-      
-      // Same category gets highest score
-      if (item.data.category === listing.data.category) {
-        score += 5;
-      }
-      
-      // Matching tags add to score
-      if (item.data.tags && listing.data.tags) {
-        const matchingTags = item.data.tags.filter(tag => 
-          listing.data.tags.includes(tag)
-        );
-        score += matchingTags.length * 2;
-      }
-      
-      return { listing: item, score };
-    });
-    
-    // Sort by score and take top results
-    const relatedListings = scoredListings
-      .sort((a, b) => b.score - a.score)
-      .slice(0, limit)
-      .map(item => item.listing);
-    
-    return relatedListings;
+    return await fetchRelatedListings(directoryId, listing, limit); // Using renamed import
   } catch (error) {
     console.error(`Error getting related listings for ${directoryId}:`, error);
     return [];

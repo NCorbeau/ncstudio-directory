@@ -13,14 +13,17 @@ const {
   image,
   canonicalUrl = Astro.url.href,
   structuredData = null,
-  breadcrumbs = []
+  breadcrumbs = [],
+  publishedDate,
+  modifiedDate,
+  author,
+  type = 'website',
+  noindex = false,
+  keywords = []
 } = Astro.props;
 
 // Get the current theme from directory data
 const theme = directoryData.theme || 'default';
-
-// Dynamically import theme CSS
-const themeStylesPath = `../styles/themes/${theme}.css`;
 
 // Generate breadcrumb schema if breadcrumbs are provided
 let combinedStructuredData = structuredData;
@@ -89,12 +92,19 @@ const cssVars = {
   image={image}
   canonicalUrl={canonicalUrl}
   structuredData={combinedStructuredData}
+  directoryData={directoryData}
+  publishedDate={publishedDate}
+  modifiedDate={modifiedDate}
+  author={author}
+  type={type}
+  noindex={noindex}
+  keywords={keywords}
 >
   <!-- Add theme-specific CSS -->
-  <link rel="stylesheet" href={themeStylesPath} />
+  <link slot="head" rel="stylesheet" href={`/${directoryData.id}/styles/themes/${theme}.css`} />
   
   <!-- Add inline CSS variables for theme colors -->
-  <style is:inline define:vars={cssVars}>
+  <style is:inline slot="head" define:vars={cssVars}>
     :root {
       /* Colors are set via define:vars above */
       /* Additional theme variables can be set here */

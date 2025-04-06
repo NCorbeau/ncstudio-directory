@@ -1,23 +1,23 @@
 ---
-import DirectoryLayout from '../../layouts/DirectoryLayout.astro';
-import ListingCard from '../../components/core/ListingCard.astro';
-import SearchBar from '../../components/core/SearchBar.astro';
-import { 
-  getAllDirectories, 
-  getDirectoryConfig, 
+import DirectoryLayout from "../../layouts/DirectoryLayout.astro";
+import ListingCard from "../../components/core/ListingCard.astro";
+import SearchBar from "../../components/core/SearchBar.astro";
+import {
+  getAllDirectories,
+  getDirectoryConfig,
   getFeaturedListings,
   getRecentListings,
-  getDirectoryLandingPages
-} from '../../utils/directory-helpers';
-import { generateDirectoryHomeSchema } from '../../utils/schema-generator';
+  getDirectoryLandingPages,
+} from "../../utils/directory-helpers";
+import { generateDirectoryHomeSchema } from "../../utils/schema-generator";
 
 // Generate all dynamic routes
 export async function getStaticPaths() {
   const directories = await getAllDirectories();
-  
-  return directories.map(directory => ({
+
+  return directories.map((directory) => ({
     params: { directory: directory.id },
-    props: { directoryId: directory.id }
+    props: { directoryId: directory.id },
   }));
 }
 
@@ -29,7 +29,7 @@ const directoryData = await getDirectoryConfig(directoryId);
 
 // Handle case where directory isn't found
 if (!directoryData) {
-  return Astro.redirect('/404');
+  return Astro.redirect("/404");
 }
 
 // Fetch featured listings
@@ -42,15 +42,22 @@ const recentListings = await getRecentListings(directoryId, 4);
 const landingPages = await getDirectoryLandingPages(directoryId);
 
 // Construct canonical URL
-const canonicalUrl = new URL(`/${directoryId}/`, Astro.site || 'http://localhost:4321').toString();
+const canonicalUrl = new URL(
+  `/${directoryId}/`,
+  Astro.site || "http://localhost:4321"
+).toString();
 
 // Generate structured data for home page
-const structuredData = generateDirectoryHomeSchema(directoryData.data, canonicalUrl);
+const structuredData = generateDirectoryHomeSchema(
+  directoryData.data,
+  canonicalUrl
+);
 ---
 
 <DirectoryLayout
   title={directoryData.data.metaTags?.title || directoryData.data.name}
-  description={directoryData.data.metaTags?.description || directoryData.data.description}
+  description={directoryData.data.metaTags?.description ||
+    directoryData.data.description}
   directoryData={directoryData.data}
   canonicalUrl={canonicalUrl}
   structuredData={structuredData}
@@ -59,108 +66,135 @@ const structuredData = generateDirectoryHomeSchema(directoryData.data, canonical
     <div class="container">
       <h1>{directoryData.data.name}</h1>
       <p class="lead">{directoryData.data.description}</p>
-      
+
       <div class="search-container">
-        <SearchBar directoryId={directoryId} placeholder={`Search ${directoryData.data.name}...`} />
+        <SearchBar
+          directoryId={directoryId}
+          placeholder={`Search ${directoryData.data.name}...`}
+        />
       </div>
     </div>
   </section>
-  
+
   <!-- Featured Listings Section -->
-  {featuredListings.length > 0 && (
-    <section class="featured">
-      <div class="container">
-        <div class="section-header">
-          <h2>Featured Listings</h2>
-          <a href={`/${directoryId}/search`} class="view-all">View All</a>
+  {
+    featuredListings.length > 0 && (
+      <section class="featured">
+        <div class="container">
+          <div class="section-header">
+            <h2>Featured Listings</h2>
+            <a href={`/${directoryId}/search`} class="view-all">
+              View All
+            </a>
+          </div>
+
+          <div class="listing-grid">
+            {featuredListings.map((listing) => (
+              <ListingCard
+                listing={listing.data}
+                url={`/${directoryId}/${listing.slug.replace(`${directoryId}/`, "")}`}
+                theme={directoryData.data.theme}
+              />
+            ))}
+          </div>
         </div>
-        
-        <div class="listing-grid">
-          {featuredListings.map(listing => (
-            <ListingCard 
-              listing={listing.data} 
-              url={`/${directoryId}/${listing.slug.replace(`${directoryId}/`, '')}`}
-              theme={directoryData.data.theme}
-            />
-          ))}
-        </div>
-      </div>
-    </section>
-  )}
-  
+      </section>
+    )
+  }
+
   <!-- Categories Section -->
   <section class="categories">
     <div class="container">
       <div class="section-header">
         <h2>Browse by Category</h2>
       </div>
-      
+
       <div class="category-grid">
-        {directoryData.data.categories.map(category => (
-          <a href={`/${directoryId}/category/${category.id}`} class="category-card">
-            <h3>{category.name}</h3>
-            {category.description && <p>{category.description}</p>}
-          </a>
-        ))}
+        {
+          directoryData.data.categories.map((category) => (
+            <a
+              href={`/${directoryId}/category/${category.id}`}
+              class="category-card"
+            >
+              <h3>{category.name}</h3>
+              {category.description && <p>{category.description}</p>}
+            </a>
+          ))
+        }
       </div>
     </div>
   </section>
-  
+
   <!-- Recent Listings Section (if different from featured) -->
-  {recentListings.length > 0 && !recentListings.every(r => featuredListings.some(f => f.slug === r.slug)) && (
-    <section class="recent">
-      <div class="container">
-        <div class="section-header">
-          <h2>Recent Additions</h2>
-        </div>
-        
-        <div class="listing-grid">
-          {recentListings.map(listing => (
-            <ListingCard 
-              listing={listing.data} 
-              url={`/${directoryId}/${listing.slug.replace(`${directoryId}/`, '')}`}
-              theme={directoryData.data.theme}
-            />
-          ))}
-        </div>
-      </div>
-    </section>
-  )}
-  
+  {
+    recentListings.length > 0 &&
+      !recentListings.every((r) =>
+        featuredListings.some((f) => f.slug === r.slug)
+      ) && (
+        <section class="recent">
+          <div class="container">
+            <div class="section-header">
+              <h2>Recent Additions</h2>
+            </div>
+
+            <div class="listing-grid">
+              {recentListings.map((listing) => (
+                <ListingCard
+                  listing={listing.data}
+                  url={`/${directoryId}/${listing.slug.replace(`${directoryId}/`, "")}`}
+                  theme={directoryData.data.theme}
+                />
+              ))}
+            </div>
+          </div>
+        </section>
+      )
+  }
+
   <!-- Landing Pages Section -->
-  {landingPages.length > 0 && (
-    <section class="guides">
-      <div class="container">
-        <div class="section-header">
-          <h2>Guides & Resources</h2>
-        </div>
-        
-        <div class="guides-grid">
-          {landingPages.slice(0, 3).map(page => (
-            <a href={`/${directoryId}/${page.slug.replace(`${directoryId}/`, '')}`} class="guide-card">
-              {page.data.featuredImage && (
-                <div class="guide-image">
-                  <img src={page.data.featuredImage} alt={page.data.title} />
+  {
+    landingPages.length > 0 && (
+      <section class="guides">
+        <div class="container">
+          <div class="section-header">
+            <h2>Guides & Resources</h2>
+          </div>
+
+          <div class="guides-grid">
+            {landingPages.slice(0, 3).map((page) => (
+              <a
+                href={`/${directoryId}/page/${page.slug.replace(`${directoryId}/`, "")}`}
+                class="guide-card"
+              >
+                {page.data.featuredImage && (
+                  <div class="guide-image">
+                    <img src={page.data.featuredImage} alt={page.data.title} />
+                  </div>
+                )}
+                <div class="guide-content">
+                  <h3>{page.data.title}</h3>
+                  <p>{page.data.description}</p>
                 </div>
-              )}
-              <div class="guide-content">
-                <h3>{page.data.title}</h3>
-                <p>{page.data.description}</p>
-              </div>
-            </a>
-          ))}
+              </a>
+            ))}
+          </div>
         </div>
-      </div>
-    </section>
-  )}
-  
+      </section>
+    )
+  }
+
   <!-- About Section with Call-to-Action -->
   <section class="about">
     <div class="container">
       <div class="about-content">
         <h2>About {directoryData.data.name}</h2>
-        <p>Discover the best {directoryData.data.name.toLowerCase()} with our comprehensive directory. Our expert team researches and curates the finest selections to help you find exactly what you're looking for.</p>
-        <a href={`/${directoryId}/search`} class="cta-button">Start Exploring</a>
+        <p>
+          Discover the best {directoryData.data.name.toLowerCase()} with our comprehensive
+          directory. Our expert team researches and curates the finest selections
+          to help you find exactly what you're looking for.
+        </p>
+        <a href={`/${directoryId}/search`} class="cta-button">Start Exploring</a
+        >
       </div>
     </div>
   </section>
@@ -174,107 +208,109 @@ const structuredData = generateDirectoryHomeSchema(directoryData.data, canonical
     padding: 4rem 0;
     text-align: center;
   }
-  
+
   .hero h1 {
     font-size: 3rem;
     margin-bottom: 1rem;
   }
-  
+
   .lead {
     font-size: 1.25rem;
     max-width: 800px;
     margin: 0 auto 2rem;
     opacity: 0.9;
   }
-  
+
   .search-container {
     max-width: 600px;
     margin: 0 auto;
   }
-  
+
   /* Container */
   .container {
     max-width: var(--max-width, 1200px);
     margin: 0 auto;
     padding: 0 1rem;
   }
-  
+
   /* Section styling */
   section {
     padding: 4rem 0;
   }
-  
+
   section:nth-child(even) {
     background-color: #f9f9f9;
   }
-  
+
   .section-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 2rem;
   }
-  
+
   .section-header h2 {
     font-size: 2rem;
     margin: 0;
   }
-  
+
   .view-all {
     color: var(--primaryColor);
     text-decoration: none;
     font-weight: 500;
   }
-  
+
   /* Listing grid */
   .listing-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 2rem;
   }
-  
+
   /* Category cards */
   .category-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
     gap: 1.5rem;
   }
-  
+
   .category-card {
     background-color: white;
     border-radius: 8px;
     padding: 1.5rem;
     text-decoration: none;
     color: #333;
-    transition: transform 0.2s, box-shadow 0.2s;
+    transition:
+      transform 0.2s,
+      box-shadow 0.2s;
     border: 1px solid #eee;
     height: 100%;
   }
-  
+
   .category-card:hover {
     transform: translateY(-5px);
     box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
   }
-  
+
   .category-card h3 {
     font-size: 1.3rem;
     margin-bottom: 0.75rem;
     color: var(--primaryColor);
   }
-  
+
   .category-card p {
     font-size: 0.95rem;
     color: #666;
     margin: 0;
   }
-  
+
   /* Guide cards */
   .guides-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
     gap: 2rem;
   }
-  
+
   .guide-card {
     display: flex;
     flex-direction: column;
@@ -283,74 +319,76 @@ const structuredData = generateDirectoryHomeSchema(directoryData.data, canonical
     overflow: hidden;
     text-decoration: none;
     color: #333;
-    transition: transform 0.2s, box-shadow 0.2s;
+    transition:
+      transform 0.2s,
+      box-shadow 0.2s;
     border: 1px solid #eee;
     height: 100%;
   }
-  
+
   .guide-card:hover {
     transform: translateY(-5px);
     box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
   }
-  
+
   .guide-image {
     height: 200px;
     overflow: hidden;
   }
-  
+
   .guide-image img {
     width: 100%;
     height: 100%;
     object-fit: cover;
     transition: transform 0.3s;
   }
-  
+
   .guide-card:hover .guide-image img {
     transform: scale(1.05);
   }
-  
+
   .guide-content {
     padding: 1.5rem;
     flex-grow: 1;
     display: flex;
     flex-direction: column;
   }
-  
+
   .guide-content h3 {
     font-size: 1.3rem;
     margin-bottom: 0.75rem;
     color: #333;
   }
-  
+
   .guide-content p {
     font-size: 0.95rem;
     color: #666;
     margin: 0;
     flex-grow: 1;
   }
-  
+
   /* About section */
   .about {
     text-align: center;
     background-color: #f5f5f5;
   }
-  
+
   .about-content {
     max-width: 800px;
     margin: 0 auto;
   }
-  
+
   .about-content h2 {
     font-size: 2rem;
     margin-bottom: 1rem;
   }
-  
+
   .about-content p {
     font-size: 1.1rem;
     margin-bottom: 2rem;
     color: #555;
   }
-  
+
   .cta-button {
     display: inline-block;
     background-color: var(--primaryColor);
@@ -359,26 +397,28 @@ const structuredData = generateDirectoryHomeSchema(directoryData.data, canonical
     border-radius: 50px;
     font-weight: 500;
     text-decoration: none;
-    transition: background-color 0.2s, transform 0.2s;
+    transition:
+      background-color 0.2s,
+      transform 0.2s;
   }
-  
+
   .cta-button:hover {
     background-color: var(--primaryColor-dark, #2a549f);
     transform: translateY(-2px);
   }
-  
+
   /* Responsive adjustments */
   @media (max-width: 768px) {
     .hero h1 {
       font-size: 2.5rem;
     }
-    
+
     .section-header {
       flex-direction: column;
       text-align: center;
       gap: 1rem;
     }
-    
+
     .listing-grid,
     .category-grid,
     .guides-grid {

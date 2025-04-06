@@ -3,7 +3,9 @@
  * 
  * This endpoint receives webhooks from NocoDB when content changes,
  * and triggers a GitHub Action to rebuild the affected directory.
+ * It also provides direct cache invalidation for rapid content updates.
  */
+import { clearCache } from '../../lib/nocodb.js';
 
 export async function post({ request }) {
     try {
@@ -48,6 +50,16 @@ export async function post({ request }) {
       console.log(`Identified affected directory: ${affectedDirectory}`);
       console.log(`Operation: ${operation}, Table: ${table}`);
       
+      // Immediately invalidate the cache for faster content updates
+      const cacheType = table === TABLES.directories ? 'directories' : 
+                        table === TABLES.listings ? 'listings' : 
+                        table === TABLES.landingPages ? 'landingPages' : null;
+                        
+      if (cacheType) {
+        clearCache(cacheType, affectedDirectory !== 'all' ? affectedDirectory : null);
+        console.log(`Cache invalidated for ${cacheType} in ${affectedDirectory !== 'all' ? 'directory ' + affectedDirectory : 'all directories'}`);
+      }
+      
       // Get GitHub token from environment variable
       const githubToken = import.meta.env.GITHUB_TOKEN || process.env.GITHUB_TOKEN;
       const githubRepo = import.meta.env.GITHUB_REPO || process.env.GITHUB_REPO || 'yourusername/yourrepo';
@@ -89,7 +101,8 @@ export async function post({ request }) {
       return new Response(
         JSON.stringify({
           success: true,
-          message: `Rebuild triggered for directory: ${affectedDirectory}`
+          message: `Rebuild triggered for directory: ${affectedDirectory}`,
+          cacheInvalidated: cacheType !== null
         }),
         {
           status: 200,

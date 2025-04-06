@@ -1,18 +1,132 @@
 /**
- * Build script for Cloudflare Pages deployment
- * This script builds all directories and creates the necessary structure
+ * Enhanced Build Script for Cloudflare Pages deployment
+ * Supports selective builds based on directory changes
+ * Includes sitemap and robots.txt generation for SEO
  */
 
 import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import yaml from 'js-yaml';
+import dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config();
 
 // Directories
 const BUILD_DIR = path.resolve('./dist');
 const PUBLIC_DIR = path.resolve('./public');
-const HEADERS_FILE = path.resolve('./_headers');
-const REDIRECTS_FILE = path.resolve('./_redirects');
+const FUNCTIONS_DIR = path.resolve('./functions');
+const HEADERS_FILE = path.resolve('./public/_headers');
+const REDIRECTS_FILE = path.resolve('./public/_redirects');
+
+// Get changed files from Git (if in CI environment)
+function getChangedFiles() {
+  try {
+    if (process.env.CF_PAGES_BRANCH) {
+      // Get base branch to compare against
+      const baseBranch = process.env.CF_PAGES_BRANCH === 'main' ? 
+        'origin/main~1' : 'origin/main';
+      
+      // Get changed files between latest commit and base branch
+      const output = execSync(`git diff --name-only ${baseBranch} HEAD`, 
+        { encoding: 'utf8' });
+      
+      return output.split('\n').filter(file => file.trim() !== '');
+    }
+  } catch (error) {
+    console.warn('Error getting changed files:', error);
+  }
+  
+  // Default to empty array if not in CI or error occurred
+  return [];
+}
+
+// Determine which directories need to be built based on changed files
+function getDirectoriesToBuild(changedFiles) {
+  // If no changed files available, build all
+  if (!changedFiles || changedFiles.length === 0) {
+    console.log('No changed files detected, building all directories');
+    return 'all';
+  }
+  
+  // Initialize affected directories
+  const affectedDirectories = new Set();
+  
+  // Map of file paths to directories that should be rebuilt
+  const DEPENDENCIES = {
+    'src/components/core/': ['all'],
+    'src/layouts/': ['all'],
+    'src/lib/': ['all'],
+    'src/utils/': ['all'],
+    'src/styles/global.css': ['all'],
+    'public/styles/global.css': ['all'],
+    'src/styles/themes/elegant.css': ['french-desserts'],
+    'public/styles/themes/elegant.css': ['french-desserts'],
+    'src/styles/themes/nature.css': ['dog-parks-warsaw'],
+    'public/styles/themes/nature.css': ['dog-parks-warsaw'],
+    'functions/': ['all'], // Changes to functions affect all directories
+  };
+  
+  // Check each changed file
+  changedFiles.forEach(file => {
+    // Core file changes affect all directories
+    if (file.startsWith('src/components/core/') || 
+        file.startsWith('src/layouts/') ||
+        file.startsWith('src/lib/') ||
+        file.startsWith('src/utils/') ||
+        file.startsWith('src/styles/global') ||
+        file.startsWith('public/styles/global') ||
+        file.startsWith('functions/')) {
+      affectedDirectories.add('all');
+      return;
+    }
+    
+    // Check specific theme dependencies
+    if (file.includes('elegant.css')) {
+      affectedDirectories.add('french-desserts');
+    }
+    
+    if (file.includes('nature.css')) {
+      affectedDirectories.add('dog-parks-warsaw');
+    }
+    
+    // Directory-specific content changes
+    if (file.includes('/content/')) {
+      // Extract directory from path (assumes content is organized by directory)
+      const dirMatch = file.match(/\/content\/([^\/]+)/);
+      if (dirMatch && dirMatch[1]) {
+        affectedDirectories.add(dirMatch[1]);
+      }
+    }
+    
+    // Check for changes in directory-specific components or layouts
+    if (file.includes('/components/themes/')) {
+      const themeMatch = file.match(/\/themes\/([^\/]+)/);
+      if (themeMatch && themeMatch[1]) {
+        // Map theme name to directory
+        const themeToDir = {
+          'elegant': 'french-desserts',
+          'nature': 'dog-parks-warsaw',
+          'modern': 'modern-directory',
+          'default': 'default'
+        };
+        
+        if (themeToDir[themeMatch[1]]) {
+          affectedDirectories.add(themeToDir[themeMatch[1]]);
+        }
+      }
+    }
+  });
+  
+  // If 'all' is in the set, build everything
+  if (affectedDirectories.has('all')) {
+    return 'all';
+  }
+  
+  // Return array of affected directories
+  return Array.from(affectedDirectories);
+}
 
 // Function to build all directories
 async function buildAllDirectories() {
@@ -21,7 +135,88 @@ async function buildAllDirectories() {
   // Run the normal build-all script
   execSync('node scripts/build-all.js', { stdio: 'inherit' });
   
-  // Copy _headers and _redirects to the dist folder
+  // Copy public files to build folder
+  copyPublicFiles();
+  
+  // Create a directory selector page for the main domain
+  createDirectorySelector();
+  
+  // Generate sitemaps for SEO
+  console.log('Generating sitemaps for SEO...');
+  try {
+    execSync('node scripts/generate-sitemaps.js', { stdio: 'inherit' });
+    console.log('Sitemaps generated successfully');
+  } catch (error) {
+    console.error('Error generating sitemaps:', error);
+    // Don't fail the build for sitemap errors
+  }
+  
+  // Generate robots.txt files
+  console.log('Generating robots.txt files...');
+  try {
+    execSync('node scripts/generate-robots.js', { stdio: 'inherit' });
+    console.log('Robots.txt files generated successfully');
+  } catch (error) {
+    console.error('Error generating robots.txt files:', error);
+    // Don't fail the build for robots.txt errors
+  }
+  
+  console.log('Cloudflare Pages build completed successfully!');
+}
+
+// Function to build selective directories
+async function buildSelectiveDirectories(directories) {
+  console.log(`Building selective directories: ${directories.join(', ')}...`);
+  
+  for (const dir of directories) {
+    console.log(`Building directory: ${dir}`);
+    
+    // Set environment variable for the build
+    process.env.CURRENT_DIRECTORY = dir;
+    
+    // Run the build for this directory
+    try {
+      execSync(`node scripts/selective-build.js ${dir}`, { 
+        stdio: 'inherit',
+        env: {...process.env}
+      });
+    } catch (error) {
+      console.error(`Error building directory ${dir}:`, error);
+    }
+  }
+  
+  // Copy public files to build folder
+  copyPublicFiles();
+  
+  // Create a directory selector page for the main domain
+  createDirectorySelector();
+  
+  // Generate sitemaps for SEO
+  console.log('Generating sitemaps for SEO...');
+  try {
+    execSync('node scripts/generate-sitemaps.js', { stdio: 'inherit' });
+    console.log('Sitemaps generated successfully');
+  } catch (error) {
+    console.error('Error generating sitemaps:', error);
+    // Don't fail the build for sitemap errors
+  }
+  
+  // Generate robots.txt files
+  console.log('Generating robots.txt files...');
+  try {
+    execSync('node scripts/generate-robots.js', { stdio: 'inherit' });
+    console.log('Robots.txt files generated successfully');
+  } catch (error) {
+    console.error('Error generating robots.txt files:', error);
+    // Don't fail the build for robots.txt errors
+  }
+  
+  console.log('Selective build completed successfully!');
+}
+
+// Copy public files to the dist directory
+function copyPublicFiles() {
+  // Copy _headers and _redirects to the dist folder if they exist
   if (fs.existsSync(HEADERS_FILE)) {
     fs.copyFileSync(HEADERS_FILE, path.join(BUILD_DIR, '_headers'));
     console.log('Copied _headers file to dist folder');
@@ -32,10 +227,38 @@ async function buildAllDirectories() {
     console.log('Copied _redirects file to dist folder');
   }
   
-  // Create a directory selector page for the main domain
-  createDirectorySelector();
-  
-  console.log('Cloudflare Pages build completed successfully!');
+  // Ensure functions directory is properly set up
+  if (fs.existsSync(FUNCTIONS_DIR)) {
+    // Create the functions directory in the output if it doesn't exist
+    const outputFunctionsDir = path.join(BUILD_DIR, 'functions');
+    if (!fs.existsSync(outputFunctionsDir)) {
+      fs.mkdirSync(outputFunctionsDir, { recursive: true });
+    }
+    
+    // Function to copy directory recursively
+    const copyDir = (src, dest) => {
+      if (!fs.existsSync(dest)) {
+        fs.mkdirSync(dest, { recursive: true });
+      }
+      
+      const entries = fs.readdirSync(src, { withFileTypes: true });
+      
+      for (const entry of entries) {
+        const srcPath = path.join(src, entry.name);
+        const destPath = path.join(dest, entry.name);
+        
+        if (entry.isDirectory()) {
+          copyDir(srcPath, destPath);
+        } else {
+          fs.copyFileSync(srcPath, destPath);
+        }
+      }
+    };
+    
+    // Copy the functions
+    copyDir(FUNCTIONS_DIR, outputFunctionsDir);
+    console.log('Copied functions to dist folder');
+  }
 }
 
 // Create a directory selector page for the main domain
@@ -78,6 +301,7 @@ function createDirectorySelector() {
         const folderPath = path.join(BUILD_DIR, folder);
         return fs.statSync(folderPath).isDirectory() && 
           folder !== 'directory-selector' &&
+          folder !== 'functions' &&
           !folder.startsWith('.');
       });
     
@@ -197,8 +421,30 @@ function createDirectorySelector() {
   console.log('Created directory selector page');
 }
 
+// Main build function
+async function runBuild() {
+  // Create build directory if it doesn't exist
+  if (!fs.existsSync(BUILD_DIR)) {
+    fs.mkdirSync(BUILD_DIR, { recursive: true });
+  }
+  
+  // Get changed files
+  const changedFiles = getChangedFiles();
+  console.log('Changed files:', changedFiles);
+  
+  // Determine which directories to build
+  const directoriesToBuild = getDirectoriesToBuild(changedFiles);
+  
+  // Build the appropriate directories
+  if (directoriesToBuild === 'all') {
+    await buildAllDirectories();
+  } else {
+    await buildSelectiveDirectories(directoriesToBuild);
+  }
+}
+
 // Run the build process
-buildAllDirectories().catch(err => {
+runBuild().catch(err => {
   console.error('Build failed:', err);
   process.exit(1);
 });

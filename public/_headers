@@ -1,17 +1,25 @@
-# Global headers for all pages
+# Global security headers for all pages
 /*
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
-  Permissions-Policy: camera=(), microphone=(), geolocation=()
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), interest-cohort=()
   X-XSS-Protection: 1; mode=block
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'
+  Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
 
-# Cache static assets for a year
+# API endpoints should not be cached
+/api/*
+  Cache-Control: no-store, max-age=0
+  Access-Control-Allow-Origin: *
+  Access-Control-Allow-Methods: GET, POST, OPTIONS
+  Access-Control-Allow-Headers: Content-Type
+
+# Static assets with long cache (1 year)
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
 
-# Cache images for a year
+# Static images with long cache
 /*.jpg
   Cache-Control: public, max-age=31536000, immutable
 /*.jpeg
@@ -24,3 +32,29 @@
   Cache-Control: public, max-age=31536000, immutable
 /*.webp
   Cache-Control: public, max-age=31536000, immutable
+/*.avif
+  Cache-Control: public, max-age=31536000, immutable
+/*.ico
+  Cache-Control: public, max-age=31536000, immutable
+
+# CSS and JavaScript with long cache
+/*.css
+  Cache-Control: public, max-age=31536000, immutable
+/*.js
+  Cache-Control: public, max-age=31536000, immutable
+
+# Fonts with long cache
+/*.woff
+  Cache-Control: public, max-age=31536000, immutable
+/*.woff2
+  Cache-Control: public, max-age=31536000, immutable
+/*.ttf
+  Cache-Control: public, max-age=31536000, immutable
+/*.otf
+  Cache-Control: public, max-age=31536000, immutable
+
+# HTML pages with shorter cache (5 minutes)
+/*.html
+  Cache-Control: public, max-age=300
+/*/
+  Cache-Control: public, max-age=300

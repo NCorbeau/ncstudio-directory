@@ -19,10 +19,15 @@ try {
 const siteName = directoryData?.data?.name || 'Directory Listing';
 const description = directoryData?.data?.description || 'Discover the best options in our comprehensive directory.';
 
+if (!directoryData) {
+  console.error(`Directory data not found for ID: ${directoryId}`);
+}
+
 ---
 
 <BaseLayout
   title={`Page Not Found | ${siteName}`}
+  directoryData={directoryData?.data}
   description={description}
 >
   <main class="not-found">
