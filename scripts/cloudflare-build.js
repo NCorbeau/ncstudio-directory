@@ -24,23 +24,54 @@ const REDIRECTS_FILE = path.resolve('./public/_redirects');
 function getChangedFiles() {
   try {
     if (process.env.CF_PAGES_BRANCH) {
-      // Get base branch to compare against
-      const baseBranch = process.env.CF_PAGES_BRANCH === 'main' ? 
-        'origin/main~1' : 'origin/main';
-      console.log(`Base branch for comparison: ${baseBranch}`);
-      
-      // Get changed files between latest commit and base branch
-      console.log('git diff --name-only', baseBranch, 'HEAD');
-      const output = execSync(`git diff --name-only ${baseBranch} HEAD`, 
-        { encoding: 'utf8' });
-      
-      return output.split('\n').filter(file => file.trim() !== '');
+      // Try different approaches to get changed files
+      try {
+        // Attempt to fetch more history if needed
+        execSync('git fetch --unshallow || true', { stdio: 'ignore' });
+        
+        // For a full build, just return empty array which will trigger building all directories
+        if (process.env.CF_PAGES_COMMIT_MESSAGE && 
+            process.env.CF_PAGES_COMMIT_MESSAGE.includes('[full-build]')) {
+          console.log('Full build requested via commit message');
+          return [];
+        }
+        
+        let changedFiles = [];
+        
+        // Try different git commands to get changed files
+        try {
+          // First attempt: compare with previous commit
+          changedFiles = execSync('git diff --name-only HEAD~1 HEAD', { encoding: 'utf8' })
+            .split('\n')
+            .filter(file => file.trim() !== '');
+          
+          console.log('Got changed files using HEAD~1');
+        } catch (e) {
+          try {
+            // Second attempt: Get files changed in the latest commit
+            changedFiles = execSync('git show --name-only --pretty="" HEAD', { encoding: 'utf8' })
+              .split('\n')
+              .filter(file => file.trim() !== '');
+            
+            console.log('Got changed files using git show HEAD');
+          } catch (e2) {
+            console.log('Could not determine changed files, will build all directories');
+            return [];
+          }
+        }
+        
+        return changedFiles;
+      } catch (error) {
+        console.warn('Error getting detailed git info:', error);
+        return [];
+      }
     }
   } catch (error) {
-    console.warn('Error getting changed files:', error);
+    console.warn('Error in getChangedFiles:', error);
   }
   
   // Default to empty array if not in CI or error occurred
+  console.log('No changed files information available, building all directories');
   return [];
 }
 
