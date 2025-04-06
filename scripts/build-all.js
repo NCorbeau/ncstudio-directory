@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
 import { getDirectories, getDirectory } from '../src/lib/nocodb.js';
+import { cleanupNestedDirectories } from './cleanup-build.js';
 
 // Load environment variables
 dotenv.config();
@@ -63,6 +64,7 @@ async function buildDirectory(directoryId) {
     
     // Add this line to copy public assets after the build
     copyPublicAssetsToDirectory(directoryId);
+    // cleanupNestedDirectories(directoryId);
     
     console.log(`Build complete for ${directoryId}`);
     

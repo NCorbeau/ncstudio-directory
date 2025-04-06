@@ -28,12 +28,16 @@ const {
   publishedDate,
   modifiedDate,
   author,
-  directoryData,
+  directoryData = {}, // Provide default empty object
   structuredData,
   noindex = false,
   keywords = []
 } = Astro.props;
 
+
+// Handle the case when directoryData might be incomplete or missing
+const metaTags = directoryData?.metaTags || {};
+const siteName = directoryData?.name || 'Directory';
 
 // Default image if none provided
 const ogImage = image || (directoryData?.logo || '/default-og-image.jpg');
@@ -44,17 +48,14 @@ const ogImageUrl = new URL(ogImage, Astro.site || canonicalUrl).toString();
 // Combine keywords from props and directory meta tags
 const allKeywords = [
   ...keywords,
-  ...(directoryData.metaTags?.keywords || [])
+  ...(metaTags?.keywords || [])
 ].filter(Boolean);
 
-// Site name from directory
-const siteName = directoryData.name;
-
 // Determine language
-const language = directoryData.metaTags?.language || 'en';
+const language = metaTags?.language || 'en';
 
 // Check if URL is using a custom domain
-const isCustomDomain = canonicalUrl.includes(directoryData.domain || '');
+const isCustomDomain = directoryData?.domain ? canonicalUrl.includes(directoryData.domain) : false;
 ---
 
 <!-- Basic Meta Tags -->
@@ -85,7 +86,7 @@ const isCustomDomain = canonicalUrl.includes(directoryData.domain || '');
 <meta name="twitter:title" content={title} />
 <meta name="twitter:description" content={description} />
 <meta name="twitter:image" content={ogImageUrl} />
-{directoryData.metaTags?.twitterHandle && <meta name="twitter:site" content={directoryData.metaTags.twitterHandle} />}
+{metaTags?.twitterHandle && <meta name="twitter:site" content={metaTags.twitterHandle} />}
 
 <!-- Language and locale -->
 <meta property="og:locale" content={language} />
@@ -101,7 +102,7 @@ const isCustomDomain = canonicalUrl.includes(directoryData.domain || '');
 )}
 
 <!-- Custom directory meta tags if specified -->
-{directoryData.metaTags?.custom?.map(tag => (
+{metaTags?.custom?.map(tag => (
   <meta name={tag.name} content={tag.content} />
 ))}
 
@@ -109,4 +110,4 @@ const isCustomDomain = canonicalUrl.includes(directoryData.domain || '');
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 
 <!-- Sitemap reference -->
-<link rel="sitemap" type="application/xml" href={isCustomDomain ? "/sitemap.xml" : `/${directoryData.id}/sitemap.xml`} />
+<link rel="sitemap" type="application/xml" href={isCustomDomain ? "/sitemap.xml" : `/sitemap.xml`} />

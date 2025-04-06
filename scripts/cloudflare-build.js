@@ -12,6 +12,7 @@ import dotenv from 'dotenv';
 import { getDirectories } from '../src/lib/nocodb.js';
 import { generateAllSitemaps } from './generate-sitemaps.js';
 import { generateAllRobots } from './generate-robots.js';
+import { cleanupNestedDirectories } from './cleanup-build.js';
 
 // Load environment variables
 dotenv.config();
@@ -221,6 +222,7 @@ async function buildAllDirectories() {
   // Copy public assets to each directory
   for (const dir of directories) {
     copyPublicAssetsToDirectory(dir);
+    // cleanupNestedDirectories(dir);
   }
   
   // Copy public files to build folder
