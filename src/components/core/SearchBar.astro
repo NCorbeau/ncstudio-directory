@@ -3,7 +3,7 @@ const { directoryId, placeholder = "Search...", initialQuery = "" } = Astro.prop
 ---
 
 <div class="search-container">
-  <form action={`/${directoryId}/search`} method="get" class="search-form">
+  <form action={`/search`} method="get" class="search-form">
     <input 
       type="text" 
       name="q" 

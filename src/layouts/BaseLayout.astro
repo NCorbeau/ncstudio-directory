@@ -26,7 +26,7 @@ const {
   image,
   canonicalUrl = Astro.url.href,
   structuredData = null,
-  directoryData,
+  directoryData, // This might be incomplete or undefined in some cases
   publishedDate,
   modifiedDate,
   author,
@@ -38,6 +38,16 @@ const {
 // Get the current directory ID from the URL or environment
 const urlParts = Astro.url.pathname.split('/');
 const directoryId = urlParts[1] || import.meta.env.CURRENT_DIRECTORY || 'default';
+
+// Ensure directoryData is always at least an empty object to prevent errors
+const safeDirectoryData = directoryData || {
+  name: 'Directory Listing',
+  description: description,
+  metaTags: {},
+  theme: 'default',
+  primaryColor: '#3366cc',
+  secondaryColor: '#ff9900'
+};
 ---
 
 <!DOCTYPE html>
@@ -48,7 +58,7 @@ const directoryId = urlParts[1] || import.meta.env.CURRENT_DIRECTORY || 'default
       description={description}
       canonicalUrl={canonicalUrl}
       image={image}
-      directoryData={directoryData}
+      directoryData={safeDirectoryData}
       structuredData={structuredData}
       publishedDate={publishedDate}
       modifiedDate={modifiedDate}
@@ -81,13 +91,13 @@ const directoryId = urlParts[1] || import.meta.env.CURRENT_DIRECTORY || 'default
     <slot />
     
     <!-- Basic analytics script (replace with your preferred solution) -->
-    <script is:inline>
+    <script is:inline define:vars={{ directoryId }}>
       // Simple page view tracking - you would replace this with your analytics provider
       document.addEventListener('DOMContentLoaded', () => {
         const sendPageView = () => {
           if (typeof window._analytics !== 'undefined') {
             window._analytics.trackPageView({
-              directoryId: '{ directoryId }',
+              directoryId: directoryId,
               path: window.location.pathname,
               title: document.title
             });

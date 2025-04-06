@@ -5,7 +5,10 @@ import { getCurrentDirectoryId, getDirectoryConfig } from '../utils/directory-he
 
 // Get the current directory from URL or environment
 const currentUrl = Astro.url;
-const directoryId = getCurrentDirectoryId(currentUrl);
+
+// For 404 pages, directoryId can't be extracted from the URL reliably
+// So we use the environment variable directly
+const directoryId = import.meta.env.CURRENT_DIRECTORY || 'default';
 
 // Get directory configuration if available
 let directoryData = null;
@@ -15,19 +18,28 @@ try {
   console.error('Error loading directory config for 404 page:', error);
 }
 
-// Fallback values if directory not found
+// Fallback values if directory not found or has no data
 const siteName = directoryData?.data?.name || 'Directory Listing';
 const description = directoryData?.data?.description || 'Discover the best options in our comprehensive directory.';
 
-if (!directoryData) {
-  console.error(`Directory data not found for ID: ${directoryId}`);
-}
+// Create a minimal directoryData object if it's not available
+// This prevents errors when trying to access nested properties
+const fallbackDirectoryData = {
+  name: siteName,
+  description: description,
+  theme: 'default',
+  primaryColor: '#3366cc',
+  metaTags: {},
+  categories: []
+};
 
+// Use the found directoryData or the fallback
+const directoryDataToUse = directoryData?.data || fallbackDirectoryData;
 ---
 
 <BaseLayout
   title={`Page Not Found | ${siteName}`}
-  directoryData={directoryData?.data}
+  directoryData={directoryDataToUse}
   description={description}
 >
   <main class="not-found">
@@ -38,7 +50,7 @@ if (!directoryData) {
       <p>It might have been moved, deleted, or never existed in the first place.</p>
       
       <div class="actions">
-        <a href={`/${directoryId}/`} class="button">Go to Homepage</a>
+        <a href={`/`} class="button">Go to Homepage</a>
         <button onclick="window.history.back()" class="button button-outline">Go Back</button>
       </div>
     </div>

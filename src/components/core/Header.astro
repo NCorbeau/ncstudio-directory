@@ -8,8 +8,7 @@ const directoryId = currentPath.split('/')[1];
 // Get directory data to access categories
 let directoryData;
 try {
-  const directory = await getDirectoryConfig(listing.directory);
-  directoryData = directories.find(dir => dir.id === directoryId)?.data;
+  directoryData = await getDirectoryConfig(directoryId);
 } catch (error) {
   console.error(`Error loading directory data for ${directoryId}:`, error);
 }
@@ -22,11 +21,11 @@ const categories = directoryData?.categories || [];
   <div class="container">
     <div class="logo-container">
       {logo ? (
-        <a href={`/${directoryId}/`} class="logo">
+        <a href={`/`} class="logo">
           <img src={logo} alt={`${directoryName} logo`} />
         </a>
       ) : (
-        <a href={`/${directoryId}/`} class="site-name">
+        <a href={`/`} class="site-name">
           {directoryName}
         </a>
       )}
@@ -35,15 +34,15 @@ const categories = directoryData?.categories || [];
     <nav class="main-nav">
       <ul>
         <li>
-          <a href={`/${directoryId}/`} class={currentPath === `/${directoryId}/` ? 'active' : ''}>
+          <a href={`/`} class={currentPath === `/` ? 'active' : ''}>
             Home
           </a>
         </li>
         {categories.slice(0, 4).map(category => (
           <li>
             <a 
-              href={`/${directoryId}/category/${category.id}`}
-              class={currentPath === `/${directoryId}/category/${category.id}` ? 'active' : ''}
+              href={`/category/${category.id}`}
+              class={currentPath === `/category/${category.id}` ? 'active' : ''}
             >
               {category.name}
             </a>
@@ -55,7 +54,7 @@ const categories = directoryData?.categories || [];
             <ul class="dropdown">
               {categories.slice(4).map(category => (
                 <li>
-                  <a href={`/${directoryId}/category/${category.id}`}>
+                  <a href={`/category/${category.id}`}>
                     {category.name}
                   </a>
                 </li>
@@ -64,7 +63,7 @@ const categories = directoryData?.categories || [];
           </li>
         )}
         <li>
-          <a href={`/${directoryId}/search`} class="search-link">
+          <a href={`/search`} class="search-link">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="11" cy="11" r="8"></circle>
               <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
