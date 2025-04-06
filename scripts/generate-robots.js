@@ -112,7 +112,7 @@ Sitemap: ${BASE_DOMAIN}/sitemap.xml
 /**
  * Main function to generate all robots.txt files
  */
-async function generateAllRobots() {
+export async function generateAllRobots() {
   try {
     // Get all directories
     const directories = await getDirectories();

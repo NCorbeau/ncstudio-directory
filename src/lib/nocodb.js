@@ -62,8 +62,8 @@ const FIELD_MAPPINGS = {
   'Tags': 'tags',
   'Opening_Hours': 'openingHours',
   'Custom_Fields': 'customFields',
-  'Created_At': 'createdAt',
-  'Updated_At': 'updatedAt',
+  'CreatedAt': 'createdAt',
+  'UpdatedAt': 'updatedAt',
   
   // Landing Pages table
   'Featured_Image': 'featuredImage',
@@ -218,7 +218,13 @@ async function fetchFromNocoDB(endpoint, params = {}, ttl = cacheTTL.directories
   const url = `${NOCODB_API_URL}${endpoint}${queryString ? `?${queryString}` : ''}`;
   
   try {
-    const response = await cachedFetch(url, { headers }, ttl);
+    // Add agent: false to prevent connection hanging
+    const fetchOptions = { 
+      headers, 
+      agent: false // This prevents connection hanging by using a new agent for each request 
+    };
+    
+    const response = await cachedFetch(url, fetchOptions, ttl);
     
     // Handle pagination if fetchAll is true
     if (fetchAll && response.pageInfo && response.pageInfo.hasNextPage) {
@@ -238,7 +244,7 @@ async function fetchFromNocoDB(endpoint, params = {}, ttl = cacheTTL.directories
           .join('&');
         
         const nextPageUrl = `${NOCODB_API_URL}${endpoint}?${nextPageQueryString}`;
-        const nextPageResponse = await cachedFetch(nextPageUrl, { headers }, ttl);
+        const nextPageResponse = await cachedFetch(nextPageUrl, fetchOptions, ttl);
         
         if (nextPageResponse.list && nextPageResponse.list.length > 0) {
           allResults.push(...nextPageResponse.list);
@@ -335,6 +341,7 @@ export async function getDirectory(id) {
     return {
       id: directory.id,
       data: {
+        id: directory.id,
         name: directory.name,
         description: directory.description,
         domain: directory.domain,
@@ -657,7 +664,7 @@ export async function getRecentListings(directoryId, limit = 4) {
     where: {
       directory: { eq: directoryId }
     },
-    sort: '-Updated_At',
+    sort: '-UpdatedAt',
     limit
   }, cacheTTL.listings);
   

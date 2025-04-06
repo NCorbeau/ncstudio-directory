@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
 import { getDirectories, getDirectory } from '../src/lib/nocodb.js';
+import { copyPublicAssetsToDirectory } from './build-utils.js';
 
 // Load environment variables
 dotenv.config();
@@ -100,6 +101,9 @@ async function buildDirectory(directoryId) {
       env: {...process.env}
     });
     
+    // Add this line to copy public assets after the build
+    copyPublicAssetsToDirectory(directoryId);
+    
     console.log(`Build complete for ${directoryId}`);
     return true;
   } catch (error) {
@@ -135,6 +139,9 @@ async function runSelectiveBuild() {
     console.error(`Failed to build ${failures.length} directories`);
     process.exit(1);
   }
+
+  console.log('Selective build completed successfully!');
+  process.exit(0);
 }
 
 // Create an index file listing all built directories

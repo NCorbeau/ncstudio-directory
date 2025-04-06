@@ -9,6 +9,9 @@ import fs from 'fs';
 import path from 'path';
 import yaml from 'js-yaml';
 import dotenv from 'dotenv';
+import { getDirectories } from '../src/lib/nocodb.js';
+import { generateAllSitemaps } from './generate-sitemaps.js';
+import { generateAllRobots } from './generate-robots.js';
 
 // Load environment variables
 dotenv.config();
@@ -19,6 +22,42 @@ const PUBLIC_DIR = path.resolve('./public');
 const FUNCTIONS_DIR = path.resolve('./functions');
 const HEADERS_FILE = path.resolve('./public/_headers');
 const REDIRECTS_FILE = path.resolve('./public/_redirects');
+
+// Copy all public assets to a directory's build output
+function copyPublicAssetsToDirectory(directoryId) {
+  const publicDir = path.resolve('./public');
+  const targetDir = path.resolve(`./dist/${directoryId}`);
+  
+  console.log(`Copying public assets from ${publicDir} to ${targetDir}...`);
+  
+  // Function to copy directory recursively
+  const copyDir = (src, dest) => {
+    if (!fs.existsSync(dest)) {
+      fs.mkdirSync(dest, { recursive: true });
+    }
+    
+    const entries = fs.readdirSync(src, { withFileTypes: true });
+    
+    for (const entry of entries) {
+      const srcPath = path.join(src, entry.name);
+      const destPath = path.join(dest, entry.name);
+      
+      // Skip _headers and _redirects as they're handled separately
+      if (entry.name === '_headers' || entry.name === '_redirects') {
+        continue;
+      }
+      
+      if (entry.isDirectory()) {
+        copyDir(srcPath, destPath);
+      } else {
+        fs.copyFileSync(srcPath, destPath);
+      }
+    }
+  };
+  
+  copyDir(publicDir, targetDir);
+  console.log(`Copied public assets to ${directoryId}`);
+}
 
 // Get changed files from Git (if in CI environment)
 function getChangedFiles() {
@@ -168,6 +207,22 @@ async function buildAllDirectories() {
   // Run the normal build-all script
   execSync('node scripts/build-all.js', { stdio: 'inherit' });
   
+  // After building all directories, copy public assets to each directory
+  // First get a list of all directories in the dist folder
+  const directories = fs.readdirSync(BUILD_DIR)
+    .filter(dir => {
+      const dirPath = path.join(BUILD_DIR, dir);
+      return fs.statSync(dirPath).isDirectory() && 
+        dir !== 'directory-selector' &&
+        dir !== 'functions' &&
+        !dir.startsWith('.');
+    });
+    
+  // Copy public assets to each directory
+  for (const dir of directories) {
+    copyPublicAssetsToDirectory(dir);
+  }
+  
   // Copy public files to build folder
   copyPublicFiles();
   
@@ -177,7 +232,8 @@ async function buildAllDirectories() {
   // Generate sitemaps for SEO
   console.log('Generating sitemaps for SEO...');
   try {
-    execSync('node scripts/generate-sitemaps.js', { stdio: 'inherit' });
+    // Import the sitemap generator function and call it directly
+    await generateAllSitemaps();
     console.log('Sitemaps generated successfully');
   } catch (error) {
     console.error('Error generating sitemaps:', error);
@@ -187,7 +243,8 @@ async function buildAllDirectories() {
   // Generate robots.txt files
   console.log('Generating robots.txt files...');
   try {
-    execSync('node scripts/generate-robots.js', { stdio: 'inherit' });
+    // Import the robots.txt generator function and call it directly
+    await generateAllRobots();
     console.log('Robots.txt files generated successfully');
   } catch (error) {
     console.error('Error generating robots.txt files:', error);
@@ -197,7 +254,7 @@ async function buildAllDirectories() {
   console.log('Cloudflare Pages build completed successfully!');
 }
 
-// Function to build selective directories
+// Also update the same approach in buildSelectiveDirectories function
 async function buildSelectiveDirectories(directories) {
   console.log(`Building selective directories: ${directories.join(', ')}...`);
   
@@ -213,6 +270,10 @@ async function buildSelectiveDirectories(directories) {
         stdio: 'inherit',
         env: {...process.env}
       });
+      
+      // Add this line to copy public assets after each directory build
+      copyPublicAssetsToDirectory(dir);
+      
     } catch (error) {
       console.error(`Error building directory ${dir}:`, error);
     }
@@ -227,7 +288,8 @@ async function buildSelectiveDirectories(directories) {
   // Generate sitemaps for SEO
   console.log('Generating sitemaps for SEO...');
   try {
-    execSync('node scripts/generate-sitemaps.js', { stdio: 'inherit' });
+    // Import the sitemap generator function and call it directly
+    await generateAllSitemaps();
     console.log('Sitemaps generated successfully');
   } catch (error) {
     console.error('Error generating sitemaps:', error);
@@ -237,7 +299,8 @@ async function buildSelectiveDirectories(directories) {
   // Generate robots.txt files
   console.log('Generating robots.txt files...');
   try {
-    execSync('node scripts/generate-robots.js', { stdio: 'inherit' });
+    // Import the robots.txt generator function and call it directly
+    await generateAllRobots();
     console.log('Robots.txt files generated successfully');
   } catch (error) {
     console.error('Error generating robots.txt files:', error);
@@ -471,6 +534,9 @@ async function runBuild() {
     
     // Create a marker file to indicate first build is done
     fs.writeFileSync(path.join(BUILD_DIR, 'first-build-completed'), 'Build completed at: ' + new Date().toISOString());
+
+    console.log('First build completed successfully!');
+    process.exit(0);
     return;
   }
   
@@ -487,6 +553,9 @@ async function runBuild() {
   } else {
     await buildSelectiveDirectories(directoriesToBuild);
   }
+
+  console.log('Build completed successfully!');
+  process.exit(0);
 }
 
 // Run the build process

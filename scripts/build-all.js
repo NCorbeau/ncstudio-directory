@@ -16,6 +16,37 @@ if (!fs.existsSync(BUILD_DIR)) {
   fs.mkdirSync(BUILD_DIR);
 }
 
+// Function to copy all public assets to a directory's build output
+function copyPublicAssetsToDirectory(directoryId) {
+  const publicDir = path.resolve('./public');
+  const targetDir = path.resolve(`./dist/${directoryId}`);
+  
+  console.log(`Copying public assets from ${publicDir} to ${targetDir}...`);
+  
+  // Function to copy directory recursively
+  const copyDir = (src, dest) => {
+    if (!fs.existsSync(dest)) {
+      fs.mkdirSync(dest, { recursive: true });
+    }
+    
+    const entries = fs.readdirSync(src, { withFileTypes: true });
+    
+    for (const entry of entries) {
+      const srcPath = path.join(src, entry.name);
+      const destPath = path.join(dest, entry.name);
+      
+      if (entry.isDirectory()) {
+        copyDir(srcPath, destPath);
+      } else {
+        fs.copyFileSync(srcPath, destPath);
+      }
+    }
+  };
+  
+  copyDir(publicDir, targetDir);
+  console.log(`Copied public assets to ${directoryId}`);
+}
+
 // Function to build a specific directory
 async function buildDirectory(directoryId) {
   console.log(`Building directory: ${directoryId}...`);
@@ -29,6 +60,9 @@ async function buildDirectory(directoryId) {
       stdio: 'inherit',
       env: {...process.env}
     });
+    
+    // Add this line to copy public assets after the build
+    copyPublicAssetsToDirectory(directoryId);
     
     console.log(`Build complete for ${directoryId}`);
     
@@ -119,6 +153,10 @@ async function buildAll() {
       console.error(`Failed to build ${failures.length} directories`);
       process.exit(1);
     }
+
+    // Add explicit exit on success
+    console.log('Build completed successfully!');
+    process.exit(0);
   } catch (error) {
     console.error('Build process failed:', error);
     process.exit(1);

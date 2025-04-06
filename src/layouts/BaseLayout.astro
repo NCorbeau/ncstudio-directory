@@ -38,7 +38,6 @@ const {
 // Get the current directory ID from the URL or environment
 const urlParts = Astro.url.pathname.split('/');
 const directoryId = urlParts[1] || import.meta.env.CURRENT_DIRECTORY || 'default';
-
 ---
 
 <!DOCTYPE html>
@@ -60,10 +59,20 @@ const directoryId = urlParts[1] || import.meta.env.CURRENT_DIRECTORY || 'default
     />
     
     <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href={`/${directoryId}/favicon.svg`} />
+    {(() => {
+      const faviconPath = import.meta.env.DEV 
+        ? `/favicon.svg` 
+        : `/favicon.svg`;
+      return <link rel="icon" type="image/svg+xml" href={faviconPath} />;
+    })()}
     
     <!-- Global base styles -->
-    <link rel="stylesheet" href={`/${directoryId}/styles/global.css`} />
+    {(() => {
+      const globalCssPath = import.meta.env.DEV 
+        ? `/styles/global.css` 
+        : `/styles/global.css`;
+      return <link rel="stylesheet" href={globalCssPath} />;
+    })()}
     
     <!-- Slot for additional head content -->
     <slot name="head" />

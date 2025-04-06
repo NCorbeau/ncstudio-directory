@@ -1,4 +1,6 @@
 ---
+import { getDirectoryConfig } from "@/utils/directory-helpers";
+
 const { listing, url } = Astro.props;
 
 // Format the first image as the thumbnail
@@ -10,8 +12,7 @@ const thumbnail = listing.images && listing.images.length > 0
 let categoryName = '';
 if (listing.category) {
   try {
-    const { getCollection } = await import('astro:content');
-    const directory = await getCollection('directories', ({ id }) => id === listing.directory);
+    const directory = await getDirectoryConfig(listing.directory);
     if (directory.length > 0) {
       const category = directory[0].data.categories.find(c => c.id === listing.category);
       categoryName = category?.name || '';

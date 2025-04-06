@@ -101,7 +101,12 @@ const cssVars = {
   keywords={keywords}
 >
   <!-- Add theme-specific CSS -->
-  <link slot="head" rel="stylesheet" href={`/${directoryData.id}/styles/themes/${theme}.css`} />
+  {(() => {
+    const cssPath = import.meta.env.DEV 
+      ? `/styles/themes/${theme}.css` 
+      : `/styles/themes/${theme}.css`;
+    return <link slot="head" rel="stylesheet" href={cssPath} />;
+  })()}
   
   <!-- Add inline CSS variables for theme colors -->
   <style is:inline slot="head" define:vars={cssVars}>

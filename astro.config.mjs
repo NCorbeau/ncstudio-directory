@@ -39,10 +39,15 @@ async function getSiteUrl(directoryId) {
 
 export default defineConfig({
   site: await getSiteUrl(currentDirectory),
-  base: currentDirectory === 'default' ? '/' : `/${currentDirectory}`,
+  
+  // Use empty base for all cases to prevent double-nesting
+  base: '/',
+  
+  // Keep this setting so each directory gets its own folder in dist
   outDir: currentDirectory === 'default' 
     ? './dist'
     : `./dist/${currentDirectory}`,
+  
   build: {
     format: 'directory',
     assets: '_assets'
@@ -56,6 +61,29 @@ export default defineConfig({
     },
     build: {
       sourcemap: true
-    }
+    },
+    // Add this section for development server assets
+    server: {
+      fs: {
+        allow: ['.']
+      }
+    },
+    // Improved handling of paths for development mode
+    plugins: [
+      {
+        name: 'directory-assets-resolver',
+        configureServer(server) {
+          if (process.env.NODE_ENV !== 'production') {
+            server.middlewares.use((req, res, next) => {
+              // If request is for a static asset under the current directory path
+              if (req.url.startsWith(`/${currentDirectory}/`)) {
+                req.url = req.url.replace(`/${currentDirectory}/`, '/');
+              }
+              next();
+            });
+          }
+        }
+      }
+    ]
   }
 });

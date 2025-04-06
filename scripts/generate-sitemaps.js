@@ -222,7 +222,7 @@ function generateSitemapIndex(sitemaps) {
 /**
  * Main function to generate all sitemaps
  */
-async function generateAllSitemaps() {
+export async function generateAllSitemaps() {
   try {
     // Get all directories
     const directories = await getDirectories();

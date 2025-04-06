@@ -1,5 +1,5 @@
 ---
-import { getCollection } from 'astro:content';
+import { getDirectoryConfig } from '@/utils/directory-helpers';
 
 const { directoryName, logo, theme = 'default' } = Astro.props;
 const currentPath = Astro.url.pathname;
@@ -8,7 +8,7 @@ const directoryId = currentPath.split('/')[1];
 // Get directory data to access categories
 let directoryData;
 try {
-  const directories = await getCollection('directories');
+  const directory = await getDirectoryConfig(listing.directory);
   directoryData = directories.find(dir => dir.id === directoryId)?.data;
 } catch (error) {
   console.error(`Error loading directory data for ${directoryId}:`, error);

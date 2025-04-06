@@ -113,6 +113,12 @@ export async function cachedFetch(url, options = {}, ttl = 60) {
     return cachedData;
   }
   
+  // Add agent: false to options if not explicitly set
+  // This will prevent HTTP connections from hanging open
+  if (!options.agent && typeof options.agent !== 'boolean') {
+    options.agent = false;
+  }
+  
   // Fetch new data
   const response = await fetch(url, options);
   
