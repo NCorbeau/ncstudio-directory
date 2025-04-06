@@ -38,10 +38,24 @@ async function generateDirectorySitemap(directoryId, directoryData) {
   try {
     console.log(`Generating sitemap for ${directoryId}...`);
     
-    // Determine domain URL
-    const domain = directoryData.domain 
-      ? `https://${directoryData.domain}` 
-      : `${BASE_DOMAIN}/${directoryId}`;
+    // Determine domain URL - more flexible handling
+    let domain;
+    
+    if (directoryData.domain) {
+      // Use custom domain if available
+      domain = `https://${directoryData.domain}`;
+    } else if (process.env.SITE_URL) {
+      // Use SITE_URL from environment with directory path
+      if (process.env.SITE_URL.endsWith('/')) {
+        domain = `${process.env.SITE_URL}${directoryId}`;
+      } else {
+        domain = `${process.env.SITE_URL}/${directoryId}`;
+      }
+    } else {
+      // Fallback to a placeholder URL format that follows your path structure
+      domain = `https://YOUR-PROJECT-NAME.pages.dev/${directoryId}`;
+      console.warn(`No domain or SITE_URL configured for ${directoryId}, using placeholder URL: ${domain}`);
+    }
     
     // Define directory output path
     const outputPath = path.resolve(`./dist/${directoryId}`);

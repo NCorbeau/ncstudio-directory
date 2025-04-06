@@ -461,7 +461,20 @@ async function runBuild() {
     fs.mkdirSync(BUILD_DIR, { recursive: true });
   }
   
-  // Get changed files
+  // Check if this is the first build
+  const isFirstBuild = process.env.CF_PAGES_BRANCH && 
+                       (!fs.existsSync(path.join(BUILD_DIR, 'first-build-completed')));
+  
+  if (isFirstBuild) {
+    console.log('🚀 First deployment detected - performing full build of all directories...');
+    await buildAllDirectories();
+    
+    // Create a marker file to indicate first build is done
+    fs.writeFileSync(path.join(BUILD_DIR, 'first-build-completed'), 'Build completed at: ' + new Date().toISOString());
+    return;
+  }
+  
+  // Standard build process for subsequent builds
   const changedFiles = getChangedFiles();
   console.log('Changed files:', changedFiles);
   
