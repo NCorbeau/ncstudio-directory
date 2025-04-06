@@ -1,16 +1,16 @@
-# Redirect domain aliases to primary domains (www to non-www)
-https://www.frenchdesserts-guide.com/* https://frenchdesserts-guide.com/:splat 301!
-https://www.dogparkswarsaw.com/* https://dogparkswarsaw.com/:splat 301!
+# Directory paths for Cloudflare Pages domain
+/dog-parks-warsaw/* /dog-parks-warsaw/:splat 200
+/french-desserts/* /french-desserts/:splat 200
 
-# Custom domain routing to respective directories
+# Custom domain routing (keep these as they are)
 /* /french-desserts/:splat 200  Host=frenchdesserts-guide.com
 /* /dog-parks-warsaw/:splat 200  Host=dogparkswarsaw.com
 
-# API endpoints need to be handled specially to maintain functionality
+# API endpoints
 /api/search /api/search 200
 /api/webhook /api/webhook 200
 
-# Handle 404s for each directory by routing to the directory's 404 page
+# Handle 404s for each directory
 /french-desserts/* /french-desserts/404/index.html 404
 /dog-parks-warsaw/* /dog-parks-warsaw/404/index.html 404
 
