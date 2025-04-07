@@ -1,3 +1,8 @@
+# Allow CSS files to pass through (must come first!)
+/styles/global.css /styles/global.css 200
+/styles/themes/*.css /styles/themes/:splat.css 200
+/_astro/*.css /_astro/:splat.css 200
+
 # Directory paths for the Cloudflare Pages domain
 /dog-parks-warsaw/* /dog-parks-warsaw/:splat 200
 /french-desserts/* /french-desserts/:splat 200
@@ -20,4 +25,6 @@ https://www.dogparkswarsaw.com/* https://dogparkswarsaw.com/:splat 301!
 
 # Default redirects for the main domain
 / /directory-selector/ 200
+
+# Must be last!
 /* /404.html 404
