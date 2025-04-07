@@ -1,0 +1,15 @@
+# This specifically addresses MIME type issues
+/*.css
+  Content-Type: text/css
+
+/styles/*
+  Content-Type: text/css
+
+/styles/global.css
+  Content-Type: text/css
+
+/styles/themes/*
+  Content-Type: text/css
+
+/_astro/*.css
+  Content-Type: text/css

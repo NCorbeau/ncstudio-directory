@@ -1,150 +1,206 @@
 /**
- * This script ensures all static assets are correctly copied to each directory
- * with proper file permissions and content-types
+ * Enhanced script to fix CSS file issues
+ * - Creates a separate styles directory at the root level
+ * - Ensures CSS files have correct MIME types
+ * - Creates a proper output structure for Cloudflare Pages
  */
 
 import fs from 'fs';
 import path from 'path';
-import { execSync } from 'child_process';
 
-// Directories to process
+// Directories
 const BUILD_DIR = path.resolve('./dist');
 const PUBLIC_DIR = path.resolve('./public');
 
-// Get a list of all directories in the dist folder
-function getDirectories() {
-  return fs.readdirSync(BUILD_DIR)
-    .filter(dir => {
-      const dirPath = path.join(BUILD_DIR, dir);
-      return fs.statSync(dirPath).isDirectory() && 
-        dir !== 'directory-selector' &&
-        dir !== 'functions' &&
-        !dir.startsWith('.');
-    });
-}
-
-// Copy a file with correct permissions
-function copyWithPermissions(src, dest) {
-  try {
-    // Create the destination directory if it doesn't exist
-    const destDir = path.dirname(dest);
-    if (!fs.existsSync(destDir)) {
-      fs.mkdirSync(destDir, { recursive: true });
-    }
-    
-    // Copy the file
-    fs.copyFileSync(src, dest);
-    
-    // Set file permissions to be world-readable (644)
-    fs.chmodSync(dest, 0o644);
-    
-    return true;
-  } catch (err) {
-    console.error(`Error copying ${src} to ${dest}:`, err);
-    return false;
-  }
-}
-
-// Copy all style files to all directories
-function copyStylesToAllDirectories() {
-  console.log('Copying style files to all directories...');
+// Make sure the global styles directory exists at the root level
+function ensureRootStylesDirectory() {
+  console.log('Setting up root level styles directory...');
   
-  const directories = getDirectories();
-  const stylesDir = path.join(PUBLIC_DIR, 'styles');
-  
-  if (!fs.existsSync(stylesDir)) {
-    console.warn('Styles directory not found in public folder');
-    return;
+  // Create the root styles directory
+  const rootStylesDir = path.join(BUILD_DIR, 'styles');
+  if (!fs.existsSync(rootStylesDir)) {
+    fs.mkdirSync(rootStylesDir, { recursive: true });
   }
   
-  // Copy all styles recursively to each directory
-  directories.forEach(dir => {
-    const targetDir = path.join(BUILD_DIR, dir, 'styles');
+  // Create the themes directory
+  const rootThemesDir = path.join(rootStylesDir, 'themes');
+  if (!fs.existsSync(rootThemesDir)) {
+    fs.mkdirSync(rootThemesDir, { recursive: true });
+  }
+  
+  // Copy global.css to the root styles directory
+  const sourceGlobalCss = path.join(PUBLIC_DIR, 'styles', 'global.css');
+  const destGlobalCss = path.join(rootStylesDir, 'global.css');
+  
+  if (fs.existsSync(sourceGlobalCss)) {
+    fs.copyFileSync(sourceGlobalCss, destGlobalCss);
+    console.log('✓ Copied global.css to root styles directory');
+  } else {
+    console.error('❌ global.css not found in public/styles');
+  }
+  
+  // Copy theme files to the root themes directory
+  const sourceThemesDir = path.join(PUBLIC_DIR, 'styles', 'themes');
+  if (fs.existsSync(sourceThemesDir)) {
+    const themeFiles = fs.readdirSync(sourceThemesDir);
     
-    // Create target directory if it doesn't exist
-    if (!fs.existsSync(targetDir)) {
-      fs.mkdirSync(targetDir, { recursive: true });
-    }
-    
-    // Function to recursively copy all files in a directory
-    function copyDirRecursive(src, dest) {
-      const entries = fs.readdirSync(src, { withFileTypes: true });
-      
-      for (const entry of entries) {
-        const srcPath = path.join(src, entry.name);
-        const destPath = path.join(dest, entry.name);
-        
-        if (entry.isDirectory()) {
-          if (!fs.existsSync(destPath)) {
-            fs.mkdirSync(destPath, { recursive: true });
-          }
-          copyDirRecursive(srcPath, destPath);
-        } else {
-          copyWithPermissions(srcPath, destPath);
-        }
+    themeFiles.forEach(file => {
+      if (file.endsWith('.css')) {
+        const sourceFile = path.join(sourceThemesDir, file);
+        const destFile = path.join(rootThemesDir, file);
+        fs.copyFileSync(sourceFile, destFile);
+        console.log(`✓ Copied ${file} to root themes directory`);
       }
+    });
+  } else {
+    console.error('❌ themes directory not found in public/styles');
+  }
+}
+
+// Create a CSS file with basic rules if global.css doesn't exist
+function createFallbackCssFiles() {
+  const globalCssContent = `
+/* Fallback global CSS */
+body {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  line-height: 1.6;
+  color: #333;
+  margin: 0;
+  padding: 0;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+h1, h2, h3 {
+  margin-top: 0;
+}
+
+a {
+  color: #3366cc;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+`;
+
+  // Create basic theme CSS files
+  const themeCssContent = (color, name) => `
+/* Fallback ${name} theme CSS */
+.theme-${name} {
+  --primaryColor: ${color};
+  --secondaryColor: #ff9900;
+}
+
+.theme-${name} .site-header {
+  background-color: ${color};
+  color: white;
+  padding: 1rem 0;
+}
+
+.theme-${name} .site-name {
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.theme-${name} .main-nav a {
+  color: white;
+  text-decoration: none;
+}
+`;
+
+  const rootStylesDir = path.join(BUILD_DIR, 'styles');
+  if (!fs.existsSync(rootStylesDir)) {
+    fs.mkdirSync(rootStylesDir, { recursive: true });
+  }
+  
+  const rootThemesDir = path.join(rootStylesDir, 'themes');
+  if (!fs.existsSync(rootThemesDir)) {
+    fs.mkdirSync(rootThemesDir, { recursive: true });
+  }
+  
+  // Write global.css
+  const globalCssPath = path.join(rootStylesDir, 'global.css');
+  if (!fs.existsSync(globalCssPath)) {
+    fs.writeFileSync(globalCssPath, globalCssContent);
+    console.log('Created fallback global.css');
+  }
+  
+  // Write theme CSS files
+  const themes = [
+    { name: 'default', color: '#3366cc' },
+    { name: 'elegant', color: '#9c7c38' },
+    { name: 'modern', color: '#0070f3' },
+    { name: 'nature', color: '#4b7f52' }
+  ];
+  
+  themes.forEach(theme => {
+    const themeCssPath = path.join(rootThemesDir, `${theme.name}.css`);
+    if (!fs.existsSync(themeCssPath)) {
+      fs.writeFileSync(themeCssPath, themeCssContent(theme.color, theme.name));
+      console.log(`Created fallback ${theme.name}.css`);
     }
-    
-    copyDirRecursive(stylesDir, targetDir);
-    console.log(`Copied styles to ${dir}`);
   });
 }
 
-// Verify CSS files have the correct content-type and permissions
-function verifyCssFiles() {
-  console.log('Verifying CSS files...');
+// Create special files for Cloudflare Pages to handle MIME types
+function createCloudflareSpecialFiles() {
+  // Create a .gitattributes file to ensure MIME types
+  const gitattributesContent = `
+# Force CSS files to have text/css MIME type
+*.css text/css
+`;
+
+  const gitattributesPath = path.join(BUILD_DIR, '.gitattributes');
+  fs.writeFileSync(gitattributesPath, gitattributesContent);
+  console.log('Created .gitattributes file');
   
-  const directories = getDirectories();
-  
-  directories.forEach(dir => {
-    const stylesDir = path.join(BUILD_DIR, dir, 'styles');
-    
-    if (!fs.existsSync(stylesDir)) {
-      console.warn(`Styles directory not found in ${dir}`);
-      return;
+  // Create a type.json file for Cloudflare Pages
+  const typesContent = `{
+  "routes": {
+    "/*.css": {
+      "content-type": "text/css"
+    },
+    "/styles/*.css": {
+      "content-type": "text/css"
+    },
+    "/styles/themes/*.css": {
+      "content-type": "text/css"
+    },
+    "/_astro/*.css": {
+      "content-type": "text/css"
     }
-    
-    // Check global.css exists
-    const globalCssPath = path.join(stylesDir, 'global.css');
-    if (!fs.existsSync(globalCssPath)) {
-      console.error(`global.css not found in ${dir}`);
-    } else {
-      console.log(`✓ ${dir}/styles/global.css exists`);
-      fs.chmodSync(globalCssPath, 0o644);
-    }
-    
-    // Check theme CSS files
-    const themesDir = path.join(stylesDir, 'themes');
-    if (!fs.existsSync(themesDir)) {
-      console.warn(`Themes directory not found in ${dir}/styles`);
-    } else {
-      // Check each theme file
-      const themeFiles = ['default.css', 'modern.css', 'elegant.css', 'nature.css'];
-      themeFiles.forEach(themeFile => {
-        const themePath = path.join(themesDir, themeFile);
-        if (!fs.existsSync(themePath)) {
-          console.warn(`${themeFile} not found in ${dir}/styles/themes`);
-        } else {
-          console.log(`✓ ${dir}/styles/themes/${themeFile} exists`);
-          fs.chmodSync(themePath, 0o644);
-        }
-      });
-    }
-  });
+  }
+}`;
+
+  const typesPath = path.join(BUILD_DIR, 'types.json');
+  fs.writeFileSync(typesPath, typesContent);
+  console.log('Created types.json file for Cloudflare Pages');
 }
 
-// Main execution
-function main() {
-  console.log('Starting asset verification and copying...');
+// Main function
+async function main() {
+  console.log('Starting enhanced CSS fix...');
   
-  // Copy all styles to all directories
-  copyStylesToAllDirectories();
+  // Make sure we have CSS files at the root level
+  ensureRootStylesDirectory();
   
-  // Verify CSS files
-  verifyCssFiles();
+  // Create fallback CSS files if needed
+  createFallbackCssFiles();
   
-  console.log('Asset processing complete!');
+  // Create special files for Cloudflare Pages
+  createCloudflareSpecialFiles();
+  
+  console.log('CSS fixes completed!');
 }
 
 // Run the script
-main();
+main().catch(err => {
+  console.error('Error:', err);
+  process.exit(1);
+});
