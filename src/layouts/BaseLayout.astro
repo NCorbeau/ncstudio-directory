@@ -69,20 +69,10 @@ const safeDirectoryData = directoryData || {
     />
     
     <!-- Favicon -->
-    {(() => {
-      const faviconPath = import.meta.env.DEV 
-        ? `/favicon.svg` 
-        : `/favicon.svg`;
-      return <link rel="icon" type="image/svg+xml" href={faviconPath} />;
-    })()}
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     
-    <!-- Global base styles -->
-    {(() => {
-      const globalCssPath = import.meta.env.DEV 
-        ? `/styles/global.css` 
-        : `/styles/global.css`;
-      return <link rel="stylesheet" href={globalCssPath} />;
-    })()}
+    <!-- Global base styles - using absolute paths -->
+    <link rel="stylesheet" href="/styles/global.css" />
     
     <!-- Slot for additional head content -->
     <slot name="head" />

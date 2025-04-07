@@ -13,7 +13,7 @@
     "build:all": "node scripts/build-all.js",
     "build:selective": "node scripts/selective-build.js",
     "build:directory": "node scripts/selective-build.js",
-    "build:cloudflare": "node scripts/cloudflare-build.js"
+    "build:cloudflare": "node scripts/cloudflare-build.js && node scripts/copy-assets.js"
   },
   "dependencies": {
     "@astrojs/check": "^0.4.1",
