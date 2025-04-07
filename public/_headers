@@ -8,16 +8,25 @@
   Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: i.imgur.com *.imgur.com *.cloudflare.com; font-src 'self'; connect-src 'self'; frame-ancestors 'none'
   Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
 
+# CSS Files need specific content type headers
+/_astro/*
+  Content-Type: text/css
+
+/_astro/*.css
+  Content-Type: text/css
+
+/styles/*.css
+  Content-Type: text/css
+
+/styles/themes/*.css
+  Content-Type: text/css
+
 # API endpoints should not be cached
 /api/*
   Cache-Control: no-store, max-age=0
   Access-Control-Allow-Origin: *
   Access-Control-Allow-Methods: GET, POST, OPTIONS
   Access-Control-Allow-Headers: Content-Type
-
-# CSS files need specific content type
-*.css
-  Content-Type: text/css
 
 # Static assets with long cache (1 year)
 /assets/*
@@ -44,6 +53,8 @@
 # CSS and JavaScript with long cache
 /*.css
   Cache-Control: public, max-age=31536000, immutable
+  Content-Type: text/css
+
 /*.js
   Cache-Control: public, max-age=31536000, immutable
 

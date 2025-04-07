@@ -1,7 +1,7 @@
 # Allow CSS files to pass through (must come first!)
-/styles/global.css /styles/global.css 200
-/styles/themes/*.css /styles/themes/:splat.css 200
-/_astro/*.css /_astro/:splat.css 200
+/_astro/*.css /_astro/:splat 200!
+/styles/global.css /styles/global.css 200!
+/styles/themes/*.css /styles/themes/:splat 200!
 
 # Directory paths for the Cloudflare Pages domain
 /dog-parks-warsaw/* /dog-parks-warsaw/:splat 200
