@@ -1,10 +1,19 @@
 ---
 const { directoryName, socialLinks = [], theme = 'default' } = Astro.props;
+
+// Get the current URL and extract the directory ID
 const currentPath = Astro.url.pathname;
-const directoryId = currentPath.split('/')[1];
+const urlParts = currentPath.split('/');
+const directoryId = urlParts[1] || '';
 
 // Get the current year for copyright
 const currentYear = new Date().getFullYear();
+
+// Helper function to create a directory-aware URL
+function makeDirUrl(path) {
+  if (!directoryId) return path;
+  return `/${directoryId}${path.startsWith('/') ? path : '/' + path}`;
+}
 
 // Social media icons mapping
 const socialIcons = {
@@ -29,19 +38,19 @@ const socialIcons = {
         <div class="footer-nav">
           <h3>Navigation</h3>
           <ul>
-            <li><a href={`/`}>Home</a></li>
-            <li><a href={`/search`}>Search</a></li>
-            <li><a href={`/about`}>About</a></li>
-            <li><a href={`/contact`}>Contact</a></li>
+            <li><a href={makeDirUrl('/')}>Home</a></li>
+            <li><a href={makeDirUrl('/search')}>Search</a></li>
+            <li><a href={makeDirUrl('/about')}>About</a></li>
+            <li><a href={makeDirUrl('/contact')}>Contact</a></li>
           </ul>
         </div>
         
         <div class="footer-legal">
           <h3>Legal</h3>
           <ul>
-            <li><a href={`/privacy`}>Privacy Policy</a></li>
-            <li><a href={`/terms`}>Terms of Service</a></li>
-            <li><a href={`/cookies`}>Cookie Policy</a></li>
+            <li><a href={makeDirUrl('/privacy')}>Privacy Policy</a></li>
+            <li><a href={makeDirUrl('/terms')}>Terms of Service</a></li>
+            <li><a href={makeDirUrl('/cookies')}>Cookie Policy</a></li>
           </ul>
         </div>
       </div>
