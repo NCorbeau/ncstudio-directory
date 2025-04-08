@@ -23,9 +23,9 @@ async function getSiteUrl(directoryId) {
     // Fallback domains if not found in NocoDB
     switch(directoryId) {
       case 'french-desserts':
-        return 'https://frenchdesserts-guide.com';
+        return 'https://french-desserts.ncstudio.click';
       case 'dog-parks-warsaw':
-        return 'https://dogparkswarsaw.com';
+        return 'https://dog-parks-warsaw.ncstudio.click';
       default:
         return 'https://ncstudio-directory.pages.dev';
     }

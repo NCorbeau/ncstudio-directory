@@ -12,8 +12,8 @@ https://www.frenchdesserts-guide.com/* https://frenchdesserts-guide.com/:splat 3
 https://www.dogparkswarsaw.com/* https://dogparkswarsaw.com/:splat 301!
 
 # Custom domain routing to respective directories
-/* /french-desserts/:splat 200  Host=frenchdesserts-guide.com
-/* /dog-parks-warsaw/:splat 200  Host=dogparkswarsaw.com
+/* /french-desserts/:splat 200  Host=french-desserts.ncstudio.click
+/* /dog-parks-warsaw/:splat 200  Host=dog-parks-warsaw.ncstudio.click
 
 # API endpoints need to be handled specially to maintain functionality
 /api/search /api/search 200
