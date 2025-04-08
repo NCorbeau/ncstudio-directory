@@ -1,34 +1,11 @@
-# Allow CSS files to pass through (must come first!)
-/_astro/*.css /_astro/:splat 200!
-/styles/global.css /styles/global.css 200!
-/styles/themes/*.css /styles/themes/:splat 200!
-
-# Redirect domain aliases to primary domains (www to non-www)
-https://www.french-desserts.ncstudio.click/* https://french-desserts.ncstudio.click/:splat 301!
-https://www.dog-parks-warsaw.ncstudio.click/* https://dog-parks-warsaw.ncstudio.click/:splat 301!
-
-# Explicit root paths for custom domains
-/ /french-desserts/index.html 200 Host=french-desserts.ncstudio.click
-/ /dog-parks-warsaw/index.html 200 Host=dog-parks-warsaw.ncstudio.click
-
-# Custom domain routing to respective directories
+# Custom domains
 /* /french-desserts/:splat 200 Host=french-desserts.ncstudio.click
 /* /dog-parks-warsaw/:splat 200 Host=dog-parks-warsaw.ncstudio.click
 
-# Directory paths for the Cloudflare Pages domain
-/dog-parks-warsaw/* /dog-parks-warsaw/:splat 200
+# Main domain paths
 /french-desserts/* /french-desserts/:splat 200
+/dog-parks-warsaw/* /dog-parks-warsaw/:splat 200
 
-# API endpoints need to be handled specially to maintain functionality
-/api/search /api/search 200
-/api/webhook /api/webhook 200
-
-# Handle 404s for each directory by routing to the directory's 404 page
-/french-desserts/* /french-desserts/404/index.html 404
-/dog-parks-warsaw/* /dog-parks-warsaw/404/index.html 404
-
-# Default redirects for the main domain
+# Default path
 / /directory-selector/ 200
-
-# Must be last!
 /* /404.html 404
