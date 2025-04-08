@@ -8,8 +8,8 @@
 /french-desserts/* /french-desserts/:splat 200
 
 # Redirect domain aliases to primary domains (www to non-www)
-https://www.frenchdesserts-guide.com/* https://frenchdesserts-guide.com/:splat 301!
-https://www.dogparkswarsaw.com/* https://dogparkswarsaw.com/:splat 301!
+https://www.french-desserts.ncstudio.click/* https://french-desserts.ncstudio.click/:splat 301!
+https://dog-parks-warsaw.ncstudio.click/* https://dog-parks-warsaw.ncstudio.click/:splat 301!
 
 # Custom domain routing to respective directories
 /* /french-desserts/:splat 200  Host=french-desserts.ncstudio.click
