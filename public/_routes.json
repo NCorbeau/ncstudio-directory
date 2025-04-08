@@ -1,47 +1,63 @@
 {
-    "version": 1,
-    "include": [
-      "/*"
-    ],
-    "exclude": [
-      "/api/*"
-    ],
-    "routes": [
-      {
-        "src": "/",
-        "dest": "/directory-selector/index.html"
-      },
-      {
-        "src": "/dog-parks-warsaw",
-        "dest": "/dog-parks-warsaw/index.html"
-      },
-      {
-        "src": "/dog-parks-warsaw/",
-        "dest": "/dog-parks-warsaw/index.html"
-      },
-      {
-        "src": "/dog-parks-warsaw/*",
-        "dest": "/dog-parks-warsaw/:splat"
-      },
-      {
-        "src": "/french-desserts",
-        "dest": "/french-desserts/index.html"
-      },
-      {
-        "src": "/french-desserts/",
-        "dest": "/french-desserts/index.html"
-      },
-      {
-        "src": "/french-desserts/*",
-        "dest": "/french-desserts/:splat"
-      },
-      {
-        "src": "/api/search",
-        "dest": "/api/search.js"
-      },
-      {
-        "src": "/api/webhook",
-        "dest": "/api/webhook.js"
-      }
-    ]
-  }
+  "version": 1,
+  "include": ["/*"],
+  "exclude": ["/api/*"],
+  "routes": [
+    {
+      "src": "/",
+      "dest": "/french-desserts/index.html",
+      "has": [
+        {
+          "type": "host",
+          "value": "french-desserts.ncstudio.click"
+        }
+      ]
+    },
+    {
+      "src": "/",
+      "dest": "/dog-parks-warsaw/index.html",
+      "has": [
+        {
+          "type": "host",
+          "value": "dog-parks-warsaw.ncstudio.click"
+        }
+      ]
+    },
+    {
+      "src": "/",
+      "dest": "/directory-selector/index.html"
+    },
+    {
+      "src": "/dog-parks-warsaw",
+      "dest": "/dog-parks-warsaw/index.html"
+    },
+    {
+      "src": "/dog-parks-warsaw/",
+      "dest": "/dog-parks-warsaw/index.html"
+    },
+    {
+      "src": "/dog-parks-warsaw/*",
+      "dest": "/dog-parks-warsaw/:splat"
+    },
+    {
+      "src": "/french-desserts",
+      "dest": "/french-desserts/index.html"
+    },
+    {
+      "src": "/french-desserts/",
+      "dest": "/french-desserts/index.html"
+    },
+    {
+      "src": "/french-desserts/*",
+      "dest": "/french-desserts/:splat"
+    },
+    {
+      "src": "/api/search",
+      "dest": "/api/search.js"
+    },
+    {
+      "src": "/api/webhook",
+      "dest": "/api/webhook.js"
+    }
+  ]
+}
