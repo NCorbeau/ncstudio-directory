@@ -1,5 +1,6 @@
 ---
 import { getDirectoryConfig } from '@/utils/directory-helpers';
+import { makeDirUrl } from './PathUtils';
 
 const { directoryName, logo, theme = 'default' } = Astro.props;
 
@@ -18,23 +19,17 @@ try {
 
 // Categories for navigation
 const categories = directoryData?.categories || [];
-
-// Helper function to create a directory-aware URL
-function makeDirUrl(path) {
-  if (!directoryId) return path;
-  return `/${directoryId}${path.startsWith('/') ? path : '/' + path}`;
-}
 ---
 
 <header class={`site-header theme-${theme}`}>
   <div class="container">
     <div class="logo-container">
       {logo ? (
-        <a href={makeDirUrl('/')} class="logo">
+        <a href={makeDirUrl('/', directoryId)} class="logo">
           <img src={logo} alt={`${directoryName} logo`} />
         </a>
       ) : (
-        <a href={makeDirUrl('/')} class="site-name">
+        <a href={makeDirUrl('/', directoryId)} class="site-name">
           {directoryName}
         </a>
       )}
@@ -44,7 +39,7 @@ function makeDirUrl(path) {
       <ul>
         <li>
           <a 
-            href={makeDirUrl('/')} 
+            href={makeDirUrl('/', directoryId)} 
             class={currentPath === `/${directoryId}/` || currentPath === `/${directoryId}` ? 'active' : ''}
           >
             Home
@@ -53,8 +48,8 @@ function makeDirUrl(path) {
         {categories.slice(0, 4).map(category => (
           <li>
             <a 
-              href={makeDirUrl(`/category/${category.id}`)}
-              class={currentPath === makeDirUrl(`/category/${category.id}`) ? 'active' : ''}
+              href={makeDirUrl(`/category/${category.id}`, directoryId)}
+              class={currentPath === makeDirUrl(`/category/${category.id}`, directoryId) ? 'active' : ''}
             >
               {category.name}
             </a>
@@ -66,7 +61,7 @@ function makeDirUrl(path) {
             <ul class="dropdown">
               {categories.slice(4).map(category => (
                 <li>
-                  <a href={makeDirUrl(`/category/${category.id}`)}>
+                  <a href={makeDirUrl(`/category/${category.id}`, directoryId)}>
                     {category.name}
                   </a>
                 </li>
@@ -75,7 +70,7 @@ function makeDirUrl(path) {
           </li>
         )}
         <li>
-          <a href={makeDirUrl('/search')} class="search-link">
+          <a href={makeDirUrl('/search', directoryId)} class="search-link">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="11" cy="11" r="8"></circle>
               <line x1="21" y1="21" x2="16.65" y2="16.65"></line>

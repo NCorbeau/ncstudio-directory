@@ -1,9 +1,11 @@
 ---
+import { makeDirUrl } from "./PathUtils";
+
 const { directoryId, placeholder = "Search...", initialQuery = "" } = Astro.props;
 ---
 
 <div class="search-container">
-  <form action={`/search`} method="get" class="search-form">
+  <form action={makeDirUrl(`/search`, directoryId)} method="get" class="search-form">
     <input 
       type="text" 
       name="q" 
