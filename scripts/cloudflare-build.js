@@ -389,7 +389,7 @@ function copyApiFunctions() {
   );
 
   const functionsApiDir = path.join(FUNCTIONS_DIR, "api");
-  const outputApiDir = path.join(BUILD_DIR, "api");
+  const outputApiDir = path.join(BUILD_DIR, "functions");
 
   // Check if functions/api directory exists
   if (!fs.existsSync(functionsApiDir)) {
