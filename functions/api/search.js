@@ -67,7 +67,7 @@ export async function onRequest(context) {
     const apiEndpoint = `${apiUrl}/tables/${listingsTable}/records`;
     
     // Create the query condition for NocoDB v2 API
-    const queryCondition = `(Directory,eq,${directoryId})~and((Title,like,%${sanitizedQuery}%)~or(Description,like,%${sanitizedQuery}%)~or(Content,like,%${sanitizedQuery}%))`;
+    const queryCondition = `(Directory Identifier,eq,${directoryId})~and((Title,like,%${sanitizedQuery}%)~or(Description,like,%${sanitizedQuery}%)~or(Content,like,%${sanitizedQuery}%))`;
     
     // Fetch from NocoDB
     const response = await fetch(`${apiEndpoint}?where=${encodeURIComponent(queryCondition)}`, {
