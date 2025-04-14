@@ -96,11 +96,11 @@ export async function onRequest(context) {
       
       // Map NocoDB fields to our format
       return {
-        slug: `${listing.Directory}/${listing.Slug}`,
+        slug: `${listing['Directory Identifier']}/${listing.Slug}`,
         data: {
           title: listing.Title,
           description: listing.Description,
-          directory: listing.Directory,
+          directory: listing['Directory Identifier'],
           category: listing.Category,
           featured: listing.Featured === 1 || listing.Featured === true,
           images: safeParseJSON(listing.Images, []),

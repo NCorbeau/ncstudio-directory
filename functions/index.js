@@ -17,14 +17,14 @@ export default {
     // Handle /api/webhook requests
     if (path === '/api/webhook') {
       if (request.method === 'OPTIONS') {
-        return webhookHandler.onRequestOptions(context);
+        return webhookHandler.onRequestOptions(ctx);
       }
       return webhookHandler.onRequest({ request, env, ctx });
     }
     
     // Handle /api/search requests
     if (path === '/api/search') {
-      return searchHandler.get({ request, env, ctx });
+      return searchHandler.onRequest({ request, env, ctx });
     }
     
     // Handle /api/render-layout requests
