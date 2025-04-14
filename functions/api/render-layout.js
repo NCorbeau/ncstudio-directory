@@ -2,6 +2,7 @@
  * Cloudflare Function to render layouts on demand
  * This is a simplified version that returns raw data for client-side rendering
  */
+import { getDirectoryConfig, getDirectoryListings } from '../../src/lib/nocodb.js';
 
 export async function onRequest(context) {
   try {
@@ -50,7 +51,7 @@ export async function onRequest(context) {
     // Get directory data
     let directoryData;
     try {
-      directoryData = await getDirectory(directoryId);
+      directoryData = await getDirectoryConfig(directoryId);
       
       if (!directoryData) {
         return new Response(
@@ -84,7 +85,7 @@ export async function onRequest(context) {
     // Get listings for this directory
     let listings;
     try {
-      listings = await getListings(directoryId);
+      listings = await getDirectoryListings(directoryId);
     } catch (error) {
       return new Response(
         JSON.stringify({
