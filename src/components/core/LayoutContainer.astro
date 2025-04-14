@@ -1,0 +1,91 @@
+---
+// src/components/core/LayoutContainer.astro
+import MapLayout from '../layouts/MapLayout.astro';
+import CardLayout from '../layouts/CardLayout.astro';
+import TableLayout from '../layouts/TableLayout.astro';
+import MagazineLayout from '../layouts/MagazineLayout.astro';
+import ListLayout from '../layouts/ListLayout.astro';
+import LayoutSwitcher from './LayoutSwitcher.astro';
+
+const { 
+  listings, 
+  directory, 
+  currentLayout,
+  categories = [],
+  searchParams = ''
+} = Astro.props;
+
+// Get available layouts from directory config
+const availableLayouts = directory.availableLayouts || ['Card'];
+const defaultLayout = directory.defaultLayout || 'Card';
+
+// Use the specified layout or fall back to default
+const layoutToUse = availableLayouts.includes(currentLayout) 
+  ? currentLayout 
+  : defaultLayout;
+---
+
+<div class="layout-container">
+  {availableLayouts.length > 1 && (
+    <LayoutSwitcher 
+      availableLayouts={availableLayouts}
+      currentLayout={layoutToUse}
+      directoryId={directory.id}
+      searchParams={searchParams}
+    />
+  )}
+  
+  <div class="listings-content">
+    {layoutToUse === 'Map' && (
+      <MapLayout 
+        listings={listings} 
+        directory={directory}
+        categories={categories}
+      />
+    )}
+    
+    {layoutToUse === 'Card' && (
+      <CardLayout 
+        listings={listings} 
+        directory={directory}
+        categories={categories}
+      />
+    )}
+    
+    {layoutToUse === 'Table' && (
+      <TableLayout 
+        listings={listings} 
+        directory={directory}
+        categories={categories}
+      />
+    )}
+    
+    {layoutToUse === 'Magazine' && (
+      <MagazineLayout 
+        listings={listings} 
+        directory={directory}
+        categories={categories}
+        directoryId={directory.id}
+      />
+    )}
+    
+    {layoutToUse === 'List' && (
+      <ListLayout 
+        listings={listings} 
+        directory={directory}
+        categories={categories}
+        directoryId={directory.id}
+      />
+    )}
+  </div>
+</div>
+
+<style>
+  .layout-container {
+    margin-bottom: 2rem;
+  }
+  
+  .listings-content {
+    min-height: 400px; /* Ensure consistent height when switching layouts */
+  }
+</style>

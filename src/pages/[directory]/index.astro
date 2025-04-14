@@ -1,15 +1,16 @@
 ---
 import DirectoryLayout from "../../layouts/DirectoryLayout.astro";
-import ListingCard from "../../components/core/ListingCard.astro";
+import LayoutContainer from "../../components/core/LayoutContainer.astro";
 import SearchBar from "../../components/core/SearchBar.astro";
+import { generateDirectoryHomeSchema } from "../../utils/schema-generator";
 import {
   getAllDirectories,
   getDirectoryConfig,
   getFeaturedListings,
   getRecentListings,
+  getDirectoryListings,
   getDirectoryLandingPages,
 } from "../../utils/directory-helpers";
-import { generateDirectoryHomeSchema } from "../../utils/schema-generator";
 
 // Generate all dynamic routes
 export async function getStaticPaths() {
@@ -32,14 +33,25 @@ if (!directoryData) {
   return Astro.redirect("/404");
 }
 
-// Fetch featured listings
+// Get the layout parameter from the URL, if provided
+const { searchParams } = Astro.url;
+
+const currentLayout = searchParams.get('layout') || null;
+
+// Fetch all listings (for any layout type)
+const allListings = await getDirectoryListings(directoryId);
+
+// Fetch featured listings (for featured section below main listings)
 const featuredListings = await getFeaturedListings(directoryId, 6);
 
-// Fetch recent listings
+// Fetch recent listings (for recent section)
 const recentListings = await getRecentListings(directoryId, 4);
 
 // Fetch landing pages
 const landingPages = await getDirectoryLandingPages(directoryId);
+
+// Get categories from directory data
+const categories = directoryData.data.categories || [];
 
 // Construct canonical URL
 const canonicalUrl = new URL(
@@ -52,6 +64,17 @@ const structuredData = generateDirectoryHomeSchema(
   directoryData.data,
   canonicalUrl
 );
+
+// Get the direct URL query string for preserving filters when switching layouts
+const queryString = Astro.url.search;
+
+// Get available layouts from directory config or default to card view
+const availableLayouts = directoryData.data.availableLayouts || ['card'];
+const defaultLayout = directoryData.data.defaultLayout || 'card';
+
+// Determine which listings to show in the main layout
+// For this example, we're showing all listings, but you could filter by featured status or other criteria
+const mainListings = allListings;
 ---
 
 <DirectoryLayout
@@ -62,6 +85,7 @@ const structuredData = generateDirectoryHomeSchema(
   canonicalUrl={canonicalUrl}
   structuredData={structuredData}
 >
+  <!-- Hero Section -->
   <section class="hero">
     <div class="container">
       <h1>{directoryData.data.name}</h1>
@@ -76,42 +100,46 @@ const structuredData = generateDirectoryHomeSchema(
     </div>
   </section>
 
-  <!-- Featured Listings Section -->
-  {
-    featuredListings.length > 0 && (
-      <section class="featured">
-        <div class="container">
-          <div class="section-header">
-            <h2>Featured Listings</h2>
-            <a href={`/${directoryId}/search`} class="view-all">
-              View All
-            </a>
-          </div>
-
-          <div class="listing-grid">
-            {featuredListings.map((listing) => (
-              <ListingCard
-                listing={listing.data}
-                url={`/${directoryId}/${listing.slug.replace(`${directoryId}/`, "")}`}
-                theme={directoryData.data.theme}
-              />
-            ))}
-          </div>
-        </div>
-      </section>
-    )
-  }
-
-  <!-- Categories Section -->
-  <section class="categories">
+  <!-- Main Listings with Layout Switching -->
+  <section class="main-listings">
     <div class="container">
       <div class="section-header">
-        <h2>Browse by Category</h2>
+        <h2>Browse {directoryData.data.name}</h2>
+        
+        {allListings.length > 0 ? (
+          <span class="listing-count">{allListings.length} listings found</span>
+        ) : (
+          <span class="listing-count">No listings found</span>
+        )}
       </div>
 
-      <div class="category-grid">
-        {
-          directoryData.data.categories.map((category) => (
+      {allListings.length > 0 ? (
+        <LayoutContainer
+          listings={mainListings}
+          directory={directoryData.data}
+          currentLayout={currentLayout}
+          categories={categories}
+          searchParams={queryString}
+          directoryId={directoryId}
+        />
+      ) : (
+        <div class="no-listings-message">
+          <p>No listings have been added to this directory yet.</p>
+        </div>
+      )}
+    </div>
+  </section>
+
+  <!-- Categories Section -->
+  {categories.length > 0 && (
+    <section class="categories">
+      <div class="container">
+        <div class="section-header">
+          <h2>Browse by Category</h2>
+        </div>
+
+        <div class="category-grid">
+          {categories.map((category) => (
             <a
               href={`/${directoryId}/category/${category.id}`}
               class="category-card"
@@ -119,69 +147,76 @@ const structuredData = generateDirectoryHomeSchema(
               <h3>{category.name}</h3>
               {category.description && <p>{category.description}</p>}
             </a>
-          ))
-        }
+          ))}
+        </div>
       </div>
-    </div>
-  </section>
+    </section>
+  )}
 
-  <!-- Recent Listings Section (if different from featured) -->
-  {
-    recentListings.length > 0 &&
-      !recentListings.every((r) =>
-        featuredListings.some((f) => f.slug === r.slug)
-      ) && (
-        <section class="recent">
-          <div class="container">
-            <div class="section-header">
-              <h2>Recent Additions</h2>
-            </div>
-
-            <div class="listing-grid">
-              {recentListings.map((listing) => (
-                <ListingCard
-                  listing={listing.data}
-                  url={`/${directoryId}/${listing.slug.replace(`${directoryId}/`, "")}`}
-                  theme={directoryData.data.theme}
-                />
-              ))}
-            </div>
-          </div>
-        </section>
-      )
-  }
-
-  <!-- Landing Pages Section -->
-  {
-    landingPages.length > 0 && (
-      <section class="guides">
+  <!-- Recent Listings Section (if different from featured and not empty) -->
+  {recentListings.length > 0 &&
+    !recentListings.every((r) =>
+      featuredListings.some((f) => f.slug === r.slug)
+    ) && (
+      <section class="recent">
         <div class="container">
           <div class="section-header">
-            <h2>Guides & Resources</h2>
+            <h2>Recent Additions</h2>
+            <a href={`/${directoryId}/search?sort=newest`} class="view-all">
+              View All
+            </a>
           </div>
 
-          <div class="guides-grid">
-            {landingPages.slice(0, 3).map((page) => (
-              <a
-                href={`/${directoryId}/page/${page.slug.replace(`${directoryId}/`, "")}`}
-                class="guide-card"
-              >
-                {page.data.featuredImage && (
-                  <div class="guide-image">
-                    <img src={page.data.featuredImage} alt={page.data.title} />
+          <div class="listing-grid">
+            {recentListings.map((listing) => (
+              <div class="recent-card">
+                <h3>
+                  <a href={`/${directoryId}/${listing.slug.replace(`${directoryId}/`, "")}`}>
+                    {listing.data.title}
+                  </a>
+                </h3>
+                <p>{listing.data.description.substring(0, 120)}...</p>
+                {listing.data.updatedAt && (
+                  <div class="date-added">
+                    Added {new Date(listing.data.updatedAt).toLocaleDateString()}
                   </div>
                 )}
-                <div class="guide-content">
-                  <h3>{page.data.title}</h3>
-                  <p>{page.data.description}</p>
-                </div>
-              </a>
+              </div>
             ))}
           </div>
         </div>
       </section>
-    )
-  }
+    )}
+
+  <!-- Landing Pages / Guides Section -->
+  {landingPages.length > 0 && (
+    <section class="guides">
+      <div class="container">
+        <div class="section-header">
+          <h2>Guides & Resources</h2>
+        </div>
+
+        <div class="guides-grid">
+          {landingPages.slice(0, 3).map((page) => (
+            <a
+              href={`/${directoryId}/page/${page.slug.replace(`${directoryId}/`, "")}`}
+              class="guide-card"
+            >
+              {page.data.featuredImage && (
+                <div class="guide-image">
+                  <img src={page.data.featuredImage} alt={page.data.title} />
+                </div>
+              )}
+              <div class="guide-content">
+                <h3>{page.data.title}</h3>
+                <p>{page.data.description}</p>
+              </div>
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
+  )}
 
   <!-- About Section with Call-to-Action -->
   <section class="about">
@@ -193,8 +228,7 @@ const structuredData = generateDirectoryHomeSchema(
           directory. Our expert team researches and curates the finest selections
           to help you find exactly what you're looking for.
         </p>
-        <a href={`/${directoryId}/search`} class="cta-button">Start Exploring</a
-        >
+        <a href={`/${directoryId}/search`} class="cta-button">Start Exploring</a>
       </div>
     </div>
   </section>
@@ -224,6 +258,11 @@ const structuredData = generateDirectoryHomeSchema(
   .search-container {
     max-width: 600px;
     margin: 0 auto;
+  }
+
+  /* Main layout section */
+  .main-listings {
+    padding: 3rem 0;
   }
 
   /* Container */
@@ -260,11 +299,17 @@ const structuredData = generateDirectoryHomeSchema(
     font-weight: 500;
   }
 
-  /* Listing grid */
-  .listing-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 2rem;
+  .listing-count {
+    color: #666;
+    font-size: 0.95rem;
+  }
+
+  .no-listings-message {
+    text-align: center;
+    padding: 3rem;
+    background-color: #f5f5f5;
+    border-radius: 8px;
+    color: #666;
   }
 
   /* Category cards */
@@ -302,6 +347,48 @@ const structuredData = generateDirectoryHomeSchema(
     font-size: 0.95rem;
     color: #666;
     margin: 0;
+  }
+
+  /* Recent listings */
+  .listing-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 2rem;
+  }
+
+  .recent-card {
+    background-color: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    border: 1px solid #eee;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  .recent-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+  }
+
+  .recent-card h3 {
+    font-size: 1.2rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .recent-card h3 a {
+    color: var(--primaryColor);
+    text-decoration: none;
+  }
+
+  .recent-card p {
+    color: #666;
+    font-size: 0.95rem;
+    margin-bottom: 1rem;
+  }
+
+  .date-added {
+    font-size: 0.8rem;
+    color: #999;
   }
 
   /* Guide cards */
