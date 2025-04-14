@@ -2,7 +2,6 @@
  * Cloudflare Function to render layouts on demand
  * This is a simplified version that returns raw data for client-side rendering
  */
-import { getDirectoryConfig, getDirectoryListings } from '../../src/lib/nocodb.js';
 
 export async function onRequest(context) {
   try {
