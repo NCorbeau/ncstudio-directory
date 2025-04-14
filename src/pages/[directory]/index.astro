@@ -33,10 +33,8 @@ if (!directoryData) {
   return Astro.redirect("/404");
 }
 
-// Get the layout parameter from the URL, if provided
-const { searchParams } = Astro.url;
-
-const currentLayout = searchParams.get('layout') || null;
+const defaultLayout = directoryData.data.defaultLayout || 'Card';
+const currentLayout = defaultLayout;
 
 // Fetch all listings (for any layout type)
 const allListings = await getDirectoryListings(directoryId);
@@ -67,10 +65,6 @@ const structuredData = generateDirectoryHomeSchema(
 
 // Get the direct URL query string for preserving filters when switching layouts
 const queryString = Astro.url.search;
-
-// Get available layouts from directory config or default to card view
-const availableLayouts = directoryData.data.availableLayouts || ['card'];
-const defaultLayout = directoryData.data.defaultLayout || 'card';
 
 // Determine which listings to show in the main layout
 // For this example, we're showing all listings, but you could filter by featured status or other criteria
@@ -233,6 +227,21 @@ const mainListings = allListings;
     </div>
   </section>
 </DirectoryLayout>
+
+<script>
+  // Check for layout parameter on initial page load
+  document.addEventListener('DOMContentLoaded', () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const layoutParam = urlParams.get('layout');
+    
+    // If there's a layout param and it's not the current layout,
+    // let the LayoutSwitcher component handle the switch
+    if (layoutParam && layoutParam !== '{defaultLayout}') {
+      // The updated LayoutSwitcher component will handle this automatically
+      console.log('Layout param detected:', layoutParam);
+    }
+  });
+</script>
 
 <style>
   /* Hero section */

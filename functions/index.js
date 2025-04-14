@@ -6,6 +6,7 @@
 // Import API functions
 import * as webhookHandler from './api/webhook.js';
 import * as searchHandler from './api/search.js';
+import * as renderLayoutHandler from './api/render-layout.js';
 
 // Export a fetch handler for Wrangler
 export default {
@@ -24,6 +25,11 @@ export default {
     // Handle /api/search requests
     if (path === '/api/search') {
       return searchHandler.get({ request, env, ctx });
+    }
+    
+    // Handle /api/render-layout requests
+    if (path === '/api/render-layout') {
+      return renderLayoutHandler.onRequest({ request, env, ctx });
     }
 
     // Handle 404 for other API paths

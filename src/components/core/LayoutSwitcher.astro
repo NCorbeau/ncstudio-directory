@@ -34,6 +34,7 @@ const queryParams = new URLSearchParams(searchParams);
           class={`layout-option ${currentLayout === layout ? 'active' : ''}`}
           title={layoutInfo[layout]?.name || layout}
           aria-label={`Switch to ${layoutInfo[layout]?.name || layout}`}
+          data-layout={layout}
         >
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             {layout === 'Map' && (
@@ -48,7 +49,7 @@ const queryParams = new URLSearchParams(searchParams);
             {layout === 'Magazine' && (
               <path d="M4 3h16a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zm1 8h14M9 21V11" />
             )}
-            {layout === 'ist' && (
+            {layout === 'List' && (
               <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
             )}
           </svg>
@@ -58,6 +59,60 @@ const queryParams = new URLSearchParams(searchParams);
     })}
   </div>
 </div>
+
+<script>
+  // Client-side layout switching
+  document.addEventListener('DOMContentLoaded', () => {
+    const layoutOptions = document.querySelectorAll('.layout-option');
+    
+    // Handle clicks on layout options
+    layoutOptions.forEach(option => {
+      option.addEventListener('click', (e) => {
+        // If this is a client-side navigation, prevent default and handle it ourselves
+        if (window.history && window.history.pushState) {
+          e.preventDefault();
+          
+          // Get the layout from the data attribute
+          const layout = option.dataset.layout;
+          
+          // Update URL without page reload
+          const url = new URL(option.href);
+          window.history.pushState({}, '', url);
+          
+          // Update active class
+          layoutOptions.forEach(opt => opt.classList.remove('active'));
+          option.classList.add('active');
+          
+          // Trigger a custom event that the layout container can listen for
+          const event = new CustomEvent('layoutchange', { 
+            detail: { layout } 
+          });
+          document.dispatchEvent(event);
+        }
+      });
+    });
+    
+    // Check URL params on page load
+    const urlParams = new URLSearchParams(window.location.search);
+    const layoutParam = urlParams.get('layout');
+    
+    if (layoutParam) {
+      // Find the matching layout option
+      const matchingOption = document.querySelector(`.layout-option[data-layout="${layoutParam}"]`);
+      if (matchingOption) {
+        // Update active class
+        layoutOptions.forEach(opt => opt.classList.remove('active'));
+        matchingOption.classList.add('active');
+        
+        // Trigger layout change event
+        const event = new CustomEvent('layoutchange', { 
+          detail: { layout: layoutParam } 
+        });
+        document.dispatchEvent(event);
+      }
+    }
+  });
+</script>
 
 <style>
   .layout-switcher {

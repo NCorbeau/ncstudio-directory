@@ -1,10 +1,6 @@
 ---
 // src/components/core/LayoutContainer.astro
-import MapLayout from '../layouts/MapLayout.astro';
 import CardLayout from '../layouts/CardLayout.astro';
-import TableLayout from '../layouts/TableLayout.astro';
-import MagazineLayout from '../layouts/MagazineLayout.astro';
-import ListLayout from '../layouts/ListLayout.astro';
 import LayoutSwitcher from './LayoutSwitcher.astro';
 
 const { 
@@ -35,15 +31,8 @@ const layoutToUse = availableLayouts.includes(currentLayout)
     />
   )}
   
-  <div class="listings-content">
-    {layoutToUse === 'Map' && (
-      <MapLayout 
-        listings={listings} 
-        directory={directory}
-        categories={categories}
-      />
-    )}
-    
+  <div id="layout-container" class="layout-content" data-layout={layoutToUse}>
+    {/* Only render the default layout initially - other layouts will be client-rendered */}
     {layoutToUse === 'Card' && (
       <CardLayout 
         listings={listings} 
@@ -52,40 +41,266 @@ const layoutToUse = availableLayouts.includes(currentLayout)
       />
     )}
     
+    {layoutToUse === 'Map' && (
+      <div id="map-layout">
+        <!-- The Map layout will be loaded via JS -->
+        <div class="loading-layout">Loading Map view...</div>
+      </div>
+    )}
+    
     {layoutToUse === 'Table' && (
-      <TableLayout 
-        listings={listings} 
-        directory={directory}
-        categories={categories}
-      />
+      <div id="table-layout">
+        <!-- The Table layout will be loaded via JS -->
+        <div class="loading-layout">Loading Table view...</div>
+      </div>
     )}
     
     {layoutToUse === 'Magazine' && (
-      <MagazineLayout 
-        listings={listings} 
-        directory={directory}
-        categories={categories}
-        directoryId={directory.id}
-      />
+      <div id="magazine-layout">
+        <!-- The Magazine layout will be loaded via JS -->
+        <div class="loading-layout">Loading Magazine view...</div>
+      </div>
     )}
     
     {layoutToUse === 'List' && (
-      <ListLayout 
-        listings={listings} 
-        directory={directory}
-        categories={categories}
-        directoryId={directory.id}
-      />
+      <div id="list-layout">
+        <!-- The List layout will be loaded via JS -->
+        <div class="loading-layout">Loading List view...</div>
+      </div>
     )}
   </div>
 </div>
+
+<script define:vars={{ directoryId: directory.id, defaultLayout: layoutToUse }}>
+  // This holds pre-rendered layouts to avoid reloading
+  const renderedLayouts = new Map();
+  
+  // Helper function to create cards (simplified version of ListingCard)
+  function createCard(listing, directoryId) {
+    const card = document.createElement('div');
+    card.className = 'listing-card';
+    
+    // Create basic card content
+    card.innerHTML = `
+      <a href="/${directoryId}/${listing.slug.replace(`${directoryId}/`, '')}" class="card-link">
+        <div class="card-image">
+          <img src="${listing.data.images?.[0] || '/placeholder-image.jpg'}" alt="${listing.data.title}" loading="lazy" />
+          ${listing.data.featured ? '<span class="featured-badge">Featured</span>' : ''}
+        </div>
+        <div class="card-content">
+          <h3 class="card-title">${listing.data.title}</h3>
+          <p class="card-description">${listing.data.description}</p>
+        </div>
+      </a>
+    `;
+    
+    return card;
+  }
+  
+  // Function to render the Card layout
+  function renderCardLayout(container, data) {
+    container.innerHTML = '';
+    
+    // Create card layout container
+    const layoutDiv = document.createElement('div');
+    layoutDiv.className = 'listing-grid';
+    
+    // Create filter bar (simplified)
+    const filterBar = document.createElement('div');
+    filterBar.className = 'filters-bar';
+    filterBar.innerHTML = `
+      <div class="filter-section">
+        <label for="category-filter">Category</label>
+        <select id="category-filter" class="filter-select">
+          <option value="">All Categories</option>
+          ${data.categories.map(cat => `<option value="${cat.id}">${cat.name}</option>`).join('')}
+        </select>
+      </div>
+      
+      <div class="filter-section">
+        <label for="sort-filter">Sort By</label>
+        <select id="sort-filter" class="filter-select">
+          <option value="featured">Featured</option>
+          <option value="name">Name A-Z</option>
+          <option value="rating">Highest Rated</option>
+          <option value="newest">Newest</option>
+        </select>
+      </div>
+    `;
+    
+    // Create grid
+    const grid = document.createElement('div');
+    grid.className = 'listing-grid';
+    
+    // Add cards to grid
+    data.listings.forEach(listing => {
+      grid.appendChild(createCard(listing, directoryId));
+    });
+    
+    // Combine components
+    layoutDiv.appendChild(filterBar);
+    layoutDiv.appendChild(grid);
+    container.appendChild(layoutDiv);
+  }
+  
+  // Function to render Table layout (simplified)
+  function renderTableLayout(container, data) {
+    // Similar implementation as Card layout but with table structure
+    container.innerHTML = '<div class="table-layout">Table layout content here...</div>';
+    // Actual implementation would create a proper table with the data
+  }
+  
+  // Function to render Map layout
+  function renderMapLayout(container, data) {
+    container.innerHTML = '<div class="map-layout">Map layout will be shown here...</div>';
+    // Actual implementation would initialize the map
+  }
+  
+  // Function to render Magazine layout
+  function renderMagazineLayout(container, data) {
+    container.innerHTML = '<div class="magazine-layout">Magazine layout content here...</div>';
+    // Actual implementation would create the magazine layout
+  }
+  
+  // Function to render List layout
+  function renderListLayout(container, data) {
+    container.innerHTML = '<div class="list-layout">List layout content here...</div>';
+    // Actual implementation would create the list layout
+  }
+  
+  // Main layout switching function
+  async function switchLayout(layout) {
+    const container = document.getElementById('layout-container');
+    container.dataset.layout = layout;
+    
+    // If we already rendered this layout before, use the cached version
+    if (renderedLayouts.has(layout)) {
+      container.innerHTML = renderedLayouts.get(layout);
+      return;
+    }
+    
+    // Show loading state
+    container.innerHTML = `<div class="loading-layout">Loading ${layout} view...</div>`;
+    
+    try {
+      // Fetch data for this layout
+      const response = await fetch(`/api/render-layout?layout=${layout}&directory=${directoryId}`);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to load layout data: ${response.statusText}`);
+      }
+      
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Unknown error loading layout');
+      }
+      
+      // Render the appropriate layout based on type
+      switch (layout) {
+        case 'Card':
+          renderCardLayout(container, result.data);
+          break;
+        case 'Table':
+          renderTableLayout(container, result.data);
+          break;
+        case 'Map':
+          renderMapLayout(container, result.data);
+          break;
+        case 'Magazine':
+          renderMagazineLayout(container, result.data);
+          break;
+        case 'List':
+          renderListLayout(container, result.data);
+          break;
+        default:
+          renderCardLayout(container, result.data);
+      }
+      
+      // Cache the rendered layout
+      renderedLayouts.set(layout, container.innerHTML);
+      
+    } catch (error) {
+      console.error('Error switching layouts:', error);
+      container.innerHTML = `
+        <div class="error-layout">
+          <p>Error loading layout: ${error.message}</p>
+          <button onclick="switchLayout('${defaultLayout}')">Try again</button>
+        </div>
+      `;
+    }
+  }
+  
+  // Listen for layout change events
+  document.addEventListener('layoutchange', (e) => {
+    const newLayout = e.detail.layout;
+    if (newLayout !== document.getElementById('layout-container').dataset.layout) {
+      switchLayout(newLayout);
+    }
+  });
+  
+  // On initial load, check if we need to load the current layout
+  document.addEventListener('DOMContentLoaded', async () => {
+    const currentLayout = document.getElementById('layout-container').dataset.layout;
+    
+    // Only fetch initial layout if it's not Card (Card is server-rendered)
+    if (currentLayout !== 'Card') {
+      await switchLayout(currentLayout);
+    }
+    
+    // Check URL for layout parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const layoutParam = urlParams.get('layout');
+    
+    if (layoutParam && layoutParam !== currentLayout) {
+      // Find the layout selector and click it
+      const selector = document.querySelector(`.layout-option[data-layout="${layoutParam}"]`);
+      if (selector) {
+        selector.click();
+      }
+    }
+  });
+  
+  // Make switchLayout available globally
+  window.switchLayout = switchLayout;
+</script>
 
 <style>
   .layout-container {
     margin-bottom: 2rem;
   }
   
-  .listings-content {
+  .layout-content {
     min-height: 400px; /* Ensure consistent height when switching layouts */
+  }
+  
+  .loading-layout {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 400px;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    color: #666;
+    font-size: 1.1rem;
+  }
+  
+  .error-layout {
+    padding: 2rem;
+    background-color: #fff5f5;
+    border: 1px solid #feb2b2;
+    border-radius: 8px;
+    color: #c53030;
+    text-align: center;
+  }
+  
+  .error-layout button {
+    margin-top: 1rem;
+    padding: 0.5rem 1rem;
+    background-color: #e53e3e;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
   }
 </style>
