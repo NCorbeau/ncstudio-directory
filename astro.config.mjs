@@ -1,5 +1,28 @@
 // astro.config.mjs
 import { defineConfig } from 'astro/config';
+import dotenv from 'dotenv';
+import path from 'path';
+import fs from 'fs';
+
+// Explicitly load environment variables
+// Load base .env file
+dotenv.config();
+
+// Try to load .env.local if it exists (overrides .env)
+const envLocalPath = path.resolve(process.cwd(), '.env.local');
+if (fs.existsSync(envLocalPath)) {
+  const envLocalResult = dotenv.config({ path: envLocalPath, override: true });
+  if (envLocalResult.error) {
+    console.warn('Error loading .env.local:', envLocalResult.error);
+  } else {
+    console.log('Loaded environment variables from .env.local');
+  }
+}
+
+// Log the API environment variables to help with debugging
+console.log('API Environment Variables:');
+console.log('- PUBLIC_API_BASE_URL:', process.env.PUBLIC_API_BASE_URL || '(not set)');
+console.log('- PUBLIC_USE_LOCAL_API:', process.env.PUBLIC_USE_LOCAL_API || '(not set)');
 
 // Get the current directory from environment variable (set by build script)
 const currentDirectory = process.env.CURRENT_DIRECTORY || 'default';
@@ -53,7 +76,10 @@ export default defineConfig({
   },
   vite: {
     define: {
-      'import.meta.env.CURRENT_DIRECTORY': JSON.stringify(currentDirectory)
+      'import.meta.env.CURRENT_DIRECTORY': JSON.stringify(currentDirectory),
+      // Explicitly pass environment variables to client-side code
+      'import.meta.env.PUBLIC_API_BASE_URL': JSON.stringify(process.env.PUBLIC_API_BASE_URL || ''),
+      'import.meta.env.PUBLIC_USE_LOCAL_API': JSON.stringify(process.env.PUBLIC_USE_LOCAL_API || 'false')
     },
     ssr: {
       noExternal: ['marked']

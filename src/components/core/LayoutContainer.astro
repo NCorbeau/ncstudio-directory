@@ -167,6 +167,21 @@ const layoutToUse = availableLayouts.includes(currentLayout)
     container.innerHTML = '<div class="list-layout">List layout content here...</div>';
     // Actual implementation would create the list layout
   }
+
+    // Import the API client
+    async function importApiClient() {
+    if (window.apiClient) return window.apiClient;
+    
+    try {
+      // Dynamically import the API client
+      const module = await import('/src/utils/api-client.js');
+      window.apiClient = module;
+      return module;
+    } catch (error) {
+      console.error('Error importing API client:', error);
+      throw error;
+    }
+  }
   
   // Main layout switching function
   async function switchLayout(layout) {
@@ -183,14 +198,11 @@ const layoutToUse = availableLayouts.includes(currentLayout)
     container.innerHTML = `<div class="loading-layout">Loading ${layout} view...</div>`;
     
     try {
-      // Fetch data for this layout
-      const response = await fetch(`/api/render-layout?layout=${layout}&directory=${directoryId}`);
+      // Get the API client
+      const apiClient = await importApiClient();
       
-      if (!response.ok) {
-        throw new Error(`Failed to load layout data: ${response.statusText}`);
-      }
-      
-      const result = await response.json();
+      // Fetch data for this layout using the API client
+      const result = await apiClient.getLayoutData(directoryId, layout);
       
       if (!result.success) {
         throw new Error(result.error || 'Unknown error loading layout');

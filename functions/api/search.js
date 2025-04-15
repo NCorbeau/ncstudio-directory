@@ -22,7 +22,10 @@ export async function onRequest(context) {
         {
           status: 500,
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type'
           }
         }
       );
@@ -38,7 +41,10 @@ export async function onRequest(context) {
         {
           status: 400,
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type'
           }
         }
       );
@@ -53,7 +59,10 @@ export async function onRequest(context) {
         {
           status: 200,
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type'
           }
         }
       );
@@ -140,7 +149,10 @@ export async function onRequest(context) {
         status: 200,
         headers: {
           'Content-Type': 'application/json',
-          'Cache-Control': 'max-age=60' // Cache for 60 seconds
+          'Cache-Control': 'max-age=60', // Cache for 60 seconds
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type'
         }
       }
     );
@@ -156,7 +168,10 @@ export async function onRequest(context) {
       {
         status: 500,
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type'
         }
       }
     );

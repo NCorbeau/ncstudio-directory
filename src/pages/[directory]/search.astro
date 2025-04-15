@@ -115,16 +115,14 @@ const breadcrumbs = [
     return urlParams.get(param);
   }
   
-  // Function to fetch search results
+  // Function to fetch search results using API client
   async function fetchSearchResults(query) {
     try {
-      const response = await fetch(`/api/search?directory=${directoryId}&q=${encodeURIComponent(query)}`);
+      // Dynamically import the API client
+      const { searchDirectory } = await import('/src/utils/api-client.js');
       
-      if (!response.ok) {
-        throw new Error(`Search request failed: ${response.status}`);
-      }
-      
-      return await response.json();
+      // Use the API client to perform the search
+      return await searchDirectory(directoryId, query);
     } catch (error) {
       console.error('Error fetching search results:', error);
       return { results: [] };

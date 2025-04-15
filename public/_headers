@@ -23,10 +23,11 @@
 
 # API endpoints should not be cached
 /api/*
-  Cache-Control: no-store, max-age=0
   Access-Control-Allow-Origin: *
   Access-Control-Allow-Methods: GET, POST, OPTIONS
-  Access-Control-Allow-Headers: Content-Type
+  Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With
+  Access-Control-Max-Age: 86400
+  Cache-Control: no-store, max-age=0
 
 # Static assets with long cache (1 year)
 /assets/*
