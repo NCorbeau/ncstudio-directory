@@ -34,7 +34,20 @@ if (!directoryData) {
 }
 
 const defaultLayout = directoryData.data.defaultLayout || 'Card';
-const currentLayout = defaultLayout;
+
+// Check URL for layout parameter
+const availableLayouts = directoryData.data.availableLayouts || ['Card'];
+let currentLayout = defaultLayout;
+
+// Get the layout from URL using a more reliable method
+const url = new URL(Astro.request.url);
+const layoutParam = url.searchParams.get('layout');
+
+if (layoutParam && availableLayouts.includes(layoutParam)) {
+  currentLayout = layoutParam;
+}
+
+// Get the direct URL query string for preserving filters when switching layouts
 
 // Fetch all listings (for any layout type)
 const allListings = await getDirectoryListings(directoryId);
