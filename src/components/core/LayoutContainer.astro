@@ -20,102 +20,132 @@ const {
 const availableLayouts = directory.availableLayouts || ['Card'];
 const defaultLayout = directory.defaultLayout || 'Card';
 
-// Check if there's a layout in the URL that should override the default
-let layoutToUse = defaultLayout;
-let urlSearchParams;
-
-try {
-  // Parse the search params to check for layout param
-  urlSearchParams = new URLSearchParams(searchParams);
-  const urlLayout = urlSearchParams.get('layout');
-  
-  // Only use the URL layout if it's valid
-  if (urlLayout && availableLayouts.includes(urlLayout)) {
-    layoutToUse = urlLayout;
-  }
-} catch (e) {
-  console.error('Error parsing search params:', e);
-}
-
-// Override with currentLayout prop if it's valid (highest priority)
-if (currentLayout && availableLayouts.includes(currentLayout)) {
-  layoutToUse = currentLayout;
-}
+// For server-side rendering, we'll use the provided currentLayout or the default
+// Client-side JavaScript will handle URL parameter detection
+const initialLayout = currentLayout && availableLayouts.includes(currentLayout) 
+  ? currentLayout 
+  : defaultLayout;
 ---
 
 <div class="layout-container">
   {availableLayouts.length > 1 && (
     <LayoutSwitcher 
       availableLayouts={availableLayouts}
-      currentLayout={layoutToUse}
+      currentLayout={initialLayout}
       directoryId={directoryId}
       searchParams={searchParams}
     />
   )}
   
-  <div id="layout-content" class="layout-content" data-layout={layoutToUse}>
-    {layoutToUse === 'Card' && (
+  <!-- All layouts are pre-rendered but hidden initially -->
+  <!-- Client-side JS will show the appropriate one -->
+  <div id="layout-wrapper">
+    <div id="card-layout" class="layout-content" style={initialLayout === 'Card' ? '' : 'display: none;'}>
       <CardLayout 
         listings={listings} 
         directory={directory}
         categories={categories}
       />
-    )}
+    </div>
     
-    {layoutToUse === 'List' && (
+    <div id="list-layout" class="layout-content" style={initialLayout === 'List' ? '' : 'display: none;'}>
       <ListLayout
         listings={listings}
         directory={directory}
         categories={categories}
         directoryId={directoryId}
       />
-    )}
+    </div>
     
-    {layoutToUse === 'Magazine' && (
+    <div id="magazine-layout" class="layout-content" style={initialLayout === 'Magazine' ? '' : 'display: none;'}>
       <MagazineLayout
         listings={listings}
         directory={directory}
         categories={categories}
         directoryId={directoryId}
       />
-    )}
+    </div>
     
-    {layoutToUse === 'Map' && (
+    <div id="map-layout" class="layout-content" style={initialLayout === 'Map' ? '' : 'display: none;'}>
       <MapLayout
         listings={listings}
         directory={directory}
         categories={categories}
       />
-    )}
+    </div>
     
-    {layoutToUse === 'Table' && (
+    <div id="table-layout" class="layout-content" style={initialLayout === 'Table' ? '' : 'display: none;'}>
       <TableLayout
         listings={listings}
         directory={directory}
         categories={categories}
       />
-    )}
+    </div>
   </div>
 </div>
 
-<script>
-  // Store the current layout to avoid unnecessary reloads
-  let currentUrlLayout = new URLSearchParams(window.location.search).get('layout');
+<script define:vars={{ availableLayouts, defaultLayout, initialLayout, directoryId }}>
+  // Function to switch layouts without page reload
+  function switchToLayout(layout) {
+    if (!availableLayouts.includes(layout)) {
+      console.error(`Invalid layout: ${layout}`);
+      return;
+    }
+    
+    console.log(`Switching to layout: ${layout}`);
+    
+    // Hide all layouts
+    document.querySelectorAll('.layout-content').forEach(el => {
+      el.style.display = 'none';
+    });
+    
+    // Show the selected layout
+    const layoutElement = document.getElementById(`${layout.toLowerCase()}-layout`);
+    if (layoutElement) {
+      layoutElement.style.display = '';
+    }
+    
+    // Update layout switcher active state
+    document.querySelectorAll('.layout-option').forEach(option => {
+      option.classList.toggle('active', option.dataset.layout === layout);
+    });
+    
+    // Update URL without reloading
+    const url = new URL(window.location.href);
+    url.searchParams.set('layout', layout);
+    window.history.pushState({}, '', url);
+    
+    // Store current layout to avoid unnecessary switches
+    window.currentLayout = layout;
+  }
+  
+  // When page loads, check URL for layout parameter
+  document.addEventListener('DOMContentLoaded', () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const layoutParam = urlParams.get('layout');
+    
+    // If URL has a valid layout parameter and it's different from what's shown
+    if (layoutParam && availableLayouts.includes(layoutParam) && layoutParam !== initialLayout) {
+      // Switch to that layout
+      switchToLayout(layoutParam);
+    }
+  });
   
   // Listen for layout change events from LayoutSwitcher
   document.addEventListener('layoutchange', (e) => {
     const newLayout = e.detail.layout;
     
-    // Only update if the layout is actually changing from what's in the URL
-    if (newLayout && newLayout !== currentUrlLayout) {
-      // Update the URL with the new layout
-      const url = new URL(window.location.href);
-      url.searchParams.set('layout', newLayout);
-      
-      // Navigate to the new URL (which will cause a reload)
-      window.location.href = url.toString();
+    // Only switch if it's different from the current layout
+    if (newLayout && newLayout !== window.currentLayout) {
+      switchToLayout(newLayout);
     }
   });
+  
+  // Make the function available globally
+  window.switchToLayout = switchToLayout;
+  
+  // Initialize current layout
+  window.currentLayout = initialLayout;
 </script>
 
 <style>
