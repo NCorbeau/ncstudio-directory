@@ -21,7 +21,6 @@ const availableLayouts = directory.availableLayouts || ['Card'];
 const defaultLayout = directory.defaultLayout || 'Card';
 
 // For server-side rendering, we'll use the provided currentLayout or the default
-// Client-side JavaScript will handle URL parameter detection
 const initialLayout = currentLayout && availableLayouts.includes(currentLayout) 
   ? currentLayout 
   : defaultLayout;
@@ -38,7 +37,6 @@ const initialLayout = currentLayout && availableLayouts.includes(currentLayout)
   )}
   
   <!-- All layouts are pre-rendered but hidden initially -->
-  <!-- Client-side JS will show the appropriate one -->
   <div id="layout-wrapper">
     <div id="card-layout" class="layout-content" style={initialLayout === 'Card' ? '' : 'display: none;'}>
       <CardLayout 
@@ -84,68 +82,20 @@ const initialLayout = currentLayout && availableLayouts.includes(currentLayout)
   </div>
 </div>
 
-<script define:vars={{ availableLayouts, defaultLayout, initialLayout, directoryId }}>
-  // Function to switch layouts without page reload
-  function switchToLayout(layout) {
-    if (!availableLayouts.includes(layout)) {
-      console.error(`Invalid layout: ${layout}`);
-      return;
-    }
-    
-    console.log(`Switching to layout: ${layout}`);
-    
-    // Hide all layouts
-    document.querySelectorAll('.layout-content').forEach(el => {
-      el.style.display = 'none';
-    });
-    
-    // Show the selected layout
-    const layoutElement = document.getElementById(`${layout.toLowerCase()}-layout`);
-    if (layoutElement) {
-      layoutElement.style.display = '';
-    }
-    
-    // Update layout switcher active state
-    document.querySelectorAll('.layout-option').forEach(option => {
-      option.classList.toggle('active', option.dataset.layout === layout);
-    });
-    
-    // Update URL without reloading
-    const url = new URL(window.location.href);
-    url.searchParams.set('layout', layout);
-    window.history.pushState({}, '', url);
-    
-    // Store current layout to avoid unnecessary switches
-    window.currentLayout = layout;
-  }
+<script>
+  // Import the layout switcher module
+  import { initLayoutSwitcher } from '../../scripts/layoutSwitcher.js';
   
-  // When page loads, check URL for layout parameter
-  document.addEventListener('DOMContentLoaded', () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const layoutParam = urlParams.get('layout');
-    
-    // If URL has a valid layout parameter and it's different from what's shown
-    if (layoutParam && availableLayouts.includes(layoutParam) && layoutParam !== initialLayout) {
-      // Switch to that layout
-      switchToLayout(layoutParam);
-    }
-  });
+  // Define variables to pass to the script
+  const availableLayouts = ['Card', 'List', 'Magazine', 'Map', 'Table'].filter(layout => 
+    document.getElementById(`${layout.toLowerCase()}-layout`)
+  );
+  const defaultLayout = 'Card';
+  const initialLayout = document.querySelector('.layout-content[style=""]')?.id.replace('-layout', '') || defaultLayout;
+  const directoryId = window.location.pathname.split('/')[1];
   
-  // Listen for layout change events from LayoutSwitcher
-  document.addEventListener('layoutchange', (e) => {
-    const newLayout = e.detail.layout;
-    
-    // Only switch if it's different from the current layout
-    if (newLayout && newLayout !== window.currentLayout) {
-      switchToLayout(newLayout);
-    }
-  });
-  
-  // Make the function available globally
-  window.switchToLayout = switchToLayout;
-  
-  // Initialize current layout
-  window.currentLayout = initialLayout;
+  // Initialize the layout switcher
+  initLayoutSwitcher(availableLayouts, defaultLayout, initialLayout, directoryId);
 </script>
 
 <style>

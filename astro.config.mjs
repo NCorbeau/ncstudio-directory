@@ -3,6 +3,7 @@ import { defineConfig } from 'astro/config';
 import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
+import solid from '@astrojs/solid-js';
 
 // Explicitly load environment variables
 // Load base .env file
@@ -74,6 +75,9 @@ export default defineConfig({
   build: {
     format: 'directory'
   },
+
+  integrations: [solid()],
+
   vite: {
     define: {
       'import.meta.env.CURRENT_DIRECTORY': JSON.stringify(currentDirectory),
