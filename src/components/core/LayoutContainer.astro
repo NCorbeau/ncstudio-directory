@@ -5,7 +5,7 @@ import ListLayout from '../layouts/ListLayout.astro';
 import MagazineLayout from '../layouts/MagazineLayout.astro';
 import MapLayout from '../layouts/MapLayout.astro';
 import TableLayout from '../layouts/TableLayout.astro';
-import LayoutSwitcher from './LayoutSwitcher.astro';
+import SolidLayoutContainer from '../solid/LayoutContainer';
 
 const { 
   listings, 
@@ -26,80 +26,87 @@ const initialLayout = currentLayout && availableLayouts.includes(currentLayout)
   : defaultLayout;
 ---
 
-<div class="layout-container">
-  {availableLayouts.length > 1 && (
-    <LayoutSwitcher 
-      availableLayouts={availableLayouts}
-      currentLayout={initialLayout}
-      directoryId={directoryId}
-      searchParams={searchParams}
-    />
-  )}
+<div class="layout-container-wrapper">
+  <!-- SolidJS Component for interactive layout switching -->
+  <SolidLayoutContainer 
+    listings={listings} 
+    directory={directory}
+    categories={categories}
+    directoryId={directoryId}
+    currentLayout={initialLayout}
+    searchParams={searchParams}
+    client:load
+  />
   
-  <!-- All layouts are pre-rendered but hidden initially -->
-  <div id="layout-wrapper">
-    <div id="card-layout" class="layout-content" style={initialLayout === 'Card' ? '' : 'display: none;'}>
-      <CardLayout 
-        listings={listings} 
-        directory={directory}
-        categories={categories}
-      />
-    </div>
-    
-    <div id="list-layout" class="layout-content" style={initialLayout === 'List' ? '' : 'display: none;'}>
-      <ListLayout
-        listings={listings}
-        directory={directory}
-        categories={categories}
-        directoryId={directoryId}
-      />
-    </div>
-    
-    <div id="magazine-layout" class="layout-content" style={initialLayout === 'Magazine' ? '' : 'display: none;'}>
-      <MagazineLayout
-        listings={listings}
-        directory={directory}
-        categories={categories}
-        directoryId={directoryId}
-      />
-    </div>
-    
-    <div id="map-layout" class="layout-content" style={initialLayout === 'Map' ? '' : 'display: none;'}>
-      <MapLayout
-        listings={listings}
-        directory={directory}
-        categories={categories}
-      />
-    </div>
-    
-    <div id="table-layout" class="layout-content" style={initialLayout === 'Table' ? '' : 'display: none;'}>
-      <TableLayout
-        listings={listings}
-        directory={directory}
-        categories={categories}
-      />
-    </div>
+  <!-- Pre-render all layouts but hide them initially (except the active one) -->
+  <!-- Each layout will be shown/hidden by the SolidJS component -->
+  <div id="card-layout" class="layout-content" style={initialLayout === 'Card' ? '' : 'display: none;'}>
+    <CardLayout 
+      listings={listings} 
+      directory={directory}
+      categories={categories}
+      directoryId={directoryId}
+    />
+  </div>
+  
+  <div id="list-layout" class="layout-content" style={initialLayout === 'List' ? '' : 'display: none;'}>
+    <ListLayout
+      listings={listings}
+      directory={directory}
+      categories={categories}
+      directoryId={directoryId}
+    />
+  </div>
+  
+  <div id="magazine-layout" class="layout-content" style={initialLayout === 'Magazine' ? '' : 'display: none;'}>
+    <MagazineLayout
+      listings={listings}
+      directory={directory}
+      categories={categories}
+      directoryId={directoryId}
+    />
+  </div>
+  
+  <div id="map-layout" class="layout-content" style={initialLayout === 'Map' ? '' : 'display: none;'}>
+    <MapLayout
+      listings={listings}
+      directory={directory}
+      categories={categories}
+      directoryId={directoryId}
+    />
+  </div>
+  
+  <div id="table-layout" class="layout-content" style={initialLayout === 'Table' ? '' : 'display: none;'}>
+    <TableLayout
+      listings={listings}
+      directory={directory}
+      categories={categories}
+      directoryId={directoryId}
+    />
   </div>
 </div>
 
 <script>
-  // Import the layout switcher module
-  import { initLayoutSwitcher } from '../../scripts/layoutSwitcher.js';
-  
-  // Define variables to pass to the script
-  const availableLayouts = ['Card', 'List', 'Magazine', 'Map', 'Table'].filter(layout => 
-    document.getElementById(`${layout.toLowerCase()}-layout`)
-  );
-  const defaultLayout = 'Card';
-  const initialLayout = document.querySelector('.layout-content[style=""]')?.id.replace('-layout', '') || defaultLayout;
-  const directoryId = window.location.pathname.split('/')[1];
-  
-  // Initialize the layout switcher
-  initLayoutSwitcher(availableLayouts, defaultLayout, initialLayout, directoryId);
+  // Client-side script to handle layout changes from the SolidJS component
+  document.addEventListener('layoutchange', (event) => {
+    const customEvent = event as CustomEvent;
+    const layout = customEvent.detail.layout;
+    
+    // Hide all layouts
+    document.querySelectorAll('.layout-content').forEach(el => {
+      el.style.display = 'none';
+    });
+    
+    // Show the selected layout
+    const layoutElement = document.getElementById(`${layout.toLowerCase()}-layout`);
+    if (layoutElement) {
+      layoutElement.style.display = '';
+    }
+  });
 </script>
 
 <style>
-  .layout-container {
+  .layout-container-wrapper {
     margin-bottom: 2rem;
   }
   

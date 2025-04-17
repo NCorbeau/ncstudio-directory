@@ -1,7 +1,7 @@
 ---
 import DirectoryLayout from "../../layouts/DirectoryLayout.astro";
-import LayoutContainer from "../../components/core/LayoutContainer.astro";
-import SearchBar from "../../components/core/SearchBar.astro";
+import SearchBar from "../../components/solid/SearchBar";
+import LayoutContainer from "../../components/solid/LayoutContainer";
 import { generateDirectoryHomeSchema } from "../../utils/schema-generator";
 import {
   getAllDirectories,
@@ -34,11 +34,9 @@ if (!directoryData) {
 }
 
 const defaultLayout = directoryData.data.defaultLayout || 'Card';
-
 const availableLayouts = directoryData.data.availableLayouts || ['Card'];
 
 // Always render with default layout initially for server-side rendering
-// Client-side JS will update this if needed based on URL parameters
 let currentLayout = defaultLayout;
 
 // Fetch all listings (for any layout type)
@@ -72,7 +70,6 @@ const structuredData = generateDirectoryHomeSchema(
 const queryString = Astro.url.search;
 
 // Determine which listings to show in the main layout
-// For this example, we're showing all listings, but you could filter by featured status or other criteria
 const mainListings = allListings;
 ---
 
@@ -94,6 +91,7 @@ const mainListings = allListings;
         <SearchBar
           directoryId={directoryId}
           placeholder={`Search ${directoryData.data.name}...`}
+          client:load
         />
       </div>
     </div>
@@ -120,6 +118,7 @@ const mainListings = allListings;
           categories={categories}
           searchParams={queryString}
           directoryId={directoryId}
+          client:visible
         />
       ) : (
         <div class="no-listings-message">
@@ -232,46 +231,6 @@ const mainListings = allListings;
     </div>
   </section>
 </DirectoryLayout>
-
-<script>
-  // Run this script BEFORE the layout container is fully initialized
-  document.addEventListener('DOMContentLoaded', () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const layoutParam = urlParams.get('layout');
-    
-    if (layoutParam) {
-      // Get available layouts from the layout container
-      const layoutContainer = document.querySelector('.layout-container');
-      
-      if (layoutContainer) {
-        // Find the layout switcher buttons to determine available layouts
-        const layoutOptions = layoutContainer.querySelectorAll('.layout-option');
-        const availableLayouts = Array.from(layoutOptions).map(el => el.dataset.layout);
-        
-        if (availableLayouts.includes(layoutParam)) {
-          console.log(`Applying layout from URL: ${layoutParam}`);
-          
-          // Find the correct layout content
-          const layoutContent = document.getElementById('layout-content');
-          
-          if (layoutContent && layoutContent.dataset.layout !== layoutParam) {
-            // The layout in the URL doesn't match what was server-rendered
-            // Trigger a 'layoutchange' event to update it
-            const event = new CustomEvent('layoutchange', { 
-              detail: { layout: layoutParam } 
-            });
-            document.dispatchEvent(event);
-          }
-          
-          // Also update the active state on layout switcher
-          layoutOptions.forEach(option => {
-            option.classList.toggle('active', option.dataset.layout === layoutParam);
-          });
-        }
-      }
-    }
-  });
-</script>
 
 <style>
   /* Hero section */
