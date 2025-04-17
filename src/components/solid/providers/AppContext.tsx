@@ -1,9 +1,9 @@
 // src/components/solid/providers/AppContext.tsx
-import { getDirectory, getListings } from "../../../services/api";
 import { getCurrentDirectoryId } from "../../../utils/common";
 import type { Directory, Listing, Category } from "../../../types";
 import { createContext, useContext, type JSX } from "solid-js";
 import { createStore } from "solid-js/store";
+import { getDirectory, getListings } from "@/lib/nocodb";
 
 // Create context for directory data
 export interface DirectoryState {

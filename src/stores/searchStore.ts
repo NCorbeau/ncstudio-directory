@@ -1,7 +1,7 @@
 // src/stores/searchStore.ts
 import { createStore } from 'solid-js/store';
-import { searchDirectory } from '../services/api';
 import type { Listing } from '../types';
+import { searchListings } from '@/lib/nocodb';
 
 // Initialize the search store
 interface SearchState {
@@ -66,11 +66,11 @@ const searchActions = {
         throw new Error('Directory ID is required for search');
       }
       
-      // Perform the search
-      const response = await searchDirectory(dirId, query);
+      // Perform the search using NocoDB
+      const response = await searchListings(dirId, query);
       
       if (!response.success) {
-        throw new Error(response.message || 'Search failed');
+        throw new Error(response.error || 'Search failed');
       }
       
       setSearchState('results', response.results || []);

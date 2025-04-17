@@ -1,8 +1,8 @@
 // src/components/solid/SearchResults.tsx
 import { createSignal, createEffect, onMount, For, Show } from 'solid-js';
-import { searchDirectory } from '../../services/api';
 import ListingCard from './ListingCard';
 import type { Listing } from '../../types';
+import { searchDirectory } from '@/utils/api-client';
 
 interface SearchResultsProps {
   directoryId: string;

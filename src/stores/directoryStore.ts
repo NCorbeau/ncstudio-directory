@@ -1,7 +1,7 @@
 // src/stores/directoryStore.ts
 import { createStore } from 'solid-js/store';
-import { getDirectory, getListings } from '../services/api';
 import type { Directory, Listing, Category } from '../types';
+import { getDirectory } from '@/lib/nocodb';
 
 // Determine the current directory from the URL
 function getCurrentDirectoryId(): string {
@@ -60,7 +60,7 @@ const directoryActions = {
     setDirectoryState('error', null);
     
     try {
-      // Fetch directory data
+      // Fetch directory data from NocoDB
       const directoryData = await getDirectory(directoryState.id);
       
       if (!directoryData) {
@@ -68,10 +68,10 @@ const directoryActions = {
       }
       
       // Set directory data
-      setDirectoryState('data', directoryData);
+      setDirectoryState('data', directoryData.data);
       
       // Set initial layout
-      const defaultLayout = directoryData.defaultLayout || 'Card';
+      const defaultLayout = directoryData.data.defaultLayout || 'Card';
       setDirectoryState('currentLayout', defaultLayout);
       
       // Check URL for layout parameter
@@ -79,12 +79,12 @@ const directoryActions = {
         const urlParams = new URLSearchParams(window.location.search);
         const layoutParam = urlParams.get('layout');
         
-        if (layoutParam && directoryData.availableLayouts.includes(layoutParam)) {
+        if (layoutParam && directoryData.data.availableLayouts.includes(layoutParam)) {
           setDirectoryState('currentLayout', layoutParam);
         }
       }
       
-      // Fetch listings
+      // Fetch listings from NocoDB
       const listings = await getListings(directoryState.id);
       setDirectoryState('listings', listings);
       
