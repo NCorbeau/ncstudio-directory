@@ -1,6 +1,13 @@
+// src/components/solid/LayoutContainer.tsx
+import { createSignal, onMount, onCleanup, Show, lazy, Suspense } from "solid-js";
 import LayoutSwitcher from "./LayoutSwitcher";
 import type { LayoutProps } from "../../types";
-import { createSignal, onMount, onCleanup } from "solid-js";
+// Lazy load layout components for better performance
+const CardLayout = lazy(() => import("./layouts/CardLayout"));
+const TableLayout = lazy(() => import("./layouts/TableLayout"));
+const ListLayout = lazy(() => import("./layouts/ListLayout"));
+const MagazineLayout = lazy(() => import("./layouts/MagazineLayout"));
+const MapLayout = lazy(() => import("./layouts/MapLayout"));
 
 interface LayoutContainerProps extends LayoutProps {
   currentLayout?: string;
@@ -67,6 +74,14 @@ export default function LayoutContainer(props: LayoutContainerProps) {
     }
   });
 
+  // Loading fallback component
+  const LoadingFallback = () => (
+    <div class="layout-loading">
+      <div class="spinner"></div>
+      <p>Loading layout...</p>
+    </div>
+  );
+
   return (
     <div class="layout-container">
       {availableLayouts.length > 1 && (
@@ -78,53 +93,53 @@ export default function LayoutContainer(props: LayoutContainerProps) {
         />
       )}
 
-      <div id="layout-wrapper">
-        {/* Instead of directly importing and using Astro components inside SolidJS,
-            we'll use a different approach with data attributes to indicate the active layout */}
-        <div
-          id="card-layout"
-          class="layout-content"
-          style={{ display: activeLayout() === "Card" ? "block" : "none" }}
-          data-active={activeLayout() === "Card" ? "true" : "false"}
-        >
-          {/* CardLayout will be rendered by Astro separately */}
-        </div>
+      <div class="layout-content-wrapper">
+        <Suspense fallback={<LoadingFallback />}>
+          <Show when={activeLayout() === "Card"}>
+            <CardLayout
+              listings={listings}
+              directory={directory}
+              categories={categories}
+              directoryId={directoryId}
+            />
+          </Show>
 
-        <div
-          id="table-layout"
-          class="layout-content"
-          style={{ display: activeLayout() === "Table" ? "block" : "none" }}
-          data-active={activeLayout() === "Table" ? "true" : "false"}
-        >
-          {/* TableLayout will be rendered by Astro separately */}
-        </div>
+          <Show when={activeLayout() === "Table"}>
+            <TableLayout
+              listings={listings}
+              directory={directory}
+              categories={categories}
+              directoryId={directoryId}
+            />
+          </Show>
 
-        <div
-          id="list-layout"
-          class="layout-content"
-          style={{ display: activeLayout() === "List" ? "block" : "none" }}
-          data-active={activeLayout() === "List" ? "true" : "false"}
-        >
-          {/* ListLayout will be rendered by Astro separately */}
-        </div>
+          <Show when={activeLayout() === "List"}>
+            <ListLayout
+              listings={listings}
+              directory={directory}
+              categories={categories}
+              directoryId={directoryId}
+            />
+          </Show>
 
-        <div
-          id="magazine-layout"
-          class="layout-content"
-          style={{ display: activeLayout() === "Magazine" ? "block" : "none" }}
-          data-active={activeLayout() === "Magazine" ? "true" : "false"}
-        >
-          {/* MagazineLayout will be rendered by Astro separately */}
-        </div>
+          <Show when={activeLayout() === "Magazine"}>
+            <MagazineLayout
+              listings={listings}
+              directory={directory}
+              categories={categories}
+              directoryId={directoryId}
+            />
+          </Show>
 
-        <div
-          id="map-layout"
-          class="layout-content"
-          style={{ display: activeLayout() === "Map" ? "block" : "none" }}
-          data-active={activeLayout() === "Map" ? "true" : "false"}
-        >
-          {/* MapLayout will be rendered by Astro separately */}
-        </div>
+          <Show when={activeLayout() === "Map"}>
+            <MapLayout
+              listings={listings}
+              directory={directory}
+              categories={categories}
+              directoryId={directoryId}
+            />
+          </Show>
+        </Suspense>
       </div>
     </div>
   );

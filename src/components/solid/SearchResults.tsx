@@ -1,6 +1,8 @@
+// src/components/solid/SearchResults.tsx
+import { createSignal, createEffect, onMount, For, Show } from 'solid-js';
+import { searchDirectory } from '../../services/api';
 import ListingCard from './ListingCard';
-import { searchState, searchActions } from '../../stores/searchStore';
-import { createSignal, onMount, For } from 'solid-js';
+import type { Listing } from '../../types';
 
 interface SearchResultsProps {
   directoryId: string;
@@ -10,9 +12,9 @@ interface SearchResultsProps {
 export default function SearchResults(props: SearchResultsProps) {
   const { directoryId, theme = 'default' } = props;
   
-  // Local state
+  // State for search
   const [isLoading, setIsLoading] = createSignal(false);
-  const [results, setResults] = createSignal([]);
+  const [results, setResults] = createSignal<Listing[]>([]);
   const [query, setQuery] = createSignal('');
   const [hasSearched, setHasSearched] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
@@ -42,17 +44,13 @@ export default function SearchResults(props: SearchResultsProps) {
     setError(null);
     
     try {
-      // In a real implementation, we'd use the searchActions from the store
-      // For simplicity, we'll simulate the API call here
-      const response = await fetch(`/api/search?directory=${directoryId}&q=${encodeURIComponent(searchQuery)}`);
+      const response = await searchDirectory(directoryId, searchQuery);
       
-      if (!response.ok) {
-        throw new Error(`Search failed: ${response.status} ${response.statusText}`);
+      if (!response.success) {
+        throw new Error(response.message || 'Search failed');
       }
       
-      const data = await response.json();
-      
-      setResults(data.results || []);
+      setResults(response.results || []);
       setHasSearched(true);
       
       // Update URL with query parameter
@@ -60,10 +58,19 @@ export default function SearchResults(props: SearchResultsProps) {
         const url = new URL(window.location.href);
         url.searchParams.set('q', searchQuery);
         window.history.replaceState({}, '', url.toString());
+        
+        // Update document title to reflect search
+        document.title = `Search: ${searchQuery} | Directory`;
+        
+        // Update search title element if it exists
+        const searchTitle = document.getElementById('search-title');
+        if (searchTitle) {
+          searchTitle.textContent = `Search Results for "${searchQuery}"`;
+        }
       }
-    } catch (err) {
-      console.error('Error performing search:', err);
-      setError(err instanceof Error ? err.message : 'Unknown error');
+    } catch (error) {
+      console.error('Error performing search:', error);
+      setError(error instanceof Error ? error.message : 'Unknown error');
     } finally {
       setIsLoading(false);
     }
@@ -81,6 +88,15 @@ export default function SearchResults(props: SearchResultsProps) {
       const url = new URL(window.location.href);
       url.searchParams.delete('q');
       window.history.replaceState({}, '', url.toString());
+      
+      // Reset title
+      document.title = 'Search | Directory';
+      
+      // Reset search title element
+      const searchTitle = document.getElementById('search-title');
+      if (searchTitle) {
+        searchTitle.textContent = 'Search Listings';
+      }
     }
   };
   
@@ -91,21 +107,20 @@ export default function SearchResults(props: SearchResultsProps) {
 
   return (
     <div class="search-results">
-      {hasSearched() && (
+      <Show when={hasSearched()}>
         <div class="search-info">
           <p class="results-count">
             {results().length === 0 
               ? 'No results found' 
               : `Found ${results().length} result${results().length !== 1 ? 's' : ''}`}
           </p>
-          <a href={`/${directoryId}/search`} class="clear-search" onClick={(e) => {
-            e.preventDefault();
-            clearSearch();
-          }}>Clear search</a>
+          <button class="clear-search" onClick={clearSearch}>
+            Clear search
+          </button>
         </div>
-      )}
+      </Show>
       
-      {!hasSearched() && (
+      <Show when={!hasSearched()}>
         <div class="no-query-message">
           <div class="no-results">
             <div>
@@ -114,12 +129,12 @@ export default function SearchResults(props: SearchResultsProps) {
             </div>
           </div>
         </div>
-      )}
+      </Show>
       
-      {hasSearched() && results().length > 0 && (
+      <Show when={hasSearched() && results().length > 0}>
         <div class="listing-grid">
           <For each={results()}>
-            {(listing: any) => (
+            {(listing) => (
               <ListingCard
                 listing={listing.data}
                 url={`/${directoryId}/${listing.slug.replace(`${directoryId}/`, '')}`}
@@ -128,9 +143,9 @@ export default function SearchResults(props: SearchResultsProps) {
             )}
           </For>
         </div>
-      )}
+      </Show>
       
-      {hasSearched() && results().length === 0 && (
+      <Show when={hasSearched() && results().length === 0 && !isLoading()}>
         <div class="no-results-message">
           <div class="no-results">
             <div>
@@ -140,23 +155,23 @@ export default function SearchResults(props: SearchResultsProps) {
             </div>
           </div>
         </div>
-      )}
+      </Show>
       
-      {isLoading() && (
+      <Show when={isLoading()}>
         <div class="loading-indicator">
           <div class="spinner"></div>
           <p>Searching...</p>
         </div>
-      )}
+      </Show>
       
-      {error() && (
+      <Show when={error()}>
         <div class="error-message">
           <p>Error: {error()}</p>
           <button onClick={() => performSearch(query())}>
             Try Again
           </button>
         </div>
-      )}
+      </Show>
     </div>
   );
 }

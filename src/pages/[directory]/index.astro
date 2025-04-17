@@ -1,5 +1,6 @@
 ---
 import DirectoryLayout from "../../layouts/DirectoryLayout.astro";
+import { AppProvider } from "../../components/solid/providers/AppContext";
 import SearchBar from "../../components/solid/SearchBar";
 import LayoutContainer from "../../components/solid/LayoutContainer";
 import { generateDirectoryHomeSchema } from "../../utils/schema-generator";
@@ -81,155 +82,157 @@ const mainListings = allListings;
   canonicalUrl={canonicalUrl}
   structuredData={structuredData}
 >
-  <!-- Hero Section -->
-  <section class="hero">
-    <div class="container">
-      <h1>{directoryData.data.name}</h1>
-      <p class="lead">{directoryData.data.description}</p>
-
-      <div class="search-container">
-        <SearchBar
-          directoryId={directoryId}
-          placeholder={`Search ${directoryData.data.name}...`}
-          client:load
-        />
-      </div>
-    </div>
-  </section>
-
-  <!-- Main Listings with Layout Switching -->
-  <section class="main-listings">
-    <div class="container">
-      <div class="section-header">
-        <h2>Browse {directoryData.data.name}</h2>
-        
-        {allListings.length > 0 ? (
-          <span class="listing-count">{allListings.length} listings found</span>
-        ) : (
-          <span class="listing-count">No listings found</span>
-        )}
-      </div>
-
-      {allListings.length > 0 ? (
-        <LayoutContainer
-          listings={mainListings}
-          directory={directoryData.data}
-          currentLayout={currentLayout}
-          categories={categories}
-          searchParams={queryString}
-          directoryId={directoryId}
-          client:visible
-        />
-      ) : (
-        <div class="no-listings-message">
-          <p>No listings have been added to this directory yet.</p>
-        </div>
-      )}
-    </div>
-  </section>
-
-  <!-- Categories Section -->
-  {categories.length > 0 && (
-    <section class="categories">
+  <AppProvider initialDirectoryId={directoryId} client:load>
+    <!-- Hero Section -->
+    <section class="hero">
       <div class="container">
-        <div class="section-header">
-          <h2>Browse by Category</h2>
-        </div>
+        <h1>{directoryData.data.name}</h1>
+        <p class="lead">{directoryData.data.description}</p>
 
-        <div class="category-grid">
-          {categories.map((category) => (
-            <a
-              href={`/${directoryId}/category/${category.id}`}
-              class="category-card"
-            >
-              <h3>{category.name}</h3>
-              {category.description && <p>{category.description}</p>}
-            </a>
-          ))}
+        <div class="search-container">
+          <SearchBar
+            directoryId={directoryId}
+            placeholder={`Search ${directoryData.data.name}...`}
+            client:load
+          />
         </div>
       </div>
     </section>
-  )}
 
-  <!-- Recent Listings Section (if different from featured and not empty) -->
-  {recentListings.length > 0 &&
-    !recentListings.every((r) =>
-      featuredListings.some((f) => f.slug === r.slug)
-    ) && (
-      <section class="recent">
+    <!-- Main Listings with Layout Switching -->
+    <section class="main-listings">
+      <div class="container">
+        <div class="section-header">
+          <h2>Browse {directoryData.data.name}</h2>
+          
+          {allListings.length > 0 ? (
+            <span class="listing-count">{allListings.length} listings found</span>
+          ) : (
+            <span class="listing-count">No listings found</span>
+          )}
+        </div>
+
+        {allListings.length > 0 ? (
+          <LayoutContainer
+            listings={mainListings}
+            directory={directoryData.data}
+            currentLayout={currentLayout}
+            categories={categories}
+            searchParams={queryString}
+            directoryId={directoryId}
+            client:visible
+          />
+        ) : (
+          <div class="no-listings-message">
+            <p>No listings have been added to this directory yet.</p>
+          </div>
+        )}
+      </div>
+    </section>
+
+    <!-- Categories Section -->
+    {categories.length > 0 && (
+      <section class="categories">
         <div class="container">
           <div class="section-header">
-            <h2>Recent Additions</h2>
-            <a href={`/${directoryId}/search?sort=newest`} class="view-all">
-              View All
-            </a>
+            <h2>Browse by Category</h2>
           </div>
 
-          <div class="listing-grid">
-            {recentListings.map((listing) => (
-              <div class="recent-card">
-                <h3>
-                  <a href={`/${directoryId}/${listing.slug.replace(`${directoryId}/`, "")}`}>
-                    {listing.data.title}
-                  </a>
-                </h3>
-                <p>{listing.data.description.substring(0, 120)}...</p>
-                {listing.data.updatedAt && (
-                  <div class="date-added">
-                    Added {new Date(listing.data.updatedAt).toLocaleDateString()}
-                  </div>
-                )}
-              </div>
+          <div class="category-grid">
+            {categories.map((category) => (
+              <a
+                href={`/${directoryId}/category/${category.id}`}
+                class="category-card"
+              >
+                <h3>{category.name}</h3>
+                {category.description && <p>{category.description}</p>}
+              </a>
             ))}
           </div>
         </div>
       </section>
     )}
 
-  <!-- Landing Pages / Guides Section -->
-  {landingPages.length > 0 && (
-    <section class="guides">
-      <div class="container">
-        <div class="section-header">
-          <h2>Guides & Resources</h2>
-        </div>
+    <!-- Recent Listings Section (if different from featured and not empty) -->
+    {recentListings.length > 0 &&
+      !recentListings.every((r) =>
+        featuredListings.some((f) => f.slug === r.slug)
+      ) && (
+        <section class="recent">
+          <div class="container">
+            <div class="section-header">
+              <h2>Recent Additions</h2>
+              <a href={`/${directoryId}/search?sort=newest`} class="view-all">
+                View All
+              </a>
+            </div>
 
-        <div class="guides-grid">
-          {landingPages.slice(0, 3).map((page) => (
-            <a
-              href={`/${directoryId}/page/${page.slug.replace(`${directoryId}/`, "")}`}
-              class="guide-card"
-            >
-              {page.data.featuredImage && (
-                <div class="guide-image">
-                  <img src={page.data.featuredImage} alt={page.data.title} />
+            <div class="listing-grid">
+              {recentListings.map((listing) => (
+                <div class="recent-card">
+                  <h3>
+                    <a href={`/${directoryId}/${listing.slug.replace(`${directoryId}/`, "")}`}>
+                      {listing.data.title}
+                    </a>
+                  </h3>
+                  <p>{listing.data.description.substring(0, 120)}...</p>
+                  {listing.data.updatedAt && (
+                    <div class="date-added">
+                      Added {new Date(listing.data.updatedAt).toLocaleDateString()}
+                    </div>
+                  )}
                 </div>
-              )}
-              <div class="guide-content">
-                <h3>{page.data.title}</h3>
-                <p>{page.data.description}</p>
-              </div>
-            </a>
-          ))}
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+    <!-- Landing Pages / Guides Section -->
+    {landingPages.length > 0 && (
+      <section class="guides">
+        <div class="container">
+          <div class="section-header">
+            <h2>Guides & Resources</h2>
+          </div>
+
+          <div class="guides-grid">
+            {landingPages.slice(0, 3).map((page) => (
+              <a
+                href={`/${directoryId}/page/${page.slug.replace(`${directoryId}/`, "")}`}
+                class="guide-card"
+              >
+                {page.data.featuredImage && (
+                  <div class="guide-image">
+                    <img src={page.data.featuredImage} alt={page.data.title} />
+                  </div>
+                )}
+                <div class="guide-content">
+                  <h3>{page.data.title}</h3>
+                  <p>{page.data.description}</p>
+                </div>
+              </a>
+            ))}
+          </div>
+        </div>
+      </section>
+    )}
+
+    <!-- About Section with Call-to-Action -->
+    <section class="about">
+      <div class="container">
+        <div class="about-content">
+          <h2>About {directoryData.data.name}</h2>
+          <p>
+            Discover the best {directoryData.data.name.toLowerCase()} with our comprehensive
+            directory. Our expert team researches and curates the finest selections
+            to help you find exactly what you're looking for.
+          </p>
+          <a href={`/${directoryId}/search`} class="cta-button">Start Exploring</a>
         </div>
       </div>
     </section>
-  )}
-
-  <!-- About Section with Call-to-Action -->
-  <section class="about">
-    <div class="container">
-      <div class="about-content">
-        <h2>About {directoryData.data.name}</h2>
-        <p>
-          Discover the best {directoryData.data.name.toLowerCase()} with our comprehensive
-          directory. Our expert team researches and curates the finest selections
-          to help you find exactly what you're looking for.
-        </p>
-        <a href={`/${directoryId}/search`} class="cta-button">Start Exploring</a>
-      </div>
-    </div>
-  </section>
+  </AppProvider>
 </DirectoryLayout>
 
 <style>

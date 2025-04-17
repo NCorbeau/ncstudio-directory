@@ -1,8 +1,13 @@
-import type { LayoutProps } from '@/types';
+// src/components/solid/layouts/CardLayout.tsx
+import type { LayoutProps } from '../../../types';
 import { createSignal, createEffect, For } from 'solid-js';
 import ListingCard from '../ListingCard';
+import { useDirectory } from '../providers/AppContext';
 
 export default function CardLayout(props: LayoutProps) {
+  // If AppContext is used, you can get data from context instead of props
+  // const directory = useDirectory();
+  
   const { listings, directory, categories, directoryId } = props;
   
   // State for filtering and sorting
@@ -109,6 +114,21 @@ export default function CardLayout(props: LayoutProps) {
             />
           )}
         </For>
+        
+        {filteredListings().length === 0 && (
+          <div class="no-results">
+            <p>No listings match your current filters.</p>
+            <button 
+              onClick={() => {
+                setCategoryFilter('');
+                setSortBy('featured');
+              }}
+              class="reset-button"
+            >
+              Reset Filters
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

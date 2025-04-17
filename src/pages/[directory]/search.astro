@@ -1,6 +1,7 @@
 ---
 import DirectoryLayout from "../../layouts/DirectoryLayout.astro";
 import { getAllDirectories, getDirectoryConfig } from "../../utils/directory-helpers";
+import { AppProvider } from "../../components/solid/providers/AppContext";
 import SearchBar from "../../components/solid/SearchBar";
 import SearchResults from "../../components/solid/SearchResults";
 
@@ -49,39 +50,41 @@ const breadcrumbs = [
   canonicalUrl={canonicalUrl}
   breadcrumbs={breadcrumbs}
 >
-  <div class="container">
-    <header class="search-header">
-      <h1 id="search-title">Search Listings</h1>
+  <AppProvider initialDirectoryId={directoryId} client:load>
+    <div class="container">
+      <header class="search-header">
+        <h1 id="search-title">Search Listings</h1>
+        
+        <div class="search-wrapper">
+          <SearchBar 
+            directoryId={directoryId}
+            placeholder={`Search ${directoryData.data.name}...`}
+            client:load
+          />
+        </div>
+      </header>
       
-      <div class="search-wrapper">
-        <SearchBar 
-          directoryId={directoryId}
-          placeholder={`Search ${directoryData.data.name}...`}
-          client:load
-        />
-      </div>
-    </header>
-    
-    <!-- Search Results Component -->
-    <SearchResults
-      directoryId={directoryId}
-      theme={directoryData.data.theme}
-      client:visible
-    />
-    
-    <!-- Categories Section -->
-    <div id="browse-categories" class="browse-categories">
-      <h2>Browse by Category</h2>
-      <div class="category-grid">
-        {directoryData.data.categories.map(category => (
-          <a href={`/${directoryId}/category/${category.id}`} class="category-card">
-            <h3>{category.name}</h3>
-            {category.description && <p>{category.description}</p>}
-          </a>
-        ))}
+      <!-- Search Results Component -->
+      <SearchResults
+        directoryId={directoryId}
+        theme={directoryData.data.theme}
+        client:visible
+      />
+      
+      <!-- Categories Section -->
+      <div id="browse-categories" class="browse-categories">
+        <h2>Browse by Category</h2>
+        <div class="category-grid">
+          {directoryData.data.categories.map(category => (
+            <a href={`/${directoryId}/category/${category.id}`} class="category-card">
+              <h3>{category.name}</h3>
+              {category.description && <p>{category.description}</p>}
+            </a>
+          ))}
+        </div>
       </div>
     </div>
-  </div>
+  </AppProvider>
 </DirectoryLayout>
 
 <style>
