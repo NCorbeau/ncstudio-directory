@@ -4,42 +4,13 @@
  */
 import { cachedFetch, cacheTTL } from './cache.js';
 
-// NocoDB API configuration with safe environment variable access
-let NOCODB_API_URL = 'https://nocodb.ncstudio.click/api/v2';
-let NOCODB_AUTH_TOKEN = '';
-let isDev = false;
+import dotenv from 'dotenv';
 
-// Safely access environment variables
-try {
-  // Check if we're in a browser/Astro context with import.meta
-  if (import.meta && import.meta.env) {
-    isDev = import.meta.env.DEV;
-    if (import.meta.env.NOCODB_API_URL) {
-      NOCODB_API_URL = import.meta.env.NOCODB_API_URL;
-    }
-    if (import.meta.env.NOCODB_AUTH_TOKEN) {
-      NOCODB_AUTH_TOKEN = import.meta.env.NOCODB_AUTH_TOKEN;
-    }
-  }
-} catch (e) {
-  // If import.meta is not available, we're likely in Node.js
-  try {
-    if (process && process.env) {
-      if (process.env.NODE_ENV === 'development') {
-        isDev = true;
-      }
-      if (process.env.NOCODB_API_URL) {
-        NOCODB_API_URL = process.env.NOCODB_API_URL;
-      }
-      if (process.env.NOCODB_AUTH_TOKEN) {
-        NOCODB_AUTH_TOKEN = process.env.NOCODB_AUTH_TOKEN;
-      }
-    }
-  } catch (nodeErr) {
-    // Neither browser nor Node.js environment variables available
-    console.warn('Unable to access environment variables');
-  }
-}
+dotenv.config();
+
+// NocoDB API configuration
+const NOCODB_API_URL = import.meta.env?.NOCODB_API_URL || process.env?.NOCODB_API_URL || 'https://nocodb.ncstudio.click/api/v2';
+const NOCODB_AUTH_TOKEN = import.meta.env?.NOCODB_AUTH_TOKEN || process.env?.NOCODB_AUTH_TOKEN;
 
 // Base headers for API requests - updated for v2 API
 const headers = {
@@ -47,11 +18,8 @@ const headers = {
   'Content-Type': 'application/json'
 };
 
-// Log only in development mode
-if (isDev) {
-  console.log('NOCODB_API_URL:', NOCODB_API_URL);
-  console.log('NOCODB_AUTH_TOKEN:', NOCODB_AUTH_TOKEN ? '****' : 'Not Set'); // Hide token in logs
-}
+console.log('NOCODB_API_URL:', NOCODB_API_URL);
+console.log('NOCODB_AUTH_TOKEN:', NOCODB_AUTH_TOKEN ? '****' : 'Not Set'); // Hide token in logs
 
 // Table mapping to handle NocoDB naming conventions
 const TABLES = {
@@ -337,7 +305,7 @@ export async function getDirectories() {
       description: directory.description,
       domain: directory.domain,
       theme: directory.theme || 'default',
-      availableLayouts: directory.availableLayouts ? directory.availableLayouts.split(',') : ['Card'],
+      availableLayouts: directory.availableLayouts.split(','),
       defaultLayout: directory.defaultLayout || 'Card',
       primaryColor: directory.primaryColor || '#3366cc',
       secondaryColor: directory.secondaryColor,
@@ -382,7 +350,7 @@ export async function getDirectory(id) {
         description: directory.description,
         domain: directory.domain,
         theme: directory.theme || 'default',
-        availableLayouts: directory.availableLayouts ? directory.availableLayouts.split(',') : ['Card'],
+        availableLayouts: directory.availableLayouts.split(','),
         defaultLayout: directory.defaultLayout || 'Card',
         primaryColor: directory.primaryColor || '#3366cc',
         secondaryColor: directory.secondaryColor,
