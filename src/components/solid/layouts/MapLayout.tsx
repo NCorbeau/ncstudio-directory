@@ -109,6 +109,14 @@ export default function MapLayout(props: LayoutProps) {
       if (firstWithAddress >= 0) {
         setActiveListingIndex(firstWithAddress);
       }
+      
+      // Force a resize event after a short delay to ensure the map renders correctly
+      setTimeout(() => {
+        if (map) {
+          map.invalidateSize();
+        }
+      }, 100);
+      
     } catch (error) {
       console.error('Error initializing map:', error);
     }
@@ -150,7 +158,10 @@ export default function MapLayout(props: LayoutProps) {
   
   // Initialize map on mount
   onMount(() => {
-    initializeMap();
+    // Delay the map initialization to ensure the container exists and has dimensions
+    setTimeout(() => {
+      initializeMap();
+    }, 100);
   });
   
   // Clean up on unmount

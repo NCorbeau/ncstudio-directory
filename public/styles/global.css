@@ -19,40 +19,46 @@
   --borderColor: #eeeeee;
   --errorColor: #d32f2f;
   --successColor: #388e3c;
-  
+
   /* Typography */
-  --fontPrimary: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-  --fontSecondary: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-  --fontMonospace: 'SF Mono', SFMono-Regular, Consolas, 'Liberation Mono', Menlo, Courier, monospace;
-  
+  --fontPrimary:
+    system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+    Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+  --fontSecondary:
+    system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+    Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+  --fontMonospace:
+    "SF Mono", SFMono-Regular, Consolas, "Liberation Mono", Menlo, Courier,
+    monospace;
+
   /* Layout */
   --maxWidth: 1200px;
   --sidebarWidth: 280px;
   --headerHeight: 70px;
   --footerHeight: 300px;
-  
+
   /* Spacing */
   --spacingXs: 0.25rem;
   --spacingSm: 0.5rem;
   --spacingMd: 1rem;
   --spacingLg: 2rem;
   --spacingXl: 4rem;
-  
+
   /* Borders */
   --borderRadius: 8px;
   --cardBorderRadius: 8px;
   --buttonBorderRadius: 4px;
-  
+
   /* Shadows */
   --shadowSm: 0 1px 3px rgba(0, 0, 0, 0.1);
   --shadowMd: 0 4px 6px rgba(0, 0, 0, 0.1);
   --shadowLg: 0 10px 15px rgba(0, 0, 0, 0.1);
-  
+
   /* Transitions */
   --transitionFast: 0.2s;
   --transitionMedium: 0.3s;
   --transitionSlow: 0.5s;
-  
+
   /* Z-index layers */
   --zIndexHeader: 100;
   --zIndexModal: 200;
@@ -60,7 +66,8 @@
   --zIndexTooltip: 175;
 }
 
-html, body {
+html,
+body {
   font-family: var(--fontPrimary);
   color: var(--textColor);
   line-height: 1.6;
@@ -96,8 +103,20 @@ body {
   padding: 0 var(--spacingMd);
 }
 
+@import './layouts/card-layout.css';
+@import './layouts/map-layout.css';
+@import './layouts/table-layout.css';
+@import './layouts/list-layout.css';
+@import './layouts/magazine-layout.css';
+@import './layouts/layout-container.css';
+
 /* Typography */
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   margin-top: 0;
   margin-bottom: var(--spacingMd);
   font-weight: 600;
@@ -143,7 +162,8 @@ a:hover {
 }
 
 /* Lists */
-ul, ol {
+ul,
+ol {
   margin-bottom: var(--spacingMd);
   padding-left: var(--spacingLg);
 }
@@ -153,7 +173,7 @@ li {
 }
 
 /* Buttons */
-button, 
+button,
 .button {
   display: inline-block;
   padding: 0.5rem 1rem;
@@ -167,22 +187,24 @@ button,
   text-align: center;
   text-decoration: none;
   cursor: pointer;
-  transition: background-color var(--transitionFast), transform var(--transitionFast);
+  transition:
+    background-color var(--transitionFast),
+    transform var(--transitionFast);
 }
 
-button:hover, 
+button:hover,
 .button:hover {
   background-color: var(--primaryColor-dark);
   transform: translateY(-2px);
 }
 
-button:focus, 
+button:focus,
 .button:focus {
   outline: none;
   box-shadow: 0 0 0 3px rgba(var(--primaryColor-rgb), 0.3);
 }
 
-button:disabled, 
+button:disabled,
 .button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
@@ -217,8 +239,8 @@ button:disabled,
 }
 
 /* Form elements */
-input, 
-textarea, 
+input,
+textarea,
 select {
   width: 100%;
   padding: 0.75rem 1rem;
@@ -226,11 +248,13 @@ select {
   border-radius: var(--borderRadius);
   font-family: var(--fontPrimary);
   font-size: 1rem;
-  transition: border-color var(--transitionFast), box-shadow var(--transitionFast);
+  transition:
+    border-color var(--transitionFast),
+    box-shadow var(--transitionFast);
 }
 
-input:focus, 
-textarea:focus, 
+input:focus,
+textarea:focus,
 select:focus {
   outline: none;
   border-color: var(--primaryColor);
@@ -278,7 +302,9 @@ section {
   border-radius: var(--cardBorderRadius);
   box-shadow: var(--shadowMd);
   overflow: hidden;
-  transition: transform var(--transitionMedium), box-shadow var(--transitionMedium);
+  transition:
+    transform var(--transitionMedium),
+    box-shadow var(--transitionMedium);
 }
 
 .card:hover {
@@ -330,15 +356,15 @@ section {
   .grid-cols-4 {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+
   h1 {
     font-size: 2rem;
   }
-  
+
   h2 {
     font-size: 1.75rem;
   }
-  
+
   .hero h1 {
     font-size: 2.5rem;
   }
@@ -350,19 +376,19 @@ section {
   .grid-cols-4 {
     grid-template-columns: 1fr;
   }
-  
+
   h1 {
     font-size: 1.8rem;
   }
-  
+
   h2 {
     font-size: 1.5rem;
   }
-  
+
   .hero h1 {
     font-size: 2rem;
   }
-  
+
   .hero p {
     font-size: 1.1rem;
   }
@@ -374,7 +400,9 @@ section {
   overflow: hidden;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   background-color: white;
-  transition: transform 0.3s, box-shadow 0.3s;
+  transition:
+    transform 0.3s,
+    box-shadow 0.3s;
   height: 100%;
 }
 
@@ -494,7 +522,7 @@ section {
   .search-header h1 {
     font-size: 1.8rem;
   }
-  
+
   .listing-grid,
   .category-grid {
     grid-template-columns: 1fr;
