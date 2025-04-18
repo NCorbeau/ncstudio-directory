@@ -4,18 +4,42 @@
  */
 import { cachedFetch, cacheTTL } from './cache.js';
 
-// NocoDB API configuration - Browser-safe environment variable access
-// Add safety check for import.meta.env and use Node.js process.env as fallback
-const isDev = typeof import !== 'undefined' && import.meta && import.meta.env && import.meta.env.DEV;
-const NOCODB_API_URL = 
-  (typeof import !== 'undefined' && import.meta && import.meta.env && import.meta.env.NOCODB_API_URL) || 
-  (typeof process !== 'undefined' && process.env && process.env.NOCODB_API_URL) || 
-  'https://nocodb.ncstudio.click/api/v2';
+// NocoDB API configuration with safe environment variable access
+let NOCODB_API_URL = 'https://nocodb.ncstudio.click/api/v2';
+let NOCODB_AUTH_TOKEN = '';
+let isDev = false;
 
-const NOCODB_AUTH_TOKEN = 
-  (typeof import !== 'undefined' && import.meta && import.meta.env && import.meta.env.NOCODB_AUTH_TOKEN) || 
-  (typeof process !== 'undefined' && process.env && process.env.NOCODB_AUTH_TOKEN) || 
-  '';
+// Safely access environment variables
+try {
+  // Check if we're in a browser/Astro context with import.meta
+  if (import.meta && import.meta.env) {
+    isDev = import.meta.env.DEV;
+    if (import.meta.env.NOCODB_API_URL) {
+      NOCODB_API_URL = import.meta.env.NOCODB_API_URL;
+    }
+    if (import.meta.env.NOCODB_AUTH_TOKEN) {
+      NOCODB_AUTH_TOKEN = import.meta.env.NOCODB_AUTH_TOKEN;
+    }
+  }
+} catch (e) {
+  // If import.meta is not available, we're likely in Node.js
+  try {
+    if (process && process.env) {
+      if (process.env.NODE_ENV === 'development') {
+        isDev = true;
+      }
+      if (process.env.NOCODB_API_URL) {
+        NOCODB_API_URL = process.env.NOCODB_API_URL;
+      }
+      if (process.env.NOCODB_AUTH_TOKEN) {
+        NOCODB_AUTH_TOKEN = process.env.NOCODB_AUTH_TOKEN;
+      }
+    }
+  } catch (nodeErr) {
+    // Neither browser nor Node.js environment variables available
+    console.warn('Unable to access environment variables');
+  }
+}
 
 // Base headers for API requests - updated for v2 API
 const headers = {
@@ -23,7 +47,7 @@ const headers = {
   'Content-Type': 'application/json'
 };
 
-// Log only in development mode, with safety check
+// Log only in development mode
 if (isDev) {
   console.log('NOCODB_API_URL:', NOCODB_API_URL);
   console.log('NOCODB_AUTH_TOKEN:', NOCODB_AUTH_TOKEN ? '****' : 'Not Set'); // Hide token in logs
@@ -313,7 +337,7 @@ export async function getDirectories() {
       description: directory.description,
       domain: directory.domain,
       theme: directory.theme || 'default',
-      availableLayouts: directory.availableLayouts.split(','),
+      availableLayouts: directory.availableLayouts ? directory.availableLayouts.split(',') : ['Card'],
       defaultLayout: directory.defaultLayout || 'Card',
       primaryColor: directory.primaryColor || '#3366cc',
       secondaryColor: directory.secondaryColor,
@@ -358,7 +382,7 @@ export async function getDirectory(id) {
         description: directory.description,
         domain: directory.domain,
         theme: directory.theme || 'default',
-        availableLayouts: directory.availableLayouts.split(','),
+        availableLayouts: directory.availableLayouts ? directory.availableLayouts.split(',') : ['Card'],
         defaultLayout: directory.defaultLayout || 'Card',
         primaryColor: directory.primaryColor || '#3366cc',
         secondaryColor: directory.secondaryColor,
