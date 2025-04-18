@@ -4,13 +4,9 @@
  */
 import { cachedFetch, cacheTTL } from './cache.js';
 
-import dotenv from 'dotenv';
-
-dotenv.config();
-
-// NocoDB API configuration
-const NOCODB_API_URL = import.meta.env?.NOCODB_API_URL || process.env?.NOCODB_API_URL || 'https://nocodb.ncstudio.click/api/v2';
-const NOCODB_AUTH_TOKEN = import.meta.env?.NOCODB_AUTH_TOKEN || process.env?.NOCODB_AUTH_TOKEN;
+// NocoDB API configuration - Browser-safe environment variable access
+const NOCODB_API_URL = import.meta.env?.NOCODB_API_URL || 'https://nocodb.ncstudio.click/api/v2';
+const NOCODB_AUTH_TOKEN = import.meta.env?.NOCODB_AUTH_TOKEN || '';
 
 // Base headers for API requests - updated for v2 API
 const headers = {
@@ -18,8 +14,11 @@ const headers = {
   'Content-Type': 'application/json'
 };
 
-console.log('NOCODB_API_URL:', NOCODB_API_URL);
-console.log('NOCODB_AUTH_TOKEN:', NOCODB_AUTH_TOKEN ? '****' : 'Not Set'); // Hide token in logs
+// Log only in development mode
+if (import.meta.env.DEV) {
+  console.log('NOCODB_API_URL:', NOCODB_API_URL);
+  console.log('NOCODB_AUTH_TOKEN:', NOCODB_AUTH_TOKEN ? '****' : 'Not Set'); // Hide token in logs
+}
 
 // Table mapping to handle NocoDB naming conventions
 const TABLES = {

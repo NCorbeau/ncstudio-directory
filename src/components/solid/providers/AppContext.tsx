@@ -3,7 +3,9 @@ import { getCurrentDirectoryId } from "../../../utils/common";
 import type { Directory, Listing, Category } from "../../../types";
 import { createContext, useContext, type JSX } from "solid-js";
 import { createStore } from "solid-js/store";
-import { getDirectory, getListings } from "@/lib/nocodb";
+
+// Import browser-safe API client instead of the server functions
+import { getDirectory, getListings } from "../../../lib/browser-api-client";
 
 // Create context for directory data
 export interface DirectoryState {
@@ -71,7 +73,7 @@ export function AppProvider(props: AppProviderProps) {
     setState("error", null);
 
     try {
-      // Fetch directory data
+      // Fetch directory data using browser-safe client
       const directoryData = await getDirectory(state.directoryId);
 
       if (!directoryData) {
@@ -112,7 +114,8 @@ export function AppProvider(props: AppProviderProps) {
     }
   };
 
-  // Set layout
+  // Rest of your code remains the same...
+  
   const setLayout = (layout: string) => {
     if (state.directory && state.directory.availableLayouts.includes(layout)) {
       setState("currentLayout", layout);
@@ -126,13 +129,11 @@ export function AppProvider(props: AppProviderProps) {
     }
   };
 
-  // Get category by ID
   const getCategory = (id: string): Category | undefined => {
     if (!state.directory) return undefined;
     return state.directory.categories.find((cat) => cat.id === id);
   };
   
-  // Change the current directory
   const changeDirectory = async (directoryId: string) => {
     if (directoryId === state.directoryId) return;
     

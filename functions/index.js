@@ -7,6 +7,8 @@
 import * as webhookHandler from './api/webhook.js';
 import * as searchHandler from './api/search.js';
 import * as renderLayoutHandler from './api/render-layout.js';
+import * as directoryHandler from './api/directory.js';
+import * as listingsHandler from './api/listings.js';
 
 // CORS Headers for all responses
 const corsHeaders = {
@@ -65,6 +67,12 @@ export default {
       // Handle /api/render-layout requests
       else if (path === '/api/render-layout') {
         response = await renderLayoutHandler.onRequest({ request, env, ctx });
+      }
+      else if (path === '/api/directory') {
+        response = await directoryHandler.onRequest({ request, env, ctx });
+      }
+      else if (path === '/api/listings') {
+        response = await listingsHandler.onRequest({ request, env, ctx });
       }
       // Handle 404 for other API paths
       else if (path.startsWith('/api/')) {
