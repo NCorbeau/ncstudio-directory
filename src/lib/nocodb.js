@@ -5,8 +5,17 @@
 import { cachedFetch, cacheTTL } from './cache.js';
 
 // NocoDB API configuration - Browser-safe environment variable access
-const NOCODB_API_URL = import.meta.env?.NOCODB_API_URL || 'https://nocodb.ncstudio.click/api/v2';
-const NOCODB_AUTH_TOKEN = import.meta.env?.NOCODB_AUTH_TOKEN || '';
+// Add safety check for import.meta.env and use Node.js process.env as fallback
+const isDev = typeof import !== 'undefined' && import.meta && import.meta.env && import.meta.env.DEV;
+const NOCODB_API_URL = 
+  (typeof import !== 'undefined' && import.meta && import.meta.env && import.meta.env.NOCODB_API_URL) || 
+  (typeof process !== 'undefined' && process.env && process.env.NOCODB_API_URL) || 
+  'https://nocodb.ncstudio.click/api/v2';
+
+const NOCODB_AUTH_TOKEN = 
+  (typeof import !== 'undefined' && import.meta && import.meta.env && import.meta.env.NOCODB_AUTH_TOKEN) || 
+  (typeof process !== 'undefined' && process.env && process.env.NOCODB_AUTH_TOKEN) || 
+  '';
 
 // Base headers for API requests - updated for v2 API
 const headers = {
@@ -14,8 +23,8 @@ const headers = {
   'Content-Type': 'application/json'
 };
 
-// Log only in development mode
-if (import.meta.env.DEV) {
+// Log only in development mode, with safety check
+if (isDev) {
   console.log('NOCODB_API_URL:', NOCODB_API_URL);
   console.log('NOCODB_AUTH_TOKEN:', NOCODB_AUTH_TOKEN ? '****' : 'Not Set'); // Hide token in logs
 }
