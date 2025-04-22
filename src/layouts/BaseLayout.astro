@@ -4,6 +4,7 @@
 
 import { getCurrentDirectoryId } from '../utils/directory-helpers';
 import SEO from '../components/core/SEO.astro';
+import '../styles/global.css';
 
 interface Props {
   title: string;
@@ -72,7 +73,7 @@ const safeDirectoryData = directoryData || {
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     
     <!-- Global base styles - using absolute paths -->
-    <link rel="stylesheet" href="/styles/global.css" />
+    <!-- <link rel="stylesheet" href="/styles/global.css" /> -->
     
     <!-- Slot for additional head content -->
     <slot name="head" />
