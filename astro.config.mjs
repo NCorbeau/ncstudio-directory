@@ -27,6 +27,10 @@ console.log('- PUBLIC_USE_LOCAL_API:', process.env.PUBLIC_USE_LOCAL_API || '(not
 
 // Get the current directory from environment variable (set by build script)
 const currentDirectory = process.env.CURRENT_DIRECTORY || 'default';
+console.log('Current directory:', currentDirectory);
+
+// In development, always use empty base to support multiple directories
+const isDev = process.env.NODE_ENV !== 'production';
 
 // Determine site URL based on directory and environment
 async function getSiteUrl(directoryId) {
@@ -64,13 +68,12 @@ async function getSiteUrl(directoryId) {
 export default defineConfig({
   site: await getSiteUrl(currentDirectory),
   
-  // Use empty base for Cloudflare Pages
-  base: '/',
+  // *** IMPORTANT CHANGE: Always use empty base for dev server ***
+  // In development, never set a base URL to allow multiple directories to work
+  base: isDev ? '' : '/',
   
-  // Important: Don't double-nest pages - put them directly in the directory
-  outDir: currentDirectory === 'default' 
-    ? './dist'
-    : `./dist/${currentDirectory}`,
+  // Output directory configuration
+  outDir: './dist',
   
   build: {
     format: 'directory'
@@ -96,23 +99,6 @@ export default defineConfig({
       fs: {
         allow: ['.']
       }
-    },
-    // Improved handling of paths for development mode
-    plugins: [
-      {
-        name: 'directory-assets-resolver',
-        configureServer(server) {
-          if (process.env.NODE_ENV !== 'production') {
-            server.middlewares.use((req, res, next) => {
-              // If request is for a static asset under the current directory path
-              if (req.url.startsWith(`/${currentDirectory}/`)) {
-                req.url = req.url.replace(`/${currentDirectory}/`, '/');
-              }
-              next();
-            });
-          }
-        }
-      }
-    ]
+    }
   }
 });

@@ -6,6 +6,10 @@ import Footer from '../components/core/Footer.astro';
 import { generateBreadcrumbSchema, generateDirectoryHomeSchema } from '../utils/schema-generator';
 
 import '../styles/layouts.css'
+import '../styles/themes/default.css';
+import '../styles/themes/modern.css';
+import '../styles/themes/nature.css';
+import '../styles/themes/elegant.css';
 
 // Get props for the layout
 const { 
@@ -103,7 +107,6 @@ const cssVars = {
   keywords={keywords}
 >
   <!-- Add theme-specific CSS using absolute paths -->
-  <link slot="head" rel="stylesheet" href={`/styles/themes/${theme}.css`} />
   
   <!-- Add inline CSS variables for theme colors -->
   <style is:inline slot="head" define:vars={cssVars}>

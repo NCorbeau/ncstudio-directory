@@ -15,21 +15,31 @@ export async function getStaticPaths() {
   
   for (const directory of directories) {
     const directoryId = directory.id;
-    const landingPages = await getDirectoryLandingPages(directoryId);
     
-    for (const page of landingPages) {
-      const slug = page.slug.replace(`${directoryId}/`, '');
-      
-      paths.push({
-        params: { 
-          directory: directoryId,
-          slug
-        },
-        props: { 
-          directoryId,
-          slug
+    try {
+      const landingPages = await getDirectoryLandingPages(directoryId);
+      for (const page of landingPages) {
+        // Handle slug extraction correctly
+        let slug = page.slug;
+        
+        // If the slug includes the directory prefix, remove it
+        if (slug.startsWith(`${directoryId}/`)) {
+          slug = slug.replace(`${directoryId}/`, '');
         }
-      });
+        
+        paths.push({
+          params: { 
+            directory: directoryId,
+            slug
+          },
+          props: { 
+            directoryId,
+            slug
+          }
+        });
+      }
+    } catch (error) {
+      console.error(`Error fetching landing pages for ${directoryId}:`, error);
     }
   }
   

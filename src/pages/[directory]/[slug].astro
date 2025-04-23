@@ -12,24 +12,35 @@ import {
 export async function getStaticPaths() {
   const directories = await getAllDirectories();
   const paths = [];
-  
   for (const directory of directories) {
     const directoryId = directory.id;
-    const listings = await getDirectoryListings(directoryId);
+    console.log(`Fetching listings for directory: ${directoryId}`);
     
-    for (const listing of listings) {
-      const slug = listing.slug.replace(`${directoryId}/`, '');
-      
-      paths.push({
-        params: { 
-          directory: directoryId,
-          slug
-        },
-        props: { 
-          directoryId,
-          slug
+    try {
+      const listings = await getDirectoryListings(directoryId);
+      for (const listing of listings) {
+        // IMPORTANT: Handle slug extraction correctly
+        // Make sure we're processing the slug correctly
+        let slug = listing.slug;
+        
+        // If the slug includes the directory prefix, remove it
+        if (slug.startsWith(`${directoryId}/`)) {
+          slug = slug.replace(`${directoryId}/`, '');
         }
-      });
+        
+        paths.push({
+          params: { 
+            directory: directoryId,
+            slug
+          },
+          props: { 
+            directoryId,
+            slug
+          }
+        });
+      }
+    } catch (error) {
+      console.error(`Error fetching listings for ${directoryId}:`, error);
     }
   }
   

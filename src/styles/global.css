@@ -103,13 +103,6 @@ body {
   padding: 0 var(--spacingMd);
 }
 
-@import './layouts/card-layout.css';
-@import './layouts/map-layout.css';
-@import './layouts/table-layout.css';
-@import './layouts/list-layout.css';
-@import './layouts/magazine-layout.css';
-@import './layouts/layout-container.css';
-
 /* Typography */
 h1,
 h2,
