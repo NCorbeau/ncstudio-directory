@@ -9,9 +9,6 @@
   Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
 
 # CSS Files need specific content type headers
-/_astro/*
-  Content-Type: text/css
-
 /_astro/*.css
   Content-Type: text/css
 
