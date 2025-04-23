@@ -58,6 +58,18 @@
     {
       "src": "/api/webhook",
       "dest": "/api/webhook.js"
+    },
+    {
+      "src": "/_astro/*.js",
+      "headers": {
+        "Content-Type": "application/javascript"
+      }
+    },
+    {
+      "src": "/*.js",
+      "headers": {
+        "Content-Type": "application/javascript"
+      }
     }
   ]
 }

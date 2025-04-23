@@ -13,3 +13,10 @@
 
 /_astro/*.css
   Content-Type: text/css
+
+# JavaScript files
+/*.js
+  Content-Type: application/javascript
+
+/_astro/*.js
+  Content-Type: application/javascript
