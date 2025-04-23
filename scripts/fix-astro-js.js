@@ -1,9 +1,15 @@
 /**
  * Fix Astro JavaScript MIME type issues for Cloudflare Pages
  * Similar to fix-astro-css.js but for JavaScript files
+ * Using ES Module syntax for compatibility with "type": "module" in package.json
  */
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// Get the current directory of this file in ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Helper to check if a file is a JavaScript file
 const isJSFile = (file) => file.endsWith('.js');
@@ -55,23 +61,94 @@ function updateHeadersOverride(directoryPath) {
   }
 }
 
-// Process the dist directory
-const distPath = path.resolve(__dirname, '../dist');
-addContentTypeHeadersForJS(distPath);
-updateHeadersOverride(distPath);
-
-// Also process any subdirectories that might be individual sites
-try {
-  const dirEntries = fs.readdirSync(distPath, { withFileTypes: true });
-  for (const entry of dirEntries) {
-    if (entry.isDirectory()) {
-      const subDirPath = path.join(distPath, entry.name);
-      addContentTypeHeadersForJS(subDirPath);
-      updateHeadersOverride(subDirPath);
+// Create _routes.json entries for JavaScript files if needed
+function updateRoutesJson(directoryPath) {
+  const routesPath = path.join(directoryPath, '_routes.json');
+  
+  if (fs.existsSync(routesPath)) {
+    try {
+      let routesContent = fs.readFileSync(routesPath, 'utf8');
+      let routes = JSON.parse(routesContent);
+      
+      // Check if JavaScript routes already exist
+      const hasJsRoute = routes.routes.some(route => 
+        route.src === '/_astro/*.js' || route.src === '/*.js'
+      );
+      
+      if (!hasJsRoute) {
+        // Add JavaScript content type routes
+        routes.routes.push({
+          "src": "/_astro/*.js",
+          "headers": {
+            "Content-Type": "application/javascript"
+          }
+        });
+        
+        routes.routes.push({
+          "src": "/*.js",
+          "headers": {
+            "Content-Type": "application/javascript"
+          }
+        });
+        
+        fs.writeFileSync(routesPath, JSON.stringify(routes, null, 2), 'utf8');
+        console.log('Updated _routes.json with JavaScript content types');
+      }
+    } catch (error) {
+      console.error('Error updating _routes.json:', error);
     }
   }
-} catch (error) {
-  console.error('Error processing subdirectories:', error);
 }
 
-console.log('JavaScript MIME type fixes complete!');
+// Create a simple .js-mime-types file to help debug
+function createJsMimeTypesFile(directoryPath) {
+  const content = `# JavaScript MIME Types
+This file helps with debugging and indicates that JS MIME types have been fixed.
+
+For JS files in _astro directory:
+Content-Type: application/javascript
+
+For JS files at root:
+Content-Type: application/javascript
+`;
+
+  fs.writeFileSync(path.join(directoryPath, '.js-mime-types'), content, 'utf8');
+}
+
+// Process the dist directory
+const distPath = path.resolve(__dirname, '../dist');
+
+// Main execution function
+async function main() {
+  console.log('Starting JavaScript MIME type fixes...');
+
+  try {
+    // Process main dist directory
+    addContentTypeHeadersForJS(distPath);
+    updateHeadersOverride(distPath);
+    updateRoutesJson(distPath);
+    createJsMimeTypesFile(distPath);
+    
+    // Process any subdirectories that might be individual sites
+    const dirEntries = fs.readdirSync(distPath, { withFileTypes: true });
+    
+    for (const entry of dirEntries) {
+      if (entry.isDirectory()) {
+        const subDirPath = path.join(distPath, entry.name);
+        console.log(`Processing subdirectory: ${entry.name}`);
+        
+        addContentTypeHeadersForJS(subDirPath);
+        updateHeadersOverride(subDirPath);
+        updateRoutesJson(subDirPath);
+        createJsMimeTypesFile(subDirPath);
+      }
+    }
+    
+    console.log('JavaScript MIME type fixes complete!');
+  } catch (error) {
+    console.error('Error during JavaScript MIME type fixes:', error);
+  }
+}
+
+// Run the main function
+main();

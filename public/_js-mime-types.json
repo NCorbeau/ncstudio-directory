@@ -1,0 +1,6 @@
+{
+    "content_type_overrides": {
+      "/*.js": "application/javascript",
+      "/_astro/*.js": "application/javascript"
+    }
+  }
