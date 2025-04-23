@@ -15,6 +15,9 @@
 /_astro/*.css
   Content-Type: text/css
 
+/_astro/*.js
+  Content-Type: application/javascript
+
 /styles/*.css
   Content-Type: text/css
 
