@@ -28,28 +28,16 @@
       "dest": "/directory-selector/index.html"
     },
     {
-      "src": "/dog-parks-warsaw",
-      "dest": "/dog-parks-warsaw/index.html"
+      "src": "/:directory",
+      "dest": "/:directory/index.html"
     },
     {
-      "src": "/dog-parks-warsaw/",
-      "dest": "/dog-parks-warsaw/index.html"
+      "src": "/:directory/",
+      "dest": "/:directory/index.html"
     },
     {
-      "src": "/dog-parks-warsaw/*",
-      "dest": "/dog-parks-warsaw/:splat"
-    },
-    {
-      "src": "/french-desserts",
-      "dest": "/french-desserts/index.html"
-    },
-    {
-      "src": "/french-desserts/",
-      "dest": "/french-desserts/index.html"
-    },
-    {
-      "src": "/french-desserts/*",
-      "dest": "/french-desserts/:splat"
+      "src": "/:directory/*",
+      "dest": "/:directory/:splat"
     },
     {
       "src": "/api/search",
@@ -63,13 +51,33 @@
       "src": "/_astro/*.js",
       "headers": {
         "Content-Type": "application/javascript"
-      }
+      },
+      "continue": true
     },
     {
       "src": "/*.js",
       "headers": {
         "Content-Type": "application/javascript"
-      }
+      },
+      "continue": true
+    },
+    {
+      "src": "/_astro/*.css",
+      "headers": {
+        "Content-Type": "text/css"
+      },
+      "continue": true
+    },
+    {
+      "src": "/*.css",
+      "headers": {
+        "Content-Type": "text/css"
+      },
+      "continue": true
+    },
+    {
+      "src": "/_astro/*.js",
+      "dest": "/_astro/:splat.js"
     }
   ]
 }

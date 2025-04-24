@@ -1,111 +1,107 @@
 /**
- * Main entry point for Cloudflare Functions
- * This file exports all your API functions for Wrangler to serve
+ * Main entry point for all Cloudflare Functions
+ * This fixes asset routing issues in Cloudflare Pages
  */
 
-// Import API functions
+// Import all handlers
 import * as webhookHandler from './api/webhook.js';
 import * as searchHandler from './api/search.js';
 import * as renderLayoutHandler from './api/render-layout.js';
-import * as directoryHandler from './api/directory.js';
-import * as listingsHandler from './api/listings.js';
 
-// CORS Headers for all responses
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
-  'Access-Control-Max-Age': '86400', // 24 hours
-};
-
-// Handle OPTIONS requests for CORS preflight
-function handleOptions() {
-  return new Response(null, {
-    status: 204,
-    headers: corsHeaders
-  });
+// Handle static assets directly - this is critical
+async function handleAsset(request, env, assetPath) {
+  try {
+    // Try to directly fetch the asset from KV or R2
+    // This bypasses the normal routing
+    const asset = await env.ASSETS.fetch(assetPath);
+    if (asset) {
+      // Make sure the right Content-Type is set
+      const headers = new Headers(asset.headers);
+      
+      if (assetPath.endsWith('.js')) {
+        headers.set('Content-Type', 'application/javascript');
+      } else if (assetPath.endsWith('.css')) {
+        headers.set('Content-Type', 'text/css');
+      }
+      
+      return new Response(asset.body, { 
+        status: 200, 
+        headers 
+      });
+    }
+  } catch (e) {
+    // If direct asset access fails, try normal routing
+    console.error(`Error accessing asset ${assetPath}:`, e);
+  }
+  
+  return null;
 }
 
-// Add CORS headers to any response
-function addCorsHeaders(response) {
-  const newHeaders = new Headers(response.headers);
-  
-  // Add all CORS headers
-  Object.entries(corsHeaders).forEach(([key, value]) => {
-    newHeaders.set(key, value);
-  });
-  
-  return new Response(response.body, {
-    status: response.status,
-    statusText: response.statusText,
-    headers: newHeaders
-  });
-}
-
-// Export a fetch handler for Wrangler
+// Export the fetch handler for Cloudflare Pages
 export default {
   async fetch(request, env, ctx) {
-    // Handle CORS preflight requests
-    if (request.method === 'OPTIONS') {
-      return handleOptions();
-    }
-    
     const url = new URL(request.url);
     const path = url.pathname;
     
-    try {
-      let response;
-      
-      // Handle /api/webhook requests
-      if (path === '/api/webhook') {
-        response = await webhookHandler.onRequest({ request, env, ctx });
-      }
-      // Handle /api/search requests
-      else if (path === '/api/search') {
-        response = await searchHandler.onRequest({ request, env, ctx });
-      }
-      // Handle /api/render-layout requests
-      else if (path === '/api/render-layout') {
-        response = await renderLayoutHandler.onRequest({ request, env, ctx });
-      }
-      else if (path === '/api/directory') {
-        response = await directoryHandler.onRequest({ request, env, ctx });
-      }
-      else if (path === '/api/listings') {
-        response = await listingsHandler.onRequest({ request, env, ctx });
-      }
-      // Handle 404 for other API paths
-      else if (path.startsWith('/api/')) {
-        response = new Response(JSON.stringify({
-          success: false,
-          error: 'API endpoint not found'
-        }), {
-          status: 404,
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        });
-      }
-      // Fallback response for non-API routes
-      else {
-        response = new Response('Not found', { status: 404 });
-      }
-      
-      // Add CORS headers to the response
-      return addCorsHeaders(response);
-    } catch (error) {
-      // Handle errors and add CORS headers
-      const errorResponse = new Response(JSON.stringify({
-        success: false,
-        error: error.message || 'Unknown error occurred'
-      }), {
-        status: 500,
+    // CORS preflight
+    if (request.method === 'OPTIONS') {
+      return new Response(null, {
+        status: 204,
         headers: {
-          'Content-Type': 'application/json'
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          'Access-Control-Max-Age': '86400'
         }
       });
+    }
+    
+    // Try to serve static assets directly first
+    if (path.includes('/_astro/') || path.endsWith('.js') || path.endsWith('.css')) {
+      const assetResponse = await handleAsset(request, env, path);
+      if (assetResponse) return assetResponse;
+    }
+    
+    // Handle API routes
+    if (path === '/api/webhook') {
+      return webhookHandler.onRequest({ request, env, ctx });
+    }
+    
+    if (path === '/api/search') {
+      return searchHandler.onRequest({ request, env, ctx });
+    }
+    
+    if (path === '/api/render-layout') {
+      return renderLayoutHandler.onRequest({ request, env, ctx });
+    }
+    
+    // For all other paths, use normal Pages routing
+    try {
+      // Access the asset using Cloudflare Pages' built-in asset handling
+      // This should return the file content with a default Content-Type
+      const response = await env.ASSETS.fetch(request);
       
-      return addCorsHeaders(errorResponse);
+      // If it's not a JS or CSS file, just return as is
+      if (!path.endsWith('.js') && !path.endsWith('.css')) {
+        return response;
+      }
+      
+      // For JS and CSS files, set the correct Content-Type
+      const headers = new Headers(response.headers);
+      
+      if (path.endsWith('.js')) {
+        headers.set('Content-Type', 'application/javascript');
+      } else if (path.endsWith('.css')) {
+        headers.set('Content-Type', 'text/css');
+      }
+      
+      return new Response(response.body, { 
+        status: response.status, 
+        headers 
+      });
+    } catch (error) {
+      console.error('Error handling request:', error);
+      return new Response('Server Error', { status: 500 });
     }
   }
-}
+};
