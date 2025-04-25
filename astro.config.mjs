@@ -97,7 +97,16 @@ export default defineConfig({
       noExternal: ['marked']
     },
     build: {
-      sourcemap: true
+      sourcemap: true,
+      // Add these options for better JS compilation
+      rollupOptions: {
+        output: {
+          entryFileNames: `_astro/[name].[hash].js`,
+          chunkFileNames: `_astro/[name].[hash].js`,
+          assetFileNames: `_astro/[name].[hash].[ext]`,
+          // Ensure correct MIME type for JS files
+          format: 'es'
+        }
       }
     },
     // Add this section for development server assets

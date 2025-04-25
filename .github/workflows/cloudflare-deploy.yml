@@ -1,0 +1,76 @@
+name: Deploy to Cloudflare Pages
+
+on:
+  push:
+    branches:
+      - main
+  repository_dispatch:
+    types: [content-update]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: Deploy to Cloudflare Pages
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Log build information
+        if: github.event_name == 'repository_dispatch'
+        run: |
+          echo "Triggered by content update in directory: ${{ github.event.client_payload.directory }}"
+          echo "Operation: ${{ github.event.client_payload.operation }}"
+          echo "Table: ${{ github.event.client_payload.table }}"
+
+      # For full deployments (on push)
+      - name: Build for Cloudflare Pages (full)
+        if: github.event_name == 'push'
+        run: npm run build:cloudflare
+        env:
+          NOCODB_API_URL: ${{ secrets.NOCODB_API_URL }}
+          NOCODB_AUTH_TOKEN: ${{ secrets.NOCODB_AUTH_TOKEN }}
+
+      # For selective deployments (on content update)
+      - name: Build for Cloudflare Pages (selective)
+        if: github.event_name == 'repository_dispatch'
+        run: |
+          # Build the specific directory
+          node scripts/selective-build.js ${{ github.event.client_payload.directory }}
+          
+          # Copy _headers and _redirects to the dist folder
+          cp _headers dist/ || echo "No _headers file found"
+          cp _redirects dist/ || echo "No _redirects file found"
+          
+          # Create directory selector
+          node -e "
+          const fs = require('fs');
+          const path = require('path');
+          const selector = path.join('dist', 'directory-selector');
+          if (!fs.existsSync(selector)) {
+            fs.mkdirSync(selector, { recursive: true });
+            fs.writeFileSync(path.join(selector, 'index.html'), 
+              '<html><head><title>Directory Selector</title></head><body><h1>Directory Selector</h1><p>This is a placeholder.</p></body></html>');
+          }
+          "
+        env:
+          NOCODB_API_URL: ${{ secrets.NOCODB_API_URL }}
+          NOCODB_AUTH_TOKEN: ${{ secrets.NOCODB_AUTH_TOKEN }}
+
+      - name: Publish to Cloudflare Pages
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: ncstudio-directory
+          directory: dist
+          # Optional: Enable this for pull request previews
+          # gitHubToken: ${{ secrets.GITHUB_TOKEN }}
