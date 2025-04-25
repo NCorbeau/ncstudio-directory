@@ -34,6 +34,9 @@ if (isFirstDeployment || isConfigChanged) {
   await determineAndBuildChangedDirectories();
 }
 
+// Add explicit exit - this is necessary to terminate the Node.js process
+process.exit(0);
+
 /**
  * Build all directories for Cloudflare Pages
  */

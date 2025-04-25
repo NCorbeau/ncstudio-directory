@@ -145,8 +145,12 @@ async function main() {
     }
     
     console.log('JavaScript MIME type fixes complete!');
+    
+    // Add explicit exit to ensure process terminates
+    process.exit(0);
   } catch (error) {
     console.error('Error during JavaScript MIME type fixes:', error);
+    process.exit(1);
   }
 }
 

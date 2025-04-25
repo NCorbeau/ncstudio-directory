@@ -27,6 +27,9 @@ async function main() {
   createAstroAssetRoutes();
   
   console.log('Astro CSS fixes completed!');
+  
+  // Add explicit exit to ensure process terminates
+  process.exit(0);
 }
 
 // Get all directories in the dist folder

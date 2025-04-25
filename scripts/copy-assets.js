@@ -197,6 +197,9 @@ async function main() {
   createCloudflareSpecialFiles();
   
   console.log('CSS fixes completed!');
+  
+  // Add explicit exit to ensure process terminates
+  process.exit(0);
 }
 
 // Run the script
