@@ -32,6 +32,10 @@ console.log('Current directory:', currentDirectory);
 // In development, always use empty base to support multiple directories
 const isDev = process.env.NODE_ENV !== 'production';
 
+// CRITICAL FIX: Use the directory ID as the base path in production
+// This ensures all assets are properly referenced with the directory prefix
+const basePath = isDev ? '' : `/${currentDirectory}`;
+
 // Determine site URL based on directory and environment
 async function getSiteUrl(directoryId) {
   // In production, each directory has its own domain
@@ -68,9 +72,8 @@ async function getSiteUrl(directoryId) {
 export default defineConfig({
   site: await getSiteUrl(currentDirectory),
   
-  // *** IMPORTANT CHANGE: Always use empty base for dev server ***
-  // In development, never set a base URL to allow multiple directories to work
-  base: isDev ? '' : '/',
+  // Use the proper base path for asset references
+  base: basePath,
   
   // Output directory configuration
   outDir: './dist',
