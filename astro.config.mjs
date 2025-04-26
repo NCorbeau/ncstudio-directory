@@ -73,7 +73,8 @@ export default defineConfig({
   site: await getSiteUrl(currentDirectory),
   
   // Use the proper base path for asset references
-  base: basePath,
+  // base: basePath,
+  base: isDev ? '' : '/',
   
   // Output directory configuration
   outDir: './dist',
