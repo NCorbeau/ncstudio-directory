@@ -5,7 +5,7 @@
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=(), interest-cohort=()
   X-XSS-Protection: 1; mode=block
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: i.imgur.com *.imgur.com *.cloudflare.com; font-src 'self'; connect-src 'self'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' data: i.imgur.com *.imgur.com *.cloudflare.com *.tile.openstreetmap.org; font-src 'self'; connect-src 'self' https://*.pages.dev; frame-ancestors 'none'
   Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
 
 # CSS Files need specific content type headers
@@ -58,6 +58,7 @@
 
 /*.js
   Cache-Control: public, max-age=31536000, immutable
+  Content-Type: application/javascript
 
 # Fonts with long cache
 /*.woff

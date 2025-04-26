@@ -125,6 +125,37 @@ export async function handleLocalApiRequest(endpoint, options = {}, params = new
       success: true,
       message: 'Webhook received (local mock)'
     };
+  } else if (endpoint === '/api/directory') {
+    // Handle directory requests
+    const directoryId = params.get('id');
+    if (!directoryId) {
+      return {
+        success: false,
+        message: 'Directory ID is required'
+      };
+    }
+    
+    try {
+      const directoryData = await getDirectory(directoryId);
+      if (!directoryData) {
+        return {
+          success: false,
+          message: `Directory not found: ${directoryId}`
+        };
+      }
+      
+      return {
+        success: true,
+        data: directoryData.data
+      };
+    } catch (error) {
+      console.error(`Error fetching directory data for ${directoryId}:`, error);
+      return {
+        success: false,
+        message: 'Error fetching directory data',
+        error: error.message
+      };
+    }
   }
   
   // Return 404 for unhandled endpoints

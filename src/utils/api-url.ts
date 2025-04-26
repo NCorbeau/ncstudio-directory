@@ -1,4 +1,4 @@
-// src/utils/api-url.ts
+// src/utils/api-url.ts - UPDATED
 // Utility for working with API URLs
 import { apiConfig } from '../config';
 import { isBrowser } from './common';
@@ -9,29 +9,18 @@ import { isBrowser } from './common';
  */
 export function getApiBaseUrl(): string {
   // Get configuration values
-  const { useLocalApi, baseUrl } = apiConfig;
+  const { useLocalApi } = apiConfig;
   
   // In the browser, use the current host by default
   if (isBrowser()) {
-    // Debug what's happening with the environment variables
-    console.debug('API Config:', {
-      useLocalApi,
-      baseUrl,
-      envVars: { ...import.meta.env }
-    });
-    
     // If explicitly set to use local API, use current origin
     if (useLocalApi) {
       return window.location.origin;
     }
     
-    // If API_BASE_URL is set, use it
-    if (baseUrl) {
-      return baseUrl;
-    }
-    
-    // Default to current origin (which will 404 if functions aren't running locally)
-    return window.location.origin;
+    // Use relative paths for API requests in the browser
+    // This keeps everything on the same domain to avoid CSP issues
+    return '';
   }
   
   // In Node.js context during build/SSR, use environment variables
@@ -41,7 +30,7 @@ export function getApiBaseUrl(): string {
     return siteUrl;
   }
   
-  return baseUrl || siteUrl;
+  return siteUrl; // Use the site URL for server-side API calls
 }
 
 /**
@@ -59,8 +48,8 @@ export function getApiUrl(
   // Ensure endpoint starts with / if needed
   const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
   
-  // Create URL object
-  const url = new URL(`${baseUrl}${normalizedEndpoint}`);
+  // Use the base URL (empty string for client-side requests to use relative paths)
+  const url = new URL(`${baseUrl}${normalizedEndpoint}`, baseUrl || window.location.origin);
   
   // Add query parameters
   Object.entries(params).forEach(([key, value]) => {
@@ -68,6 +57,11 @@ export function getApiUrl(
       url.searchParams.append(key, value);
     }
   });
+  
+  // If baseUrl is empty, return just the path and query string to keep it relative
+  if (!baseUrl && isBrowser()) {
+    return url.pathname + url.search;
+  }
   
   return url.toString();
 }

@@ -10,10 +10,26 @@ import { apiRequest } from '../utils/api-client';
  */
 export async function getDirectory(directoryId) {
   try {
+    // Use relative path for API request to avoid CSP issues
     const response = await apiRequest('/api/directory', {}, { id: directoryId });
     return response.data;
   } catch (error) {
     console.error(`Error fetching directory ${directoryId}:`, error);
+    
+    // Fallback: Try to use the data embedded in the page
+    try {
+      // Check if there's pre-rendered directory data in the window object
+      if (typeof window !== 'undefined' && 
+          window.__INITIAL_DATA__ && 
+          window.__INITIAL_DATA__.directory &&
+          window.__INITIAL_DATA__.directory.id === directoryId) {
+        console.log('Using pre-rendered directory data');
+        return window.__INITIAL_DATA__.directory;
+      }
+    } catch (fallbackError) {
+      console.error('Error using fallback directory data:', fallbackError);
+    }
+    
     return null;
   }
 }
@@ -25,10 +41,24 @@ export async function getDirectory(directoryId) {
  */
 export async function getListings(directoryId) {
   try {
+    // Use relative path for API request to avoid CSP issues
     const response = await apiRequest('/api/listings', {}, { directory: directoryId });
     return response.data || [];
   } catch (error) {
     console.error(`Error fetching listings for ${directoryId}:`, error);
+    
+    // Fallback: Try to use the data embedded in the page
+    try {
+      if (typeof window !== 'undefined' && 
+          window.__INITIAL_DATA__ && 
+          window.__INITIAL_DATA__.listings) {
+        console.log('Using pre-rendered listings data');
+        return window.__INITIAL_DATA__.listings;
+      }
+    } catch (fallbackError) {
+      console.error('Error using fallback listings data:', fallbackError);
+    }
+    
     return [];
   }
 }
@@ -41,6 +71,7 @@ export async function getListings(directoryId) {
  */
 export async function searchListings(directoryId, query) {
   try {
+    // Use relative path for API request to avoid CSP issues
     const response = await apiRequest('/api/search', {}, { 
       directory: directoryId,
       q: query
@@ -61,6 +92,7 @@ export async function searchListings(directoryId, query) {
  */
 export async function getRelatedListings(directoryId, listingId, limit = 3) {
   try {
+    // Use relative path for API request to avoid CSP issues
     const response = await apiRequest('/api/related', {}, {
       directory: directoryId,
       listing: listingId,
