@@ -1,0 +1,9 @@
+/* Main layouts CSS import file for Astro */
+
+/* Import all layout styles */
+@import './layouts/card-layout.css';
+@import './layouts/table-layout.css';
+@import './layouts/list-layout.css';
+@import './layouts/magazine-layout.css';
+@import './layouts/map-layout.css';
+@import './layouts/layout-container.css';

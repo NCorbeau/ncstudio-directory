@@ -1,0 +1,117 @@
+/* Layout Container & Layout Switcher CSS */
+
+/* Layout Container */
+.layout-container {
+  width: 100%;
+  max-width: var(--max-width, 1200px);
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+/* Layout Content Wrapper */
+.layout-content-wrapper {
+  position: relative;
+  min-height: 400px;
+}
+
+/* Layout Switcher */
+.layout-switcher {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  background-color: #f5f5f5;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+}
+
+.layout-label {
+  font-weight: 500;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.layout-options {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.layout-option {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 4px;
+  color: #555;
+  text-decoration: none;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.layout-option:hover {
+  background-color: #e5e5e5;
+}
+
+.layout-option.active {
+  background-color: var(--primaryColor, #3366cc);
+  color: white;
+}
+
+.layout-name {
+  font-size: 0.9rem;
+}
+
+/* Layout Loading State */
+.layout-loading {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 400px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(255, 255, 255, 0.8);
+  z-index: 10;
+}
+
+.layout-loading .spinner {
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid var(--primaryColor, #3366cc);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.layout-loading p {
+  color: #666;
+  font-size: 1rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .layout-name {
+    display: none;
+  }
+
+  .layout-option {
+    padding: 0.5rem;
+  }
+
+  .layout-options {
+    flex-grow: 1;
+    justify-content: space-around;
+  }
+}
