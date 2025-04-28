@@ -5,6 +5,12 @@ import Header from '../components/core/Header.astro';
 import Footer from '../components/core/Footer.astro';
 import { generateBreadcrumbSchema, generateDirectoryHomeSchema } from '../utils/schema-generator';
 
+import '../styles/layouts.css'
+import '../styles/themes/default.css';
+import '../styles/themes/modern.css';
+import '../styles/themes/nature.css';
+import '../styles/themes/elegant.css';
+
 // Get props for the layout
 const { 
   directoryData, 
@@ -84,13 +90,6 @@ const cssVars = {
   secondaryColor: directoryData.secondaryColor || '',
   primaryColorRgb: directoryData.primaryColor ? hexToRgb(directoryData.primaryColor) : ''
 };
-
-// Get the current URL and extract the directory ID
-const urlParts = Astro.url.pathname.split('/');
-const directoryId = urlParts[1] || '';
-
-// Build absolute CSS paths based on the current directory
-const cssBasePath = directoryId ? `/${directoryId}` : '';
 ---
 
 <BaseLayout 
@@ -107,14 +106,7 @@ const cssBasePath = directoryId ? `/${directoryId}` : '';
   noindex={noindex}
   keywords={keywords}
 >
-  <!-- Add theme-specific CSS using absolute paths from public directory -->
-  <link rel="stylesheet" href="/styles/layouts.css" slot="head" />
-  <link rel="stylesheet" href="/styles/themes/default.css" slot="head" />
-  
-  <!-- Only load the current theme CSS if it's not the default theme -->
-  {theme !== 'default' && (
-    <link rel="stylesheet" href={`/styles/themes/${theme}.css`} slot="head" />
-  )}
+  <!-- Add theme-specific CSS using absolute paths -->
   
   <!-- Add inline CSS variables for theme colors -->
   <style is:inline slot="head" define:vars={cssVars}>
