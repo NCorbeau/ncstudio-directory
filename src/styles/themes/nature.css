@@ -20,7 +20,8 @@
   
   /* Header modifications */
   .theme-nature .site-header {
-    background-color: var(--primaryColor, #4b7f52);
+    background-color: #4b7f52 !important;
+    /* background-color: var(--primaryColor, #4b7f52); */
     color: var(--text-on-primary, white);
   }
   
