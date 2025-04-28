@@ -3,7 +3,7 @@ import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
-import { getDirectories, getDirectory } from '../src/lib/nocodb.js';
+import { loadDirectories, getDirectoryIds } from './directory-loader.js';
 import { cleanupNestedDirectories } from './cleanup-build.js';
 
 // Load environment variables
@@ -65,8 +65,8 @@ const DEPENDENCIES = {
   'src/lib/': ['all'],
   'src/utils/': ['all'],
   'src/styles/global.css': ['all'],
-  'src/styles/themes/elegant.css': ['french-desserts'],
-  'src/styles/themes/nature.css': ['dog-parks-warsaw'],
+  'src/styles/themes/elegant.css': ['elegant'], // Map by theme instead of directory
+  'src/styles/themes/nature.css': ['nature'],   // Map by theme instead of directory
 };
 
 // Get directories to build based on dependencies
@@ -76,39 +76,41 @@ async function getDirectoriesToBuild(changedPath) {
     return [directoryToBuild];
   }
   
+  // Get directory-theme mapping
+  const directories = await loadDirectories();
+  const directoryThemes = {};
+  
+  directories.forEach(dir => {
+    const theme = dir.data.theme || 'default';
+    if (!directoryThemes[theme]) {
+      directoryThemes[theme] = [];
+    }
+    directoryThemes[theme].push(dir.id);
+  });
+  
   // If path matches a dependency, build all affected directories
   if (changedPath) {
-    for (const [pattern, directories] of Object.entries(DEPENDENCIES)) {
+    for (const [pattern, affectedThemes] of Object.entries(DEPENDENCIES)) {
       if (changedPath.includes(pattern)) {
-        if (directories.includes('all')) {
-          return await getAllDirectories();
+        if (affectedThemes.includes('all')) {
+          return await getDirectoryIds();
         }
-        return directories;
+        
+        // Get all directories with the affected themes
+        let affectedDirectories = [];
+        affectedThemes.forEach(theme => {
+          if (directoryThemes[theme]) {
+            affectedDirectories = [...affectedDirectories, ...directoryThemes[theme]];
+          }
+        });
+        
+        return affectedDirectories;
       }
     }
   }
   
   // Default: build all directories
-  return await getAllDirectories();
-}
-
-// Get all directory IDs from NocoDB
-async function getAllDirectories() {
-  try {
-    const directories = await getDirectories();
-    return directories.map(dir => dir.id);
-  } catch (error) {
-    console.error('Error fetching directories from NocoDB:', error);
-    
-    // Fallback to environment variable if available
-    const directoriesEnv = process.env.DIRECTORIES;
-    if (directoriesEnv) {
-      return directoriesEnv.split(',');
-    }
-    
-    // Hardcoded fallback as last resort
-    return ['french-desserts', 'dog-parks-warsaw'];
-  }
+  return await getDirectoryIds();
 }
 
 // Function to build a specific directory
@@ -117,7 +119,9 @@ async function buildDirectory(directoryId) {
   
   // First, check if the directory exists in NocoDB
   try {
-    const directoryExists = await getDirectory(directoryId);
+    const allDirectories = await loadDirectories();
+    const directoryExists = allDirectories.some(dir => dir.id === directoryId);
+    
     if (!directoryExists) {
       console.error(`Directory ${directoryId} not found in NocoDB`);
       return false;
@@ -138,7 +142,7 @@ async function buildDirectory(directoryId) {
     });
     
     // Fix nested directories
-    cleanupNestedDirectories(directoryId);
+    await cleanupNestedDirectories(directoryId);
     
     // Add this line to copy public assets after the build
     copyPublicAssetsToDirectory(directoryId);

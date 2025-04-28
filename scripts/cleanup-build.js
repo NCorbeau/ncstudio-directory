@@ -3,6 +3,7 @@
 
 import fs from "fs";
 import path from "path";
+import { getDirectoryIds } from "./directory-loader.js";
 
 /**
  * Identify and clean up nested directory folders in build output
@@ -93,9 +94,23 @@ function moveFilesUp(sourceDir, targetDir) {
  * @param {string} distDir - The dist directory for the current directory
  * @param {string} directoryId - Current directory ID
  */
-function removeOtherDirectoryContent(distDir, directoryId) {
-  // Get a list of all our directory IDs (this should be more dynamically determined)
-  const knownDirectories = ['dog-parks-warsaw', 'french-desserts'];
+async function removeOtherDirectoryContent(distDir, directoryId) {
+  // Get all directories dynamically from NocoDB
+  let knownDirectories;
+  try {
+    knownDirectories = await getDirectoryIds();
+  } catch (error) {
+    console.error('Error fetching directories from NocoDB:', error);
+    // Fallback to discovering directories from dist folder
+    knownDirectories = fs.readdirSync(path.resolve('./dist'))
+      .filter(dir => {
+        const dirPath = path.join(path.resolve('./dist'), dir);
+        return fs.statSync(dirPath).isDirectory() && 
+          dir !== 'directory-selector' &&
+          dir !== 'functions' &&
+          !dir.startsWith('.');
+      });
+  }
   
   // Remove other directories that don't belong here
   knownDirectories.forEach(otherId => {
@@ -113,7 +128,7 @@ function removeOtherDirectoryContent(distDir, directoryId) {
  * Fix the entire dist directory
  * This can be called as a standalone function after a complete build
  */
-export function fixDistDirectory() {
+export async function fixDistDirectory() {
   console.log("Fixing the entire dist directory structure...");
   
   const distDir = path.resolve('./dist');
@@ -134,14 +149,17 @@ export function fixDistDirectory() {
   console.log(`Found directories to fix: ${directories.join(', ')}`);
   
   // Process each directory
-  directories.forEach(directoryId => {
-    cleanupNestedDirectories(directoryId);
-  });
+  for (const directoryId of directories) {
+    await cleanupNestedDirectories(directoryId);
+  }
   
   console.log("Fixed all directories!");
 }
 
 // If script is run directly, fix all directories
 if (process.argv[1] === import.meta.url) {
-  fixDistDirectory();
+  fixDistDirectory().catch(error => {
+    console.error('Error fixing directories:', error);
+    process.exit(1);
+  });
 }

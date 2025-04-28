@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
 import solid from '@astrojs/solid-js';
+import { loadDirectories } from './scripts/directory-loader.js';
 
 // Explicitly load environment variables
 // Load base .env file
@@ -42,8 +43,8 @@ async function getSiteUrl(directoryId) {
   if (process.env.CF_PAGES && process.env.CF_PAGES_BRANCH === 'main') {
     // For production, attempt to get domain from NocoDB
     try {
-      const { getDirectory } = await import('./src/lib/nocodb.js');
-      const directory = await getDirectory(directoryId);
+      const directories = await loadDirectories();
+      const directory = directories.find(dir => dir.id === directoryId);
       
       if (directory?.data?.domain) {
         return `https://${directory.data.domain}`;
@@ -52,15 +53,8 @@ async function getSiteUrl(directoryId) {
       console.warn(`Error fetching domain for ${directoryId} from NocoDB:`, error);
     }
     
-    // Fallback domains if not found in NocoDB
-    switch(directoryId) {
-      case 'french-desserts':
-        return 'https://french-desserts.ncstudio.click';
-      case 'dog-parks-warsaw':
-        return 'https://dog-parks-warsaw.ncstudio.click';
-      default:
-        return 'https://ncstudio-directory.pages.dev';
-    }
+    // Fallback to using a default domain pattern if none is found in NocoDB
+    return `https://${directoryId}.ncstudio.click`;
   }
   
   // In preview/development, use the multi-directory approach

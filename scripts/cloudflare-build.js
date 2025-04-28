@@ -7,9 +7,14 @@
 import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
-import yaml from 'js-yaml';
 import dotenv from 'dotenv';
-import { getDirectories } from '../src/lib/nocodb.js';
+import { 
+  loadDirectories, 
+  getDirectoryIds, 
+  getDirectoryThemeMapping, 
+  getDomainDirectoryMapping,
+  generateRedirectRules 
+} from './directory-loader.js';
 import { generateAllSitemaps } from './generate-sitemaps.js';
 import { generateAllRobots } from './generate-robots.js';
 import { cleanupNestedDirectories, fixDistDirectory } from './cleanup-build.js';
@@ -30,59 +35,28 @@ function copyPublicAssetsToDirectory(directoryId) {
   const targetDir = path.resolve(`./dist/${directoryId}`);
   
   console.log(`Copying public assets from ${publicDir} to ${targetDir}...`);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  
   // Function to copy directory recursively
   const copyDir = (src, dest) => {
     if (!fs.existsSync(dest)) {
       fs.mkdirSync(dest, { recursive: true });
     }
-
-
-
+    
     const entries = fs.readdirSync(src, { withFileTypes: true });
-
-
-
-
-
-
-
-
+    
     for (const entry of entries) {
       const srcPath = path.join(src, entry.name);
       const destPath = path.join(dest, entry.name);
-
-
+      
       // Skip _headers and _redirects as they're handled separately
       if (entry.name === '_headers' || entry.name === '_redirects') {
         continue;
       }
-
+      
       if (entry.isDirectory()) {
         copyDir(srcPath, destPath);
       } else {
         fs.copyFileSync(srcPath, destPath);
-
-
-
       }
     }
   };
@@ -109,8 +83,6 @@ function getChangedFiles() {
 
         let changedFiles = [];
 
-
-
         // Try different git commands to get changed files
         try {
           // First attempt: compare with previous commit
@@ -134,11 +106,6 @@ function getChangedFiles() {
         }
 
         return changedFiles;
-
-
-
-
-
       } catch (error) {
         console.warn('Error getting detailed git info:', error);
         return [];
@@ -154,17 +121,30 @@ function getChangedFiles() {
 }
 
 // Determine which directories need to be built based on changed files
-function getDirectoriesToBuild(changedFiles) {
+async function getDirectoriesToBuild(changedFiles) {
   // If no changed files available, build all
   if (!changedFiles || changedFiles.length === 0) {
     console.log('No changed files detected, building all directories');
     return 'all';
   }
   
+  // Get theme to directory mapping
+  const directories = await loadDirectories();
+  const themeToDirectories = {};
+  
+  // Create mapping of themes to directories
+  directories.forEach(dir => {
+    const theme = dir.data.theme || 'default';
+    if (!themeToDirectories[theme]) {
+      themeToDirectories[theme] = [];
+    }
+    themeToDirectories[theme].push(dir.id);
+  });
+  
   // Initialize affected directories
   const affectedDirectories = new Set();
   
-  // Map of file paths to directories that should be rebuilt
+  // Map of file paths to themes that should be rebuilt
   const DEPENDENCIES = {
     'src/components/core/': ['all'],
     'src/layouts/': ['all'],
@@ -172,10 +152,10 @@ function getDirectoriesToBuild(changedFiles) {
     'src/utils/': ['all'],
     'src/styles/global.css': ['all'],
     'public/styles/global.css': ['all'],
-    'src/styles/themes/elegant.css': ['french-desserts'],
-    'public/styles/themes/elegant.css': ['french-desserts'],
-    'src/styles/themes/nature.css': ['dog-parks-warsaw'],
-    'public/styles/themes/nature.css': ['dog-parks-warsaw'],
+    'src/styles/themes/elegant.css': ['elegant'],
+    'public/styles/themes/elegant.css': ['elegant'],
+    'src/styles/themes/nature.css': ['nature'],
+    'public/styles/themes/nature.css': ['nature'],
     'functions/': ['all'], // Changes to functions affect all directories
   };
   
@@ -194,12 +174,13 @@ function getDirectoriesToBuild(changedFiles) {
     }
 
     // Check specific theme dependencies
-    if (file.includes('elegant.css')) {
-      affectedDirectories.add('french-desserts');
-    }
-
-    if (file.includes('nature.css')) {
-      affectedDirectories.add('dog-parks-warsaw');
+    for (const theme of Object.keys(themeToDirectories)) {
+      if (file.includes(`/${theme}.css`)) {
+        // Add all directories with this theme
+        themeToDirectories[theme].forEach(dirId => {
+          affectedDirectories.add(dirId);
+        });
+      }
     }
 
     // Directory-specific content changes
@@ -215,16 +196,12 @@ function getDirectoriesToBuild(changedFiles) {
     if (file.includes('/components/themes/')) {
       const themeMatch = file.match(/\/themes\/([^\/]+)/);
       if (themeMatch && themeMatch[1]) {
-        // Map theme name to directory
-        const themeToDir = {
-          'elegant': 'french-desserts',
-          'nature': 'dog-parks-warsaw',
-          'modern': 'modern-directory',
-          'default': 'default'
-        };
-        
-        if (themeToDir[themeMatch[1]]) {
-          affectedDirectories.add(themeToDir[themeMatch[1]]);
+        const theme = themeMatch[1];
+        // Add all directories with this theme
+        if (themeToDirectories[theme]) {
+          themeToDirectories[theme].forEach(dirId => {
+            affectedDirectories.add(dirId);
+          });
         }
       }
     }
@@ -239,131 +216,6 @@ function getDirectoriesToBuild(changedFiles) {
   return Array.from(affectedDirectories);
 }
 
-// Function to build all directories
-async function buildAllDirectories() {
-  console.log('Building all directories for Cloudflare Pages...');
-  
-  // Run the normal build-all script
-  execSync('node scripts/build-all.js', { stdio: 'inherit' });
-  
-  // After building all directories, fix the directory structure
-  fixDistDirectory();
-  
-  // Now copy public assets to each directory
-  // First get a list of all directories in the dist folder
-  const directories = fs.readdirSync(BUILD_DIR)
-    .filter(dir => {
-      const dirPath = path.join(BUILD_DIR, dir);
-      return fs.statSync(dirPath).isDirectory() && 
-        dir !== 'directory-selector' &&
-        dir !== 'functions' &&
-        !dir.startsWith('.');
-    });
-    
-  // Copy public assets to each directory
-  for (const dir of directories) {
-    copyPublicAssetsToDirectory(dir);
-  }
-  
-  // Copy public files to build folder
-  copyPublicFiles();
-  
-  // Create a directory selector page for the main domain
-  createDirectorySelector();
-  
-  // Generate sitemaps for SEO
-  console.log('Generating sitemaps for SEO...');
-  try {
-    // Import the sitemap generator function and call it directly
-    await generateAllSitemaps();
-    console.log('Sitemaps generated successfully');
-  } catch (error) {
-    console.error('Error generating sitemaps:', error);
-    // Don't fail the build for sitemap errors
-  }
-  
-  // Generate robots.txt files
-  console.log('Generating robots.txt files...');
-  try {
-    // Import the robots.txt generator function and call it directly
-    await generateAllRobots();
-    console.log('Robots.txt files generated successfully');
-  } catch (error) {
-    console.error('Error generating robots.txt files:', error);
-    // Don't fail the build for robots.txt errors
-  }
-  
-  console.log('Cloudflare Pages build completed successfully!');
-}
-
-// Also update the same approach in buildSelectiveDirectories function
-async function buildSelectiveDirectories(directories) {
-  console.log(`Building selective directories: ${directories.join(', ')}...`);
-
-
-
-  for (const dir of directories) {
-    console.log(`Building directory: ${dir}`);
-
-
-
-    // Set environment variable for the build
-    process.env.CURRENT_DIRECTORY = dir;
-    
-    // Run the build for this directory
-    try {
-      execSync(`node scripts/selective-build.js ${dir}`, { 
-        stdio: 'inherit',
-        env: {...process.env}
-      });
-      
-      // Clean up nested directories
-      cleanupNestedDirectories(dir);
-
-      // Add this line to copy public assets after each directory build
-      copyPublicAssetsToDirectory(dir);
-
-
-
-    } catch (error) {
-      console.error(`Error building directory ${dir}:`, error);
-    }
-
-
-
-  }
-
-  // Copy public files to build folder
-  copyPublicFiles();
-  
-  // Create a directory selector page for the main domain
-  createDirectorySelector();
-
-  // Generate sitemaps for SEO
-  console.log('Generating sitemaps for SEO...');
-  try {
-    // Import the sitemap generator function and call it directly
-    await generateAllSitemaps();
-    console.log('Sitemaps generated successfully');
-  } catch (error) {
-    console.error('Error generating sitemaps:', error);
-    // Don't fail the build for sitemap errors
-  }
-  
-  // Generate robots.txt files
-  console.log('Generating robots.txt files...');
-  try {
-    // Import the robots.txt generator function and call it directly
-    await generateAllRobots();
-    console.log('Robots.txt files generated successfully');
-  } catch (error) {
-    console.error('Error generating robots.txt files:', error);
-    // Don't fail the build for robots.txt errors
-  }
-
-  console.log('Selective build completed successfully!');
-}
-
 // Copy public files to the dist directory
 function copyPublicFiles() {
   // Copy _headers and _redirects to the dist folder if they exist
@@ -372,10 +224,8 @@ function copyPublicFiles() {
     console.log('Copied _headers file to dist folder');
   }
 
-  if (fs.existsSync(REDIRECTS_FILE)) {
-    fs.copyFileSync(REDIRECTS_FILE, path.join(BUILD_DIR, '_redirects'));
-    console.log('Copied _redirects file to dist folder');
-  }
+  // Don't copy static _redirects, we'll generate it dynamically
+  // We'll handle this with generateRedirects() instead
 
   // Ensure functions directory is properly set up
   if (fs.existsSync(FUNCTIONS_DIR)) {
@@ -383,9 +233,6 @@ function copyPublicFiles() {
     const outputFunctionsDir = path.join(BUILD_DIR, 'functions');
     if (!fs.existsSync(outputFunctionsDir)) {
       fs.mkdirSync(outputFunctionsDir, { recursive: true });
-
-
-
     }
 
     // Function to copy directory recursively
@@ -412,62 +259,80 @@ function copyPublicFiles() {
     copyDir(FUNCTIONS_DIR, outputFunctionsDir);
     console.log('Copied functions to dist folder');
   }
+}
 
+// Generate the dynamic domain-to-directory mapping for asset rewriting
+async function generateDomainMappings() {
+  try {
+    // Get domain mapping
+    const domainMapping = await getDomainDirectoryMapping();
+    
+    // Create the functions/domain-mapping.js file
+    const mappingContent = `/**
+ * Auto-generated domain-to-directory mapping
+ * This file is generated during the build process
+ */
+export const __DOMAIN_DIRECTORY_MAPPING__ = ${JSON.stringify(domainMapping, null, 2)};
+`;
+    
+    // Make sure functions directory exists
+    const functionsDir = path.join(BUILD_DIR, 'functions');
+    if (!fs.existsSync(functionsDir)) {
+      fs.mkdirSync(functionsDir, { recursive: true });
+    }
+    
+    // Write the mapping file
+    fs.writeFileSync(path.join(functionsDir, 'domain-mapping.js'), mappingContent);
+    
+    console.log('Generated domain mapping for asset rewriting');
+    
+    return domainMapping;
+  } catch (error) {
+    console.error('Error generating domain mappings:', error);
+    return {};
+  }
+}
+
+// Generate dynamic redirects file
+async function generateRedirects() {
+  try {
+    const redirectRules = await generateRedirectRules();
+    fs.writeFileSync(path.join(BUILD_DIR, '_redirects'), redirectRules);
+    console.log('Generated _redirects file from NocoDB data');
+  } catch (error) {
+    console.error('Error generating redirects:', error);
+    // Copy the static file as fallback if it exists
+    if (fs.existsSync(path.join(PUBLIC_DIR, '_redirects'))) {
+      fs.copyFileSync(
+        path.join(PUBLIC_DIR, '_redirects'), 
+        path.join(BUILD_DIR, '_redirects')
+      );
+      console.log('Used static _redirects file as fallback');
+    }
+  }
 }
 
 // Create a directory selector page for the main domain
-function createDirectorySelector() {
+async function createDirectorySelector() {
   const selectorDir = path.join(BUILD_DIR, 'directory-selector');
   if (!fs.existsSync(selectorDir)) {
     fs.mkdirSync(selectorDir, { recursive: true });
-
-
-
-
-
-
-
-
-
   }
 
-
-
-
-
-
-
-
-
-  // Get all directory info
-  const directories = [];
-  const directoriesPath = path.resolve('./src/content/directories');
-
-
-  if (fs.existsSync(directoriesPath)) {
-    const dirFiles = fs.readdirSync(directoriesPath)
-      .filter(file => file.endsWith('.yml') || file.endsWith('.yaml'));
-    
-    for (const file of dirFiles) {
-      try {
-        const filePath = path.join(directoriesPath, file);
-        const content = fs.readFileSync(filePath, 'utf8');
-        const data = yaml.load(content);
-        const directoryId = path.basename(file, path.extname(file));
-        
-        directories.push({
-          id: directoryId,
-          name: data.name,
-          description: data.description,
-          domain: data.domain,
-          primaryColor: data.primaryColor || '#3366cc'
-        });
-      } catch (error) {
-        console.error(`Error processing directory file ${file}:`, error);
-      }
-    }
-  } else {
-    // Fallback to the dist folders if no configuration files are found
+  // Get directory information from NocoDB
+  let directories = [];
+  try {
+    const dirObjects = await loadDirectories();
+    directories = dirObjects.map(dir => ({
+      id: dir.id,
+      name: dir.data.name,
+      description: dir.data.description || `Directory for ${dir.id}`,
+      domain: dir.data.domain,
+      primaryColor: dir.data.primaryColor || '#3366cc'
+    }));
+  } catch (error) {
+    console.error('Error fetching directories from NocoDB:', error);
+    // Fallback to the dist folders if NocoDB fetch fails
     const distFolders = fs.readdirSync(BUILD_DIR)
       .filter(folder => {
         const folderPath = path.join(BUILD_DIR, folder);
@@ -482,7 +347,7 @@ function createDirectorySelector() {
         id: folder,
         name: folder.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' '),
         description: `Directory for ${folder}`,
-        domain: `${folder}.example.com`,
+        domain: `${folder}.ncstudio.click`,
         primaryColor: '#3366cc'
       });
     }
@@ -491,20 +356,6 @@ function createDirectorySelector() {
   // Create an index.html file with links to all directories
   const selectorHtml = `
 <!DOCTYPE html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -544,7 +395,6 @@ function createDirectorySelector() {
     }
     .card-content {
       padding: 1.5rem;
-
     }
     .card-content h2 {
       margin-top: 0;
@@ -563,9 +413,6 @@ function createDirectorySelector() {
       padding: 0.5rem 1rem;
       background-color: #f5f5f5;
       border-radius: 4px;
-
-
-
       text-decoration: none;
       color: #333;
       font-weight: 500;
@@ -573,9 +420,6 @@ function createDirectorySelector() {
     }
     .card-links a:hover {
       background-color: #e5e5e5;
-
-
-
     }
     .domain-link {
       font-weight: normal;
@@ -588,23 +432,6 @@ function createDirectorySelector() {
 </head>
 <body>
   <h1>Directory Selector</h1>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   <div class="directory-grid">
     ${directories.map(dir => `
       <div class="directory-card">
@@ -628,6 +455,119 @@ function createDirectorySelector() {
   
   fs.writeFileSync(path.join(selectorDir, 'index.html'), selectorHtml);
   console.log('Created directory selector page');
+}
+
+// Function to build all directories
+async function buildAllDirectories() {
+  console.log('Building all directories for Cloudflare Pages...');
+  
+  // Run the normal build-all script
+  execSync('node scripts/build-all.js', { stdio: 'inherit' });
+  
+  // After building all directories, fix the directory structure
+  fixDistDirectory();
+  
+  // Now copy public assets to each directory
+  const directories = await loadDirectories();
+  for (const dir of directories) {
+    copyPublicAssetsToDirectory(dir.id);
+  }
+  
+  // Generate dynamic configuration files
+  await generateDomainMappings();
+  await generateRedirects();
+  
+  // Copy public files to build folder
+  copyPublicFiles();
+  
+  // Create a directory selector page for the main domain
+  await createDirectorySelector();
+  
+  // Generate sitemaps for SEO
+  console.log('Generating sitemaps for SEO...');
+  try {
+    // Import the sitemap generator function and call it directly
+    await generateAllSitemaps();
+    console.log('Sitemaps generated successfully');
+  } catch (error) {
+    console.error('Error generating sitemaps:', error);
+    // Don't fail the build for sitemap errors
+  }
+  
+  // Generate robots.txt files
+  console.log('Generating robots.txt files...');
+  try {
+    // Import the robots.txt generator function and call it directly
+    await generateAllRobots();
+    console.log('Robots.txt files generated successfully');
+  } catch (error) {
+    console.error('Error generating robots.txt files:', error);
+    // Don't fail the build for robots.txt errors
+  }
+  
+  console.log('Cloudflare Pages build completed successfully!');
+}
+
+// Also update the same approach in buildSelectiveDirectories function
+async function buildSelectiveDirectories(directories) {
+  console.log(`Building selective directories: ${directories.join(', ')}...`);
+
+  for (const dir of directories) {
+    console.log(`Building directory: ${dir}`);
+
+    // Set environment variable for the build
+    process.env.CURRENT_DIRECTORY = dir;
+    
+    // Run the build for this directory
+    try {
+      execSync(`node scripts/selective-build.js ${dir}`, { 
+        stdio: 'inherit',
+        env: {...process.env}
+      });
+      
+      // Clean up nested directories
+      await cleanupNestedDirectories(dir);
+
+      // Add this line to copy public assets after each directory build
+      copyPublicAssetsToDirectory(dir);
+    } catch (error) {
+      console.error(`Error building directory ${dir}:`, error);
+    }
+  }
+
+  // Generate dynamic configuration files
+  await generateDomainMappings();
+  await generateRedirects();
+
+  // Copy public files to build folder
+  copyPublicFiles();
+  
+  // Create a directory selector page for the main domain
+  await createDirectorySelector();
+
+  // Generate sitemaps for SEO
+  console.log('Generating sitemaps for SEO...');
+  try {
+    // Import the sitemap generator function and call it directly
+    await generateAllSitemaps();
+    console.log('Sitemaps generated successfully');
+  } catch (error) {
+    console.error('Error generating sitemaps:', error);
+    // Don't fail the build for sitemap errors
+  }
+  
+  // Generate robots.txt files
+  console.log('Generating robots.txt files...');
+  try {
+    // Import the robots.txt generator function and call it directly
+    await generateAllRobots();
+    console.log('Robots.txt files generated successfully');
+  } catch (error) {
+    console.error('Error generating robots.txt files:', error);
+    // Don't fail the build for robots.txt errors
+  }
+
+  console.log('Selective build completed successfully!');
 }
 
 // Main build function
@@ -658,7 +598,7 @@ async function runBuild() {
   console.log('Changed files:', changedFiles);
   
   // Determine which directories to build
-  const directoriesToBuild = getDirectoriesToBuild(changedFiles);
+  const directoriesToBuild = await getDirectoriesToBuild(changedFiles);
 
   // Build the appropriate directories
   if (directoriesToBuild === 'all') {
