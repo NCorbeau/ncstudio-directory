@@ -18,6 +18,13 @@ import {
 import { generateAllSitemaps } from './generate-sitemaps.js';
 import { generateAllRobots } from './generate-robots.js';
 import { cleanupNestedDirectories, fixDistDirectory } from './cleanup-build.js';
+import {
+  copyPublicAssetsToDirectory,
+  ensureDirectoryExists,
+  copySpecialFiles,
+  createIndexFile,
+  copyFile
+} from './build-utils.js';
 
 // Load environment variables
 dotenv.config();
@@ -26,44 +33,9 @@ dotenv.config();
 const BUILD_DIR = path.resolve('./dist');
 const PUBLIC_DIR = path.resolve('./public');
 const FUNCTIONS_DIR = path.resolve('./functions');
-const HEADERS_FILE = path.resolve('./public/_headers');
-const REDIRECTS_FILE = path.resolve('./public/_redirects');
 
-// Copy all public assets to a directory's build output
-function copyPublicAssetsToDirectory(directoryId) {
-  const publicDir = path.resolve('./public');
-  const targetDir = path.resolve(`./dist/${directoryId}`);
-  
-  console.log(`Copying public assets from ${publicDir} to ${targetDir}...`);
-  
-  // Function to copy directory recursively
-  const copyDir = (src, dest) => {
-    if (!fs.existsSync(dest)) {
-      fs.mkdirSync(dest, { recursive: true });
-    }
-    
-    const entries = fs.readdirSync(src, { withFileTypes: true });
-    
-    for (const entry of entries) {
-      const srcPath = path.join(src, entry.name);
-      const destPath = path.join(dest, entry.name);
-      
-      // Skip _headers and _redirects as they're handled separately
-      if (entry.name === '_headers' || entry.name === '_redirects') {
-        continue;
-      }
-      
-      if (entry.isDirectory()) {
-        copyDir(srcPath, destPath);
-      } else {
-        fs.copyFileSync(srcPath, destPath);
-      }
-    }
-  };
-  
-  copyDir(publicDir, targetDir);
-  console.log(`Copied public assets to ${directoryId}`);
-}
+// Ensure the build directory exists
+ensureDirectoryExists(BUILD_DIR);
 
 // Get changed files from Git (if in CI environment)
 function getChangedFiles() {
@@ -218,45 +190,26 @@ async function getDirectoriesToBuild(changedFiles) {
 
 // Copy public files to the dist directory
 function copyPublicFiles() {
-  // Copy _headers and _redirects to the dist folder if they exist
-  if (fs.existsSync(HEADERS_FILE)) {
-    fs.copyFileSync(HEADERS_FILE, path.join(BUILD_DIR, '_headers'));
-    console.log('Copied _headers file to dist folder');
-  }
+  // Copy _headers file to the dist folder if it exists
+  copySpecialFiles(PUBLIC_DIR, BUILD_DIR, ['_headers']);
 
   // Don't copy static _redirects, we'll generate it dynamically
   // We'll handle this with generateRedirects() instead
 
   // Ensure functions directory is properly set up
   if (fs.existsSync(FUNCTIONS_DIR)) {
-    // Create the functions directory in the output if it doesn't exist
+    // Copy the entire functions directory to the output
     const outputFunctionsDir = path.join(BUILD_DIR, 'functions');
-    if (!fs.existsSync(outputFunctionsDir)) {
-      fs.mkdirSync(outputFunctionsDir, { recursive: true });
-    }
-
-    // Function to copy directory recursively
-    const copyDir = (src, dest) => {
-      if (!fs.existsSync(dest)) {
-        fs.mkdirSync(dest, { recursive: true });
-      }
-      
-      const entries = fs.readdirSync(src, { withFileTypes: true });
-      
-      for (const entry of entries) {
-        const srcPath = path.join(src, entry.name);
-        const destPath = path.join(dest, entry.name);
-        
-        if (entry.isDirectory()) {
-          copyDir(srcPath, destPath);
-        } else {
-          fs.copyFileSync(srcPath, destPath);
-        }
-      }
-    };
-
-    // Copy the functions
-    copyDir(FUNCTIONS_DIR, outputFunctionsDir);
+    ensureDirectoryExists(outputFunctionsDir);
+    
+    // Function to copy directory recursively - we'll use our utility function
+    copyPublicAssetsToDirectory('functions', {
+      publicDir: FUNCTIONS_DIR,
+      distDir: BUILD_DIR,
+      skipFiles: [],
+      verbose: true
+    });
+    
     console.log('Copied functions to dist folder');
   }
 }
@@ -277,9 +230,7 @@ export const __DOMAIN_DIRECTORY_MAPPING__ = ${JSON.stringify(domainMapping, null
     
     // Make sure functions directory exists
     const functionsDir = path.join(BUILD_DIR, 'functions');
-    if (!fs.existsSync(functionsDir)) {
-      fs.mkdirSync(functionsDir, { recursive: true });
-    }
+    ensureDirectoryExists(functionsDir);
     
     // Write the mapping file
     fs.writeFileSync(path.join(functionsDir, 'domain-mapping.js'), mappingContent);
@@ -302,11 +253,9 @@ async function generateRedirects() {
   } catch (error) {
     console.error('Error generating redirects:', error);
     // Copy the static file as fallback if it exists
-    if (fs.existsSync(path.join(PUBLIC_DIR, '_redirects'))) {
-      fs.copyFileSync(
-        path.join(PUBLIC_DIR, '_redirects'), 
-        path.join(BUILD_DIR, '_redirects')
-      );
+    const staticRedirectsPath = path.join(PUBLIC_DIR, '_redirects');
+    if (fs.existsSync(staticRedirectsPath)) {
+      copyFile(staticRedirectsPath, path.join(BUILD_DIR, '_redirects'));
       console.log('Used static _redirects file as fallback');
     }
   }
@@ -315,9 +264,7 @@ async function generateRedirects() {
 // Create a directory selector page for the main domain
 async function createDirectorySelector() {
   const selectorDir = path.join(BUILD_DIR, 'directory-selector');
-  if (!fs.existsSync(selectorDir)) {
-    fs.mkdirSync(selectorDir, { recursive: true });
-  }
+  ensureDirectoryExists(selectorDir);
 
   // Get directory information from NocoDB
   let directories = [];
@@ -467,7 +414,7 @@ async function buildAllDirectories() {
   // After building all directories, fix the directory structure
   fixDistDirectory();
   
-  // Now copy public assets to each directory
+  // Now copy public assets to each directory using our centralized utility
   const directories = await loadDirectories();
   for (const dir of directories) {
     copyPublicAssetsToDirectory(dir.id);
@@ -528,7 +475,7 @@ async function buildSelectiveDirectories(directories) {
       // Clean up nested directories
       await cleanupNestedDirectories(dir);
 
-      // Add this line to copy public assets after each directory build
+      // Copy public assets after each directory build using our centralized utility
       copyPublicAssetsToDirectory(dir);
     } catch (error) {
       console.error(`Error building directory ${dir}:`, error);
@@ -573,9 +520,7 @@ async function buildSelectiveDirectories(directories) {
 // Main build function
 async function runBuild() {
   // Create build directory if it doesn't exist
-  if (!fs.existsSync(BUILD_DIR)) {
-    fs.mkdirSync(BUILD_DIR, { recursive: true });
-  }
+  ensureDirectoryExists(BUILD_DIR);
 
   // Check if this is the first build
   const isFirstBuild = process.env.CF_PAGES_BRANCH && 

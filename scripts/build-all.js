@@ -4,6 +4,11 @@ import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
 import { getDirectories, getDirectory } from '../src/lib/nocodb.js';
+import { 
+  copyPublicAssetsToDirectory, 
+  ensureDirectoryExists, 
+  createIndexFile 
+} from './build-utils.js';
 import { cleanupNestedDirectories, fixDistDirectory } from './cleanup-build.js';
 
 // Load environment variables
@@ -13,40 +18,7 @@ dotenv.config();
 const BUILD_DIR = path.resolve('./dist');
 
 // Create build directory if it doesn't exist
-if (!fs.existsSync(BUILD_DIR)) {
-  fs.mkdirSync(BUILD_DIR);
-}
-
-// Function to copy all public assets to a directory's build output
-function copyPublicAssetsToDirectory(directoryId) {
-  const publicDir = path.resolve('./public');
-  const targetDir = path.resolve(`./dist/${directoryId}`);
-  
-  console.log(`Copying public assets from ${publicDir} to ${targetDir}...`);
-  
-  // Function to copy directory recursively
-  const copyDir = (src, dest) => {
-    if (!fs.existsSync(dest)) {
-      fs.mkdirSync(dest, { recursive: true });
-    }
-    
-    const entries = fs.readdirSync(src, { withFileTypes: true });
-    
-    for (const entry of entries) {
-      const srcPath = path.join(src, entry.name);
-      const destPath = path.join(dest, entry.name);
-      
-      if (entry.isDirectory()) {
-        copyDir(srcPath, destPath);
-      } else {
-        fs.copyFileSync(srcPath, destPath);
-      }
-    }
-  };
-  
-  copyDir(publicDir, targetDir);
-  console.log(`Copied public assets to ${directoryId}`);
-}
+ensureDirectoryExists(BUILD_DIR);
 
 // Function to build a specific directory
 async function buildDirectory(directoryId) {
@@ -118,42 +90,7 @@ async function buildAll() {
     console.table(results);
     
     // Create an index file in the dist directory that lists all built sites
-    const indexHtml = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Directory Sites</title>
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 800px; margin: 0 auto; padding: 2rem; }
-    h1 { border-bottom: 1px solid #eee; padding-bottom: 1rem; }
-    ul { list-style-type: none; padding: 0; }
-    li { margin: 1rem 0; padding: 1rem; border: 1px solid #eee; border-radius: 4px; }
-    a { color: #0066cc; text-decoration: none; }
-    a:hover { text-decoration: underline; }
-    .success { color: green; }
-    .failure { color: red; }
-  </style>
-</head>
-<body>
-  <h1>Generated Directory Sites</h1>
-  <ul>
-    ${results.map(({ id, domain, success }) => `
-      <li>
-        <strong>${id}</strong> 
-        <span class="${success ? 'success' : 'failure'}">[${success ? 'Success' : 'Failed'}]</span><br>
-        ${domain ? `Domain: ${domain}<br>` : ''}
-        ${success ? `<a href="./${id}/">View Local Build</a>` : 'Build failed'}
-      </li>
-    `).join('')}
-  </ul>
-</body>
-</html>
-    `;
-    
-    fs.writeFileSync(path.resolve(`${BUILD_DIR}/index.html`), indexHtml);
-    console.log('\nBuild index created at dist/index.html');
+    createIndexFile(results, BUILD_DIR);
     
     // Report failures if any
     const failures = results.filter(r => !r.success);
