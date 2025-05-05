@@ -3,9 +3,9 @@ import { getCurrentDirectoryId } from "../../../utils/common";
 import type { Directory, Listing, Category } from "../../../types";
 import { createContext, useContext, type JSX } from "solid-js";
 import { createStore } from "solid-js/store";
+import { getDirectory, getListings } from "@/lib/api/client";
 
 // Import browser-safe API client instead of the server functions
-import { getDirectory, getListings } from "../../../lib/browser-api-client";
 
 // Create context for directory data
 export interface DirectoryState {

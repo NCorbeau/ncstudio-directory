@@ -2,7 +2,7 @@
 import { createSignal, createEffect, onMount, For, Show } from 'solid-js';
 import ListingCard from './ListingCard';
 import type { Listing } from '../../types';
-import { searchDirectory } from '@/utils/api-client';
+import { searchDirectory } from '@/lib/api/client';
 
 interface SearchResultsProps {
   directoryId: string;
