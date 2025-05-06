@@ -1,7 +1,6 @@
 /**
- * Enhanced Build Script for Cloudflare Pages deployment
- * Supports selective builds based on directory changes
- * Includes sitemap and robots.txt generation for SEO
+ * Simplified Build Script for Cloudflare Pages deployment
+ * Builds all directories without trying to selectively determine what needs to be built
  */
 
 import { execSync } from 'child_process';
@@ -10,14 +9,12 @@ import path from 'path';
 import dotenv from 'dotenv';
 import { 
   loadDirectories, 
-  getDirectoryIds, 
-  getDirectoryThemeMapping, 
   getDomainDirectoryMapping,
   generateRedirectRules 
 } from './directory-loader.js';
 import { generateAllSitemaps } from './generate-sitemaps.js';
 import { generateAllRobots } from './generate-robots.js';
-import { cleanupNestedDirectories, fixDistDirectory } from './cleanup-build.js';
+import { fixDistDirectory } from './cleanup-build.js';
 import {
   copyPublicAssetsToDirectory,
   ensureDirectoryExists,
@@ -37,164 +34,10 @@ const FUNCTIONS_DIR = path.resolve('./functions');
 // Ensure the build directory exists
 ensureDirectoryExists(BUILD_DIR);
 
-// Get changed files from Git (if in CI environment)
-function getChangedFiles() {
-  try {
-    if (process.env.CF_PAGES_BRANCH) {
-      // Try different approaches to get changed files
-      try {
-        // Attempt to fetch more history if needed
-        execSync('git fetch --unshallow || true', { stdio: 'ignore' });
-
-        // For a full build, just return empty array which will trigger building all directories
-        if (process.env.CF_PAGES_COMMIT_MESSAGE && 
-            process.env.CF_PAGES_COMMIT_MESSAGE.includes('[full-build]')) {
-          console.log('Full build requested via commit message');
-          return [];
-        }
-
-        let changedFiles = [];
-
-        // Try different git commands to get changed files
-        try {
-          // First attempt: compare with previous commit
-          changedFiles = execSync('git diff --name-only HEAD~1 HEAD', { encoding: 'utf8' })
-            .split('\n')
-            .filter(file => file.trim() !== '');
-          
-          console.log('Got changed files using HEAD~1');
-        } catch (e) {
-          try {
-            // Second attempt: Get files changed in the latest commit
-            changedFiles = execSync('git show --name-only --pretty="" HEAD', { encoding: 'utf8' })
-              .split('\n')
-              .filter(file => file.trim() !== '');
-            
-            console.log('Got changed files using git show HEAD');
-          } catch (e2) {
-            console.log('Could not determine changed files, will build all directories');
-            return [];
-          }
-        }
-
-        return changedFiles;
-      } catch (error) {
-        console.warn('Error getting detailed git info:', error);
-        return [];
-      }
-    }
-  } catch (error) {
-    console.warn('Error in getChangedFiles:', error);
-  }
-  
-  // Default to empty array if not in CI or error occurred
-  console.log('No changed files information available, building all directories');
-  return [];
-}
-
-// Determine which directories need to be built based on changed files
-async function getDirectoriesToBuild(changedFiles) {
-  // If no changed files available, build all
-  if (!changedFiles || changedFiles.length === 0) {
-    console.log('No changed files detected, building all directories');
-    return 'all';
-  }
-  
-  // Get theme to directory mapping
-  const directories = await loadDirectories();
-  const themeToDirectories = {};
-  
-  // Create mapping of themes to directories
-  directories.forEach(dir => {
-    const theme = dir.data.theme || 'default';
-    if (!themeToDirectories[theme]) {
-      themeToDirectories[theme] = [];
-    }
-    themeToDirectories[theme].push(dir.id);
-  });
-  
-  // Initialize affected directories
-  const affectedDirectories = new Set();
-  
-  // Map of file paths to themes that should be rebuilt
-  const DEPENDENCIES = {
-    'src/components/core/': ['all'],
-    'src/layouts/': ['all'],
-    'src/lib/': ['all'],
-    'src/utils/': ['all'],
-    'src/styles/global.css': ['all'],
-    'public/styles/global.css': ['all'],
-    'src/styles/themes/elegant.css': ['elegant'],
-    'public/styles/themes/elegant.css': ['elegant'],
-    'src/styles/themes/nature.css': ['nature'],
-    'public/styles/themes/nature.css': ['nature'],
-    'functions/': ['all'], // Changes to functions affect all directories
-  };
-  
-  // Check each changed file
-  changedFiles.forEach(file => {
-    // Core file changes affect all directories
-    if (file.startsWith('src/components/core/') || 
-        file.startsWith('src/layouts/') ||
-        file.startsWith('src/lib/') ||
-        file.startsWith('src/utils/') ||
-        file.startsWith('src/styles/global') ||
-        file.startsWith('public/styles/global') ||
-        file.startsWith('functions/')) {
-      affectedDirectories.add('all');
-      return;
-    }
-
-    // Check specific theme dependencies
-    for (const theme of Object.keys(themeToDirectories)) {
-      if (file.includes(`/${theme}.css`)) {
-        // Add all directories with this theme
-        themeToDirectories[theme].forEach(dirId => {
-          affectedDirectories.add(dirId);
-        });
-      }
-    }
-
-    // Directory-specific content changes
-    if (file.includes('/content/')) {
-      // Extract directory from path (assumes content is organized by directory)
-      const dirMatch = file.match(/\/content\/([^\/]+)/);
-      if (dirMatch && dirMatch[1]) {
-        affectedDirectories.add(dirMatch[1]);
-      }
-    }
-
-    // Check for changes in directory-specific components or layouts
-    if (file.includes('/components/themes/')) {
-      const themeMatch = file.match(/\/themes\/([^\/]+)/);
-      if (themeMatch && themeMatch[1]) {
-        const theme = themeMatch[1];
-        // Add all directories with this theme
-        if (themeToDirectories[theme]) {
-          themeToDirectories[theme].forEach(dirId => {
-            affectedDirectories.add(dirId);
-          });
-        }
-      }
-    }
-  });
-  
-  // If 'all' is in the set, build everything
-  if (affectedDirectories.has('all')) {
-    return 'all';
-  }
-  
-  // Return array of affected directories
-  return Array.from(affectedDirectories);
-}
-
 // Copy public files to the dist directory
 function copyPublicFiles() {
   // Copy _headers file to the dist folder if it exists
   copySpecialFiles(PUBLIC_DIR, BUILD_DIR, ['_headers']);
-
-  // Don't copy static _redirects, we'll generate it dynamically
-  // We'll handle this with generateRedirects() instead
 
   // Ensure functions directory is properly set up
   if (fs.existsSync(FUNCTIONS_DIR)) {
@@ -433,7 +276,6 @@ async function buildAllDirectories() {
   // Generate sitemaps for SEO
   console.log('Generating sitemaps for SEO...');
   try {
-    // Import the sitemap generator function and call it directly
     await generateAllSitemaps();
     console.log('Sitemaps generated successfully');
   } catch (error) {
@@ -444,7 +286,6 @@ async function buildAllDirectories() {
   // Generate robots.txt files
   console.log('Generating robots.txt files...');
   try {
-    // Import the robots.txt generator function and call it directly
     await generateAllRobots();
     console.log('Robots.txt files generated successfully');
   } catch (error) {
@@ -455,102 +296,15 @@ async function buildAllDirectories() {
   console.log('Cloudflare Pages build completed successfully!');
 }
 
-// Also update the same approach in buildSelectiveDirectories function
-async function buildSelectiveDirectories(directories) {
-  console.log(`Building selective directories: ${directories.join(', ')}...`);
-
-  for (const dir of directories) {
-    console.log(`Building directory: ${dir}`);
-
-    // Set environment variable for the build
-    process.env.CURRENT_DIRECTORY = dir;
-    
-    // Run the build for this directory
-    try {
-      execSync(`node scripts/selective-build.js ${dir}`, { 
-        stdio: 'inherit',
-        env: {...process.env}
-      });
-      
-      // Clean up nested directories
-      await cleanupNestedDirectories(dir);
-
-      // Copy public assets after each directory build using our centralized utility
-      copyPublicAssetsToDirectory(dir);
-    } catch (error) {
-      console.error(`Error building directory ${dir}:`, error);
-    }
-  }
-
-  // Generate dynamic configuration files
-  await generateDomainMappings();
-  await generateRedirects();
-
-  // Copy public files to build folder
-  copyPublicFiles();
-  
-  // Create a directory selector page for the main domain
-  await createDirectorySelector();
-
-  // Generate sitemaps for SEO
-  console.log('Generating sitemaps for SEO...');
-  try {
-    // Import the sitemap generator function and call it directly
-    await generateAllSitemaps();
-    console.log('Sitemaps generated successfully');
-  } catch (error) {
-    console.error('Error generating sitemaps:', error);
-    // Don't fail the build for sitemap errors
-  }
-  
-  // Generate robots.txt files
-  console.log('Generating robots.txt files...');
-  try {
-    // Import the robots.txt generator function and call it directly
-    await generateAllRobots();
-    console.log('Robots.txt files generated successfully');
-  } catch (error) {
-    console.error('Error generating robots.txt files:', error);
-    // Don't fail the build for robots.txt errors
-  }
-
-  console.log('Selective build completed successfully!');
-}
-
-// Main build function
+// Main build function - simplified to always build all directories
 async function runBuild() {
+  console.log('🚀 Starting Cloudflare Pages build...');
+  
   // Create build directory if it doesn't exist
   ensureDirectoryExists(BUILD_DIR);
 
-  // Check if this is the first build
-  const isFirstBuild = process.env.CF_PAGES_BRANCH && 
-                       (!fs.existsSync(path.join(BUILD_DIR, 'first-build-completed')));
-
-  if (isFirstBuild) {
-    console.log('🚀 First deployment detected - performing full build of all directories...');
-    await buildAllDirectories();
-    
-    // Create a marker file to indicate first build is done
-    fs.writeFileSync(path.join(BUILD_DIR, 'first-build-completed'), 'Build completed at: ' + new Date().toISOString());
-
-    console.log('First build completed successfully!');
-    process.exit(0);
-    return;
-  }
-
-  // Standard build process for subsequent builds
-  const changedFiles = getChangedFiles();
-  console.log('Changed files:', changedFiles);
-  
-  // Determine which directories to build
-  const directoriesToBuild = await getDirectoriesToBuild(changedFiles);
-
-  // Build the appropriate directories
-  if (directoriesToBuild === 'all') {
-    await buildAllDirectories();
-  } else {
-    await buildSelectiveDirectories(directoriesToBuild);
-  }
+  // Always build all directories - no selective builds
+  await buildAllDirectories();
 
   console.log('Build completed successfully!');
   process.exit(0);
