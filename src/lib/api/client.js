@@ -4,7 +4,7 @@
  */
 import { fetchApi, getApiBaseUrl } from './core';
 import { apiConfig } from '../../config';
-import { handleLocalApiRequest } from '../../utils/local-api-handler';
+import { handleLocalApiRequest } from './localApiHandler';
 
 /**
  * Build a complete API URL from endpoint and params

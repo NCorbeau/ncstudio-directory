@@ -11,9 +11,6 @@ import { getDirectories, getListings, getLandingPages } from '../src/lib/nocodb.
 // Load environment variables
 dotenv.config();
 
-// Base domain if no custom domain is specified
-const BASE_DOMAIN = process.env.SITE_URL || 'https://ncstudio-directory.pages.dev';
-
 /**
  * Format date to ISO string for sitemaps
  * @param {string|Date} date - Date to format

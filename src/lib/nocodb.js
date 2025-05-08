@@ -2,15 +2,23 @@
  * NocoDB v2 API client for fetching data with caching
  * Handles field mapping between NocoDB conventions and JavaScript conventions
  */
+
+let dotenv;
+if (typeof window === 'undefined') {
+  // We're in a Node.js environment
+  dotenv = await import('dotenv');
+  dotenv.config();
+}
+
 import { cachedFetch, cacheTTL } from './cache.js';
 
-import dotenv from 'dotenv';
+const NOCODB_API_URL = typeof window !== 'undefined' 
+  ? (import.meta.env?.NOCODB_API_URL || 'https://nocodb.ncstudio.click/api/v2')
+  : (process.env?.NOCODB_API_URL || 'https://nocodb.ncstudio.click/api/v2');
 
-dotenv.config();
-
-// NocoDB API configuration
-const NOCODB_API_URL = import.meta.env?.NOCODB_API_URL || process.env?.NOCODB_API_URL || 'https://nocodb.ncstudio.click/api/v2';
-const NOCODB_AUTH_TOKEN = import.meta.env?.NOCODB_AUTH_TOKEN || process.env?.NOCODB_AUTH_TOKEN;
+const NOCODB_AUTH_TOKEN = typeof window !== 'undefined'
+  ? import.meta.env?.NOCODB_AUTH_TOKEN
+  : process.env?.NOCODB_AUTH_TOKEN;
 
 // Base headers for API requests - updated for v2 API
 const headers = {
@@ -18,8 +26,10 @@ const headers = {
   'Content-Type': 'application/json'
 };
 
-console.log('NOCODB_API_URL:', NOCODB_API_URL);
-console.log('NOCODB_AUTH_TOKEN:', NOCODB_AUTH_TOKEN ? '****' : 'Not Set'); // Hide token in logs
+if (typeof window === 'undefined') {
+  console.log('NOCODB_API_URL:', NOCODB_API_URL);
+  console.log('NOCODB_AUTH_TOKEN:', NOCODB_AUTH_TOKEN ? '****' : 'Not Set');
+}
 
 // Table mapping to handle NocoDB naming conventions
 const TABLES = {
