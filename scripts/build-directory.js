@@ -12,7 +12,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 // Get the directory to build from environment variable
-const TARGET_DIRECTORY = process.env.TARGET_DIRECTORY;
+const TARGET_DIRECTORY = process.env.CURRENT_DIRECTORY;
 
 // Validation
 if (!TARGET_DIRECTORY) {
