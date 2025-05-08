@@ -2,29 +2,13 @@
  * Core API client functionality used by all API client implementations
  */
 import { apiConfig } from '../../config';
-import { isBrowser } from '../../utils/common';
 
 /**
  * Get the base URL for API calls based on environment configuration
  */
 export function getApiBaseUrl() {
-  // Get configuration values
-  const { useLocalApi } = apiConfig;
-  
-  // In the browser, use the current host by default
-  if (isBrowser()) {
-    // If explicitly set to use local API, use current origin
-    if (useLocalApi) {
-      return window.location.origin;
-    }
-    
-    // Use relative paths for API requests in the browser
-    return '';
-  }
-  
-  // In Node.js context during build/SSR, use environment variables
-  const siteUrl = process.env.SITE_URL || 'http://localhost:4321';
-  return siteUrl;
+  // Simply return the configured API base URL
+  return apiConfig.baseUrl;
 }
 
 /**
@@ -41,10 +25,14 @@ export async function fetchApi(url, options = {}) {
     // Make the request
     const response = await fetch(url, {
       ...options,
-      headers
+      headers,
+      // Add mode: 'cors' for cross-origin requests
+      mode: 'cors',
+      // Add credentials policy if needed
+      credentials: 'same-origin' // or 'include' if you need to send cookies
     });
     
-    // Check if the response is successful
+    // Rest of the function remains the same...
     if (!response.ok) {
       // Try to get error details from the response
       let errorDetails = '';

@@ -4,18 +4,32 @@
  */
 import { fetchApi, getApiBaseUrl } from './core';
 import { apiConfig } from '../../config';
+import { handleLocalApiRequest } from '../../utils/local-api-handler';
 
 /**
  * Build a complete API URL from endpoint and params
  */
 export function getApiUrl(endpoint, params = {}) {
+  // If using local API, handle differently
+  if (apiConfig.useLocalApi && typeof window !== 'undefined') {
+    // For local development, use relative URLs
+    const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    const url = new URL(normalizedEndpoint, window.location.origin);
+    
+    // Add query parameters
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        url.searchParams.append(key, value);
+      }
+    });
+    
+    return url.pathname + url.search;
+  }
+  
+  // For production, use the external API
   const baseUrl = getApiBaseUrl();
-  
-  // Ensure endpoint starts with / if needed
   const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-  
-  // Build the URL
-  const url = new URL(`${baseUrl}${normalizedEndpoint}`, baseUrl || (typeof window !== 'undefined' ? window.location.origin : undefined));
+  const url = new URL(`${baseUrl}${normalizedEndpoint}`);
   
   // Add query parameters
   Object.entries(params).forEach(([key, value]) => {
@@ -24,11 +38,6 @@ export function getApiUrl(endpoint, params = {}) {
     }
   });
   
-  // If baseUrl is empty and in browser, return just the path to keep it relative
-  if (!baseUrl && typeof window !== 'undefined') {
-    return url.pathname + url.search;
-  }
-  
   return url.toString();
 }
 
@@ -36,6 +45,26 @@ export function getApiUrl(endpoint, params = {}) {
  * Make a request to an API endpoint
  */
 export async function apiRequest(endpoint, options = {}, queryParams = {}) {
+  // Use local API handlers during development if configured
+  if (apiConfig.useLocalApi && typeof window !== 'undefined') {
+    try {
+      // Parse query parameters
+      const params = new URLSearchParams();
+      for (const [key, value] of Object.entries(queryParams)) {
+        if (value !== undefined && value !== null) {
+          params.append(key, String(value));
+        }
+      }
+      
+      // Handle the request locally
+      return await handleLocalApiRequest(endpoint, options, params);
+    } catch (error) {
+      console.error('Error in local API handler:', error);
+      throw error;
+    }
+  }
+  
+  // Use the external API in production
   const url = getApiUrl(endpoint, queryParams);
   return fetchApi(url, options);
 }
