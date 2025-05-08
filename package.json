@@ -12,6 +12,7 @@
     "preview": "astro preview",
     "astro": "astro",
     "build:all": "node scripts/build-all.js",
+    "build:directory": "node scripts/build-directory.js",
     "build:cloudflare": "node scripts/cloudflare-build.js && node scripts/copy-assets.js && node scripts/fix-astro-css.js"
   },
   "dependencies": {

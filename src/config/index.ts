@@ -94,17 +94,17 @@ export const layoutConfig = {
   
   // API configuration
   export const apiConfig = {
-    // Base URL for API endpoints
+    // Update the base URL for API endpoints
     baseUrl: typeof window !== 'undefined' 
-      ? import.meta.env.PUBLIC_API_BASE_URL || window.location.origin
-      : process.env.PUBLIC_API_BASE_URL || import.meta.env.PUBLIC_API_BASE_URL || '',
+      ? import.meta.env.PUBLIC_API_BASE_URL || 'https://ncstudio-directory-functions.glownia.workers.dev'
+      : process.env.PUBLIC_API_BASE_URL || import.meta.env.PUBLIC_API_BASE_URL || 'https://ncstudio-directory-functions.glownia.workers.dev',
     
-    // Whether to use local API handlers
+    // Rest of the configuration stays the same
     useLocalApi: typeof window !== 'undefined'
       ? import.meta.env.PUBLIC_USE_LOCAL_API === 'true'
       : process.env.PUBLIC_USE_LOCAL_API === 'true' || process.env.USE_LOCAL_API === 'true',
     
-    // Cache durations for different types of content (in seconds)
+    // Cache durations
     cacheTTL: {
       directories: 3600, // 1 hour
       listings: 300,     // 5 minutes
@@ -113,7 +113,7 @@ export const layoutConfig = {
       landingPages: 3600 // 1 hour
     },
     
-    // Endpoints
+    // Endpoints - these should remain the same path structure
     endpoints: {
       search: '/api/search',
       directory: '/api/directory',
