@@ -13,7 +13,8 @@
     "astro": "astro",
     "build:all": "node scripts/build-all.js",
     "build:directory": "node scripts/build-directory.js && node scripts/copy-assets.js && node scripts/fix-astro-css.js",
-    "build:cloudflare": "node scripts/cloudflare-build.js && node scripts/copy-assets.js && node scripts/fix-astro-css.js"
+    "build:cloudflare": "node scripts/cloudflare-build.js && node scripts/copy-assets.js && node scripts/fix-astro-css.js",
+    "build:single": "node scripts/build-single-directory.js"
   },
   "dependencies": {
     "@astrojs/check": "^0.4.1",

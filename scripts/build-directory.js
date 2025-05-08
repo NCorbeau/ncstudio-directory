@@ -1,8 +1,4 @@
-/**
- * Build script for a single directory
- * Used by Cloudflare Pages projects to build a specific directory
- */
-
+// scripts/build-directory.js
 import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
@@ -17,40 +13,32 @@ const TARGET_DIRECTORY = process.env.CURRENT_DIRECTORY;
 // Validation
 if (!TARGET_DIRECTORY) {
   console.error('ERROR: TARGET_DIRECTORY environment variable is required');
-  console.error('Please set TARGET_DIRECTORY to specify which directory to build');
   process.exit(1);
 }
 
-// Output directory - by default Cloudflare Pages expects output in 'dist'
+// Output directory - should be root of dist, not a subdirectory
 const OUTPUT_DIR = process.env.OUTPUT_DIR || 'dist';
 
-console.log(`Building directory: ${TARGET_DIRECTORY}`);
-console.log(`Output directory: ${OUTPUT_DIR}`);
+console.log(`Building directory: ${TARGET_DIRECTORY} directly to root output`);
 
-// Execute the build
 try {
-  // Set the current directory environment variable for the Astro build
+  // Set environment variables for the Astro build
   process.env.CURRENT_DIRECTORY = TARGET_DIRECTORY;
+  // CRITICAL: Set base to empty string for single directory deployment
+  process.env.BASE_PATH = '';
   
-  // Create the output directory if it doesn't exist
-  if (!fs.existsSync(OUTPUT_DIR)) {
-    fs.mkdirSync(OUTPUT_DIR, { recursive: true });
-  }
-  
-  // Run the Astro build
-  // This will build just the specific directory and output directly to the dist folder
-  // rather than to dist/[directory]
-  execSync(`astro build --outDir ./${OUTPUT_DIR}`, { 
+  // Run the Astro build with empty base and output directly to dist
+  execSync(`astro build --outDir ./${OUTPUT_DIR} --base ""`, { 
     stdio: 'inherit',
     env: {...process.env}
   });
   
-  // Copy necessary static files from the public directory
+  // Copy necessary static files
   const PUBLIC_DIR = path.resolve('./public');
   if (fs.existsSync(PUBLIC_DIR)) {
     console.log('Copying static assets from public directory...');
     
-    // Function to copy directory recursively
+    // Copy directory recursively (skipping multi-directory files)
     const copyDir = (src, dest, skipFiles = []) => {
       if (!fs.existsSync(dest)) {
         fs.mkdirSync(dest, { recursive: true });
@@ -62,10 +50,8 @@ try {
         const srcPath = path.join(src, entry.name);
         const destPath = path.join(dest, entry.name);
         
-        // Skip certain files (like _redirects that are specific to the multi-directory setup)
-        if (skipFiles.includes(entry.name)) {
-          continue;
-        }
+        // Skip files that are for multi-directory setup
+        if (skipFiles.includes(entry.name)) continue;
         
         if (entry.isDirectory()) {
           copyDir(srcPath, destPath, skipFiles);
@@ -75,16 +61,44 @@ try {
       }
     };
     
-    // Skip files that don't apply to individual directory deployments
+    // Files that should be skipped in single directory mode
     const skipFiles = ['_redirects', '_routes.json'];
     copyDir(PUBLIC_DIR, OUTPUT_DIR, skipFiles);
   }
+  
+  // Create simplified _routes.json for the single directory
+  const routesJson = {
+    "version": 1,
+    "include": ["/*"],
+    "exclude": ["/api/*"],
+    "routes": [
+      {
+        "src": "/_astro/*.js",
+        "headers": {
+          "Content-Type": "application/javascript"
+        },
+        "continue": true
+      },
+      {
+        "src": "/_astro/*.css",
+        "headers": {
+          "Content-Type": "text/css"
+        },
+        "continue": true
+      }
+    ]
+  };
+  
+  fs.writeFileSync(
+    path.join(OUTPUT_DIR, '_routes.json'),
+    JSON.stringify(routesJson, null, 2)
+  );
   
   // Create a build info file
   const buildInfoContent = {
     directory: TARGET_DIRECTORY,
     buildTime: new Date().toISOString(),
-    buildScript: 'build-directory.js'
+    mode: 'single-directory'
   };
   
   fs.writeFileSync(
@@ -92,7 +106,7 @@ try {
     JSON.stringify(buildInfoContent, null, 2)
   );
   
-  console.log('Build completed successfully!');
+  console.log('Single directory build completed successfully!');
   process.exit(0);
 } catch (error) {
   console.error('Build failed:', error);
