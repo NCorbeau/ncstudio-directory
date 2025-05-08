@@ -7,6 +7,21 @@ import SearchResults from "../../components/solid/SearchResults";
 
 // Generate all dynamic routes
 export async function getStaticPaths() {
+  // Check if we're in single directory mode
+  const isSingleDirectoryBuild = process.env.BUILD_MODE === 'single';
+  const currentDirectory = process.env.CURRENT_DIRECTORY;
+  
+  // In single directory mode, only get the current directory
+  if (isSingleDirectoryBuild && currentDirectory) {
+    console.log(`Single directory build: Only generating search page for ${currentDirectory}`);
+    
+    return [{
+      params: { directory: currentDirectory },
+      props: { directoryId: currentDirectory }
+    }];
+  }
+  
+  // Regular multi-directory mode
   const directories = await getAllDirectories();
   
   return directories.map((directory) => ({

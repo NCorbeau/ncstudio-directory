@@ -1,6 +1,6 @@
 /**
- * Single Directory Build Script
- * Builds ONLY the specified directory and outputs it directly to dist root
+ * Optimized Single Directory Build Script
+ * Only fetches and builds content for the target directory
  */
 
 import { execSync } from 'child_process';
@@ -26,7 +26,7 @@ if (!TARGET_DIRECTORY) {
 const OUTPUT_DIR = path.resolve('./dist');
 const TEMP_DIR = path.resolve('./temp-build');
 
-console.log(`🚀 Building ONLY directory: ${TARGET_DIRECTORY} to root output`);
+console.log(`🚀 Building ONLY directory: ${TARGET_DIRECTORY} directly to root output`);
 
 try {
   // Clean previous builds
@@ -46,110 +46,112 @@ try {
     ...process.env,
     CURRENT_DIRECTORY: TARGET_DIRECTORY,
     BUILD_MODE: 'single',  // Signal that this is a single directory build
+    ASTRO_OUT_DIR: TEMP_DIR, // Build to temp directory first
     BASE_PATH: ''
   };
   
   console.log('Step 1: Building with Astro to temporary directory...');
   
-  // Run the Astro build with special flags
-  execSync(`astro build --outDir ${TEMP_DIR} --base ""`, { 
+  // Run the Astro build to temp directory
+  execSync(`astro build --outDir "${TEMP_DIR}" --base ""`, { 
     stdio: 'inherit',
     env: buildEnv
   });
   
-  console.log('Step 2: Moving files from directory subfolder to root...');
+  console.log('Step 2: Moving files to correct locations...');
   
-  // Find the directory-specific folder in the temp build
-  const dirPath = path.join(TEMP_DIR, TARGET_DIRECTORY);
-  
-  if (!fs.existsSync(dirPath)) {
-    throw new Error(`Directory output folder ${dirPath} was not created by build`);
-  }
-  
-  // Move all files from the specific directory to the root output
-  // First, copy shared assets
-  console.log('Step 3: Copying shared assets...');
-  
-  // Copy _astro folder (contains all JS and CSS)
-  const astroDir = path.join(TEMP_DIR, '_astro');
-  if (fs.existsSync(astroDir)) {
-    fs.cpSync(astroDir, path.join(OUTPUT_DIR, '_astro'), { recursive: true });
-  }
-  
-  // Copy styles folder
-  const stylesDir = path.join(TEMP_DIR, 'styles');
-  if (fs.existsSync(stylesDir)) {
-    fs.cpSync(stylesDir, path.join(OUTPUT_DIR, 'styles'), { recursive: true });
-  }
-  
-  // Copy favicon and other root assets
-  const rootFiles = fs.readdirSync(TEMP_DIR)
-    .filter(file => !fs.statSync(path.join(TEMP_DIR, file)).isDirectory() || 
-                   file.startsWith('_') || 
-                   file === 'styles' || 
-                   file === '_astro' ||
-                   file === 'favicon.svg');
-  
-  rootFiles.forEach(file => {
-    const sourcePath = path.join(TEMP_DIR, file);
-    const destPath = path.join(OUTPUT_DIR, file);
-    if (fs.statSync(sourcePath).isDirectory()) {
-      fs.cpSync(sourcePath, destPath, { recursive: true });
+  // Copy all shared files and directories first
+  // (_astro, favicon.svg, styles, etc.)
+  fs.readdirSync(TEMP_DIR).forEach(item => {
+    const itemPath = path.join(TEMP_DIR, item);
+    
+    // Skip the target directory - we'll handle that separately
+    if (item === TARGET_DIRECTORY) return;
+    
+    // Copy everything else
+    if (fs.statSync(itemPath).isDirectory()) {
+      fs.cpSync(itemPath, path.join(OUTPUT_DIR, item), { recursive: true });
     } else {
-      fs.copyFileSync(sourcePath, destPath);
+      fs.copyFileSync(itemPath, path.join(OUTPUT_DIR, item));
     }
   });
   
-  // Now move the pages from directory subfolder to root
-  console.log(`Step 4: Moving ${TARGET_DIRECTORY} content to root...`);
+  // Now handle the directory content - move it to the root level
+  console.log(`Step 3: Moving content from ${TARGET_DIRECTORY}/ to root...`);
   
-  // Function to copy files, transforming paths if needed
-  function copyToRoot(source, dest) {
-    if (!fs.existsSync(dest)) {
-      fs.mkdirSync(dest, { recursive: true });
+  const directoryPath = path.join(TEMP_DIR, TARGET_DIRECTORY);
+  
+  if (!fs.existsSync(directoryPath)) {
+    throw new Error(`Directory folder ${directoryPath} not found in build output!`);
+  }
+  
+  // First, copy the root index.html file to the root directory
+  const sourceIndexPath = path.join(directoryPath, 'index.html');
+  if (fs.existsSync(sourceIndexPath)) {
+    let indexContent = fs.readFileSync(sourceIndexPath, 'utf8');
+    
+    // Replace any directory paths in the HTML content
+    indexContent = indexContent.replace(new RegExp(`/${TARGET_DIRECTORY}/`, 'g'), '/');
+    
+    fs.writeFileSync(path.join(OUTPUT_DIR, 'index.html'), indexContent);
+    console.log('Root index.html created from directory index');
+  }
+  
+  // Function to copy directory content with path fixing
+  const copyDirectoryContent = (source, destination) => {
+    if (!fs.existsSync(destination)) {
+      fs.mkdirSync(destination, { recursive: true });
     }
     
-    const files = fs.readdirSync(source);
-    
-    files.forEach(file => {
-      const sourcePath = path.join(source, file);
-      const destPath = path.join(dest, file);
+    fs.readdirSync(source).forEach(item => {
+      const sourcePath = path.join(source, item);
+      const destPath = path.join(destination, item);
+      
+      // Skip root index.html since we already handled it
+      if (sourcePath === sourceIndexPath) return;
       
       if (fs.statSync(sourcePath).isDirectory()) {
-        copyToRoot(sourcePath, destPath);
+        copyDirectoryContent(sourcePath, destPath);
       } else {
-        // For HTML files, we need to transform paths
-        if (file.endsWith('.html')) {
+        if (item.endsWith('.html')) {
+          // Fix HTML paths
           let content = fs.readFileSync(sourcePath, 'utf8');
-          
-          // Replace any references to /directory/ with /
-          const regex = new RegExp(`\\/${TARGET_DIRECTORY}\\/`, 'g');
-          content = content.replace(regex, '/');
-          
+          content = content.replace(new RegExp(`/${TARGET_DIRECTORY}/`, 'g'), '/');
           fs.writeFileSync(destPath, content);
         } else {
+          // Copy as-is for non-HTML files
           fs.copyFileSync(sourcePath, destPath);
         }
       }
     });
-  }
+  };
   
-  // Copy all content from the directory subfolder to root
-  copyToRoot(dirPath, OUTPUT_DIR);
-  
-  // Move the index.html to root
-  const indexPath = path.join(dirPath, 'index.html');
-  if (fs.existsSync(indexPath)) {
-    let indexContent = fs.readFileSync(indexPath, 'utf8');
+  // Copy all subdirectories and files from the directory folder
+  fs.readdirSync(directoryPath).forEach(item => {
+    const sourcePath = path.join(directoryPath, item);
     
-    // Transform paths in the root index.html
-    const regex = new RegExp(`\\/${TARGET_DIRECTORY}\\/`, 'g');
-    indexContent = indexContent.replace(regex, '/');
+    // Skip the root index.html since we already handled it
+    if (item === 'index.html') return;
     
-    fs.writeFileSync(path.join(OUTPUT_DIR, 'index.html'), indexContent);
-  }
+    // Copy subdirectories directly to root
+    if (fs.statSync(sourcePath).isDirectory()) {
+      const destPath = path.join(OUTPUT_DIR, item);
+      copyDirectoryContent(sourcePath, destPath);
+    } else {
+      // For files, copy to root with path fixing if needed
+      const destPath = path.join(OUTPUT_DIR, item);
+      
+      if (item.endsWith('.html')) {
+        let content = fs.readFileSync(sourcePath, 'utf8');
+        content = content.replace(new RegExp(`/${TARGET_DIRECTORY}/`, 'g'), '/');
+        fs.writeFileSync(destPath, content);
+      } else {
+        fs.copyFileSync(sourcePath, destPath);
+      }
+    }
+  });
   
-  console.log('Step 5: Creating specialized configuration files...');
+  console.log('Step 4: Creating specialized configuration files...');
   
   // Create _routes.json for proper handling
   const routesJson = {
@@ -180,7 +182,7 @@ try {
   );
   
   // Copy files from public directory (except multi-directory specific ones)
-  console.log('Step 6: Copying public assets...');
+  console.log('Step 5: Copying public assets...');
   const PUBLIC_DIR = path.resolve('./public');
   
   if (fs.existsSync(PUBLIC_DIR)) {
@@ -217,6 +219,17 @@ try {
   
   console.log('✨ Single directory build completed successfully!');
   console.log(`Directory "${TARGET_DIRECTORY}" has been built to ${OUTPUT_DIR}`);
+  
+  // List the root directory to check structure
+  console.log('\nRoot directory contains:');
+  const rootContents = fs.readdirSync(OUTPUT_DIR);
+  console.log(rootContents.join(', '));
+  if (rootContents.includes('index.html')) {
+    console.log('✅ Root index.html is present');
+  } else {
+    console.warn('⚠️ Root index.html not found!');
+  }
+  
   process.exit(0);
 } catch (error) {
   console.error('❌ Build failed:', error);

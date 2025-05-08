@@ -11,6 +11,41 @@ import {
 
 // Generate all dynamic routes
 export async function getStaticPaths() {
+  // Check if we're in single directory mode
+  const isSingleDirectoryBuild = process.env.BUILD_MODE === 'single';
+  const currentDirectory = process.env.CURRENT_DIRECTORY;
+  
+  // In single directory mode, only get the current directory
+  if (isSingleDirectoryBuild && currentDirectory) {
+    console.log(`Single directory build: Only generating categories for ${currentDirectory}`);
+    
+    try {
+      // Get just the current directory configuration
+      const directoryData = await getDirectoryConfig(currentDirectory);
+      
+      if (!directoryData) {
+        console.error(`Directory not found: ${currentDirectory}`);
+        return [];
+      }
+      
+      // Generate a path for each category in this directory
+      return (directoryData.data.categories || []).map(category => ({
+        params: { 
+          directory: currentDirectory,
+          category: category.id
+        },
+        props: { 
+          directoryId: currentDirectory,
+          categoryId: category.id
+        }
+      }));
+    } catch (error) {
+      console.error(`Error generating category paths for ${currentDirectory}:`, error);
+      return [];
+    }
+  }
+  
+  // Regular multi-directory mode
   const directories = await getAllDirectories();
   const paths = [];
   

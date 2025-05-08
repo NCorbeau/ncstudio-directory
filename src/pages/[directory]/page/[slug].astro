@@ -10,6 +10,44 @@ import {
 
 // Generate all dynamic routes for landing pages
 export async function getStaticPaths() {
+  // Check if we're in single directory mode
+  const isSingleDirectoryBuild = process.env.BUILD_MODE === 'single';
+  const currentDirectory = process.env.CURRENT_DIRECTORY;
+  
+  // In single directory mode, only get landing pages for the current directory
+  if (isSingleDirectoryBuild && currentDirectory) {
+    console.log(`Single directory build: Only generating landing pages for ${currentDirectory}`);
+    
+    try {
+      const landingPages = await getDirectoryLandingPages(currentDirectory);
+      
+      return landingPages.map(page => {
+        // Handle slug extraction correctly
+        let slug = page.slug;
+        
+        // If the slug includes the directory prefix, remove it
+        if (slug.startsWith(`${currentDirectory}/`)) {
+          slug = slug.replace(`${currentDirectory}/`, '');
+        }
+        
+        return {
+          params: { 
+            directory: currentDirectory,
+            slug
+          },
+          props: { 
+            directoryId: currentDirectory,
+            slug
+          }
+        };
+      });
+    } catch (error) {
+      console.error(`Error fetching landing pages for ${currentDirectory}:`, error);
+      return [];
+    }
+  }
+  
+  // Regular multi-directory mode
   const directories = await getAllDirectories();
   const paths = [];
   

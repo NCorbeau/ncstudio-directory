@@ -5,12 +5,15 @@ import {
   getListings, 
   getListing,
   getLandingPages,
-  getCategoryListings as fetchCategoryListings, // Rename to avoid confusion
-  getFeaturedListings as fetchFeaturedListings, // Rename to avoid confusion
-  getRecentListings as fetchRecentListings, // Rename to avoid confusion
+  getCategoryListings as fetchCategoryListings,
+  getFeaturedListings as fetchFeaturedListings,
+  getRecentListings as fetchRecentListings,
   searchListings,
-  getRelatedListings as fetchRelatedListings // Rename to avoid confusion
+  getRelatedListings as fetchRelatedListings
 } from '../lib/nocodb.js';
+
+// Check if we're in single directory mode
+const isSingleDirectoryBuild = process.env.BUILD_MODE === 'single';
 
 /**
  * Get the current directory ID from the URL or environment variable
@@ -57,6 +60,34 @@ export async function getDirectoryConfig(directoryId) {
   } catch (error) {
     console.error(`Error loading directory config for ${directoryId}:`, error);
     return null;
+  }
+}
+
+/**
+ * Get all directories
+ * With optimization for single directory builds
+ * @returns {Promise<Array>} Array of directory configurations
+ */
+export async function getAllDirectories() {
+  // In single directory mode, just return the current directory
+  if (isSingleDirectoryBuild) {
+    const currentDirId = process.env.CURRENT_DIRECTORY;
+    if (!currentDirId) {
+      console.error('getAllDirectories: CURRENT_DIRECTORY is not set in single directory mode');
+      return [];
+    }
+    
+    console.log(`Single directory mode: Only fetching directory ${currentDirId}`);
+    const dirConfig = await getDirectoryConfig(currentDirId);
+    return dirConfig ? [dirConfig] : [];
+  }
+  
+  // In multi-directory mode, get all directories
+  try {
+    return await getDirectories();
+  } catch (error) {
+    console.error('Error loading all directories:', error);
+    return [];
   }
 }
 
@@ -198,19 +229,6 @@ export async function searchDirectoryListings(directoryId, query) {
     return await searchListings(directoryId, query);
   } catch (error) {
     console.error(`Error searching listings for ${directoryId}:`, error);
-    return [];
-  }
-}
-
-/**
- * Get all directory configurations
- * @returns {Promise<Array>} Array of directory configurations
- */
-export async function getAllDirectories() {
-  try {
-    return await getDirectories();
-  } catch (error) {
-    console.error('Error loading all directories:', error);
     return [];
   }
 }

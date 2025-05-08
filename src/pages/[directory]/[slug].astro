@@ -10,8 +10,47 @@ import {
 
 // Generate all dynamic routes
 export async function getStaticPaths() {
+  // Check if we're in single directory mode
+  const isSingleDirectoryBuild = process.env.BUILD_MODE === 'single';
+  const currentDirectory = process.env.CURRENT_DIRECTORY;
+
+  // In single directory mode, only get listings for the current directory
+  if (isSingleDirectoryBuild && currentDirectory) {
+    console.log(`Single directory build: Only generating listings for ${currentDirectory}`);
+    
+    try {
+      const listings = await getDirectoryListings(currentDirectory);
+      
+      return listings.map(listing => {
+        // IMPORTANT: Handle slug extraction correctly
+        let slug = listing.slug;
+        
+        // If the slug includes the directory prefix, remove it
+        if (slug.startsWith(`${currentDirectory}/`)) {
+          slug = slug.replace(`${currentDirectory}/`, '');
+        }
+        
+        return {
+          params: { 
+            directory: currentDirectory,
+            slug
+          },
+          props: { 
+            directoryId: currentDirectory,
+            slug
+          }
+        };
+      });
+    } catch (error) {
+      console.error(`Error fetching listings for ${currentDirectory}:`, error);
+      return [];
+    }
+  }
+  
+  // Regular multi-directory mode
   const directories = await getAllDirectories();
   const paths = [];
+  
   for (const directory of directories) {
     const directoryId = directory.id;
     console.log(`Fetching listings for directory: ${directoryId}`);
@@ -20,7 +59,6 @@ export async function getStaticPaths() {
       const listings = await getDirectoryListings(directoryId);
       for (const listing of listings) {
         // IMPORTANT: Handle slug extraction correctly
-        // Make sure we're processing the slug correctly
         let slug = listing.slug;
         
         // If the slug includes the directory prefix, remove it

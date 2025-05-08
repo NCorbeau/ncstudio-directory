@@ -305,6 +305,59 @@ async function fetchFromNocoDB(endpoint, params = {}, ttl = cacheTTL.directories
  * @returns {Promise<Array>} - Array of directory configurations
  */
 export async function getDirectories() {
+  // In single directory build mode, only get the current directory
+  if (process.env.BUILD_MODE === 'single') {
+    const currentDirId = process.env.CURRENT_DIRECTORY;
+    if (!currentDirId) {
+      console.error('getDirectories: CURRENT_DIRECTORY is not set in single directory mode');
+      return [];
+    }
+    
+    console.log(`Single directory mode: Only fetching directory ${currentDirId}`);
+    
+    try {
+      // Use the specific recordId endpoint
+      const response = await fetchFromNocoDB(`/tables/${TABLES.directories}/records`, {
+        where: {
+          // Use Identifier column instead of Id
+          id: { eq: currentDirId }
+        },
+        limit: 1
+      }, cacheTTL.directories);
+      
+      // If no results, return empty array
+      if (!response.list || response.list.length === 0) {
+        return [];
+      }
+      
+      const directory = response.list[0];
+      
+      // Transform to expected format
+      return [{
+        id: directory.id,
+        data: {
+          name: directory.name,
+          description: directory.description,
+          domain: directory.domain,
+          theme: directory.theme || 'default',
+          availableLayouts: directory.availableLayouts.split(','),
+          defaultLayout: directory.defaultLayout || 'Card',
+          primaryColor: directory.primaryColor || '#3366cc',
+          secondaryColor: directory.secondaryColor,
+          logo: directory.logo,
+          categories: safeParseJSON(directory.categories, []),
+          metaTags: safeParseJSON(directory.metaTags, {}),
+          socialLinks: safeParseJSON(directory.socialLinks, []),
+          deployment: safeParseJSON(directory.deployment, {})
+        }
+      }];
+    } catch (error) {
+      console.error(`Error fetching directory ${currentDirId}:`, error);
+      return [];
+    }
+  }
+  
+  // Normal multi-directory mode
   const response = await fetchFromNocoDB(`/tables/${TABLES.directories}/records`, {}, cacheTTL.directories);
   
   // Transform the response to match the expected format
