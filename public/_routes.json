@@ -5,119 +5,14 @@
   "routes": [
     {
       "src": "/",
-      "dest": "/french-desserts/index.html",
-      "has": [
-        {
-          "type": "host",
-          "value": "french-desserts.ncstudio.click"
-        }
-      ]
+      "dest": "/index.html"
     },
     {
-      "src": "/",
-      "dest": "/dog-parks-warsaw/index.html",
-      "has": [
-        {
-          "type": "host",
-          "value": "dog-parks-warsaw.ncstudio.click"
-        }
-      ]
-    },
-    {
-      "src": "/",
-      "dest": "/directory-selector/index.html"
-    },
-    {
-      "src": "/:directory",
-      "dest": "/:directory/index.html"
-
-
-
-
-
-
-    },
-    {
-      "src": "/:directory/",
-      "dest": "/:directory/index.html"
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    },
-    {
-      "src": "/:directory/*",
-      "dest": "/:directory/:splat"
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    },
-    {
-      "src": "/api/search",
-      "dest": "/api/search.js"
-    },
-    {
-      "src": "/api/webhook",
-      "dest": "/api/webhook.js"
+      "src": "/index",
+      "dest": "/index.html"
     },
     {
       "src": "/_astro/*.js",
-      "headers": {
-        "Content-Type": "application/javascript"
-      },
-      "continue": true
-    },
-    {
-      "src": "/*.js",
       "headers": {
         "Content-Type": "application/javascript"
       },
@@ -136,10 +31,6 @@
         "Content-Type": "text/css"
       },
       "continue": true
-    },
-    {
-      "src": "/_astro/*.js",
-      "dest": "/_astro/:splat.js"
     }
   ]
 }

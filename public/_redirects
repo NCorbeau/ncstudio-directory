@@ -1,11 +1,5 @@
-# Custom domains
-/* /french-desserts/:splat 200 Host=french-desserts.ncstudio.click
-/* /dog-parks-warsaw/:splat 200 Host=dog-parks-warsaw.ncstudio.click
+# Ensure root path works correctly
+/ /index.html 200
 
-# Main domain paths
-/french-desserts/* /french-desserts/:splat 200
-/dog-parks-warsaw/* /dog-parks-warsaw/:splat 200
-
-# Default path
-/ /directory-selector/ 200
-/* /404.html 404
+# Handle single page app routing
+/* /index.html 200
