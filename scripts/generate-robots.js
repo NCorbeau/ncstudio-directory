@@ -1,53 +1,56 @@
 /**
- * Robots.txt Generator for Multi-Directory Project
- * Creates robots.txt files for each directory and the main site
+ * Simplified Robots.txt Generator for Single Directory Projects
+ * Only handles the specific case of a single directory build
  */
 
 import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
-import { getDirectories } from '../src/lib/nocodb.js';
+import { getDirectory } from '../src/lib/nocodb.js';
 
 // Load environment variables
 dotenv.config();
 
-// Base domain if no custom domain is specified
-const BASE_DOMAIN = process.env.SITE_URL || 'https://multi-directory-generator.pages.dev';
-
 /**
- * Generate robots.txt for a specific directory
- * @param {string} directoryId - Directory ID
- * @param {object} directoryData - Directory configuration data
+ * Generate robots.txt for a single directory build
+ * @param {string} directoryId - The directory ID to generate robots.txt for
+ * @param {string} outputDir - The output directory path
+ * @returns {Promise<void>}
  */
-async function generateDirectoryRobots(directoryId, directoryData) {
+export async function generateSingleRobotsTxt(directoryId, outputDir = './dist') {
   try {
-    console.log(`Generating robots.txt for ${directoryId}...`);
+    console.log(`Generating robots.txt for single directory build: ${directoryId}`);
     
-    // Determine domain URL
-    const domain = directoryData.domain 
-      ? `https://${directoryData.domain}` 
-      : `${BASE_DOMAIN}/${directoryId}`;
+    // Get directory data
+    const directory = await getDirectory(directoryId);
     
-    // Define directory output path
-    const outputPath = path.resolve(`./dist/${directoryId}`);
+    if (!directory) {
+      throw new Error(`Directory not found: ${directoryId}`);
+    }
     
-    // Create directory if it doesn't exist
-    if (!fs.existsSync(outputPath)) {
-      fs.mkdirSync(outputPath, { recursive: true });
+    // Determine domain URL - for single directory builds, use root domain
+    let domain;
+    
+    if (directory.data.domain) {
+      // Use custom domain if available
+      domain = `https://${directory.data.domain}`;
+    } else {
+      // Use a default domain or environment variable
+      domain = process.env.SITE_URL || 'https://example.com';
     }
     
     // Get custom robots content if available
     let customRules = '';
-    if (directoryData.metaTags?.robotsTxt) {
-      customRules = directoryData.metaTags.robotsTxt;
+    if (directory.data.metaTags?.robotsTxt) {
+      customRules = directory.data.metaTags.robotsTxt;
     }
     
-    // Generate robots.txt content
-    const robotsTxt = `# robots.txt for ${directoryData.name}
+    // Generate robots.txt content for single directory
+    const robotsTxt = `# robots.txt for ${directory.data.name}
 User-agent: *
-${directoryData.metaTags?.noindex ? 'Disallow: /' : 'Allow: /'}
+${directory.data.metaTags?.noindex ? 'Disallow: /' : 'Allow: /'}
 
-# Block admin routes if they exist
+# Block sensitive routes
 Disallow: /admin/
 Disallow: /login/
 Disallow: /logout/
@@ -59,92 +62,39 @@ Sitemap: ${domain}/sitemap.xml
 ${customRules}
 `;
     
-    // Write robots.txt to file
-    fs.writeFileSync(path.join(outputPath, 'robots.txt'), robotsTxt);
-    console.log(`robots.txt generated for ${directoryId} at ${outputPath}/robots.txt`);
+    // Write robots.txt to file in the output directory
+    const outputPath = path.resolve(outputDir, 'robots.txt');
+    fs.writeFileSync(outputPath, robotsTxt);
+    
+    console.log(`Single directory robots.txt generated at ${outputPath}`);
     
     return {
       id: directoryId,
       domain: domain
     };
   } catch (error) {
-    console.error(`Error generating robots.txt for ${directoryId}:`, error);
-    return null;
+    console.error(`Error generating single directory robots.txt for ${directoryId}:`, error);
+    throw error;
   }
 }
 
-/**
- * Generate root robots.txt for the main domain
- * @param {Array} directories - Array of directory information
- */
-function generateRootRobots(directories) {
-  try {
-    console.log('Generating root robots.txt...');
-    
-    // Start with basic rules
-    let robotsTxt = `# robots.txt for Multi-Directory Generator
-User-agent: *
-Allow: /
-
-# Block sensitive directories
-Disallow: /api/
-Disallow: /functions/
-
-# Sitemaps
-Sitemap: ${BASE_DOMAIN}/sitemap.xml
-`;
-    
-    // Add references to directory sitemaps
-    for (const dir of directories) {
-      if (dir) {
-        robotsTxt += `Sitemap: ${dir.domain}/sitemap.xml\n`;
-      }
-    }
-    
-    // Write robots.txt to file
-    fs.writeFileSync(path.resolve('./dist/robots.txt'), robotsTxt);
-    console.log('Root robots.txt generated at dist/robots.txt');
-  } catch (error) {
-    console.error('Error generating root robots.txt:', error);
+// If run directly, generate robots.txt for the specified directory
+if (process.argv[1] === import.meta.url) {
+  const directoryId = process.argv[2] || process.env.CURRENT_DIRECTORY;
+  
+  if (!directoryId) {
+    console.error('Error: Directory ID is required.');
+    console.error('Usage: node generate-robots.js <directoryId>');
+    process.exit(1);
   }
+  
+  generateSingleRobotsTxt(directoryId)
+    .then(() => {
+      console.log('Robots.txt generation completed successfully.');
+      process.exit(0);
+    })
+    .catch(error => {
+      console.error('Error generating robots.txt:', error);
+      process.exit(1);
+    });
 }
-
-/**
- * Main function to generate all robots.txt files
- */
-export async function generateAllRobots() {
-  try {
-    // Get all directories
-    const directories = await getDirectories();
-    
-    if (!directories || directories.length === 0) {
-      throw new Error('No directories found');
-    }
-    
-    console.log(`Found ${directories.length} directories`);
-    
-    // Generate robots.txt for each directory
-    const robotsPromises = directories.map(directory => 
-      generateDirectoryRobots(directory.id, directory.data)
-    );
-    
-    // Wait for all robots.txt files to be generated
-    const robotsResults = await Promise.all(robotsPromises);
-    
-    // Filter out null results (errors)
-    const validResults = robotsResults.filter(r => r !== null);
-    
-    // Generate root robots.txt
-    generateRootRobots(validResults);
-    
-    console.log('All robots.txt files generated successfully');
-  } catch (error) {
-    console.error('Error generating robots.txt files:', error);
-  }
-}
-
-// Run the robots.txt generator
-generateAllRobots().catch(error => {
-  console.error('Unhandled error in robots.txt generation:', error);
-  process.exit(1);
-});

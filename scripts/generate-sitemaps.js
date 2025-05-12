@@ -1,12 +1,12 @@
 /**
- * Sitemap Generator for Multi-Directory Project
- * Generates individual sitemaps for each directory and a site index for the root domain
+ * Simplified Sitemap Generator for Single Directory Projects
+ * Only handles the specific case of a single directory build
  */
 
 import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
-import { getDirectories, getListings, getLandingPages } from '../src/lib/nocodb.js';
+import { getDirectory, getListings, getLandingPages } from '../src/lib/nocodb.js';
 
 // Load environment variables
 dotenv.config();
@@ -27,45 +27,35 @@ function formatDate(date) {
 }
 
 /**
- * Generate sitemap for a specific directory
- * @param {string} directoryId - Directory ID
- * @param {object} directoryData - Directory configuration data
+ * Generate sitemap for a single directory build
+ * @param {string} directoryId - The directory ID to generate sitemap for
+ * @param {string} outputDir - The output directory path
+ * @returns {Promise<void>}
  */
-async function generateDirectorySitemap(directoryId, directoryData) {
+export async function generateSingleSitemap(directoryId, outputDir = './dist') {
   try {
-    console.log(`Generating sitemap for ${directoryId}...`);
+    console.log(`Generating sitemap for single directory build: ${directoryId}`);
     
-    // Determine domain URL - more flexible handling
+    // Get directory data
+    const directory = await getDirectory(directoryId);
+    
+    if (!directory) {
+      throw new Error(`Directory not found: ${directoryId}`);
+    }
+    
+    // Determine domain URL - for single directory builds, use root domain
     let domain;
     
-    if (directoryData.domain) {
+    if (directory.data.domain) {
       // Use custom domain if available
-      domain = `https://${directoryData.domain}`;
-    } else if (process.env.SITE_URL) {
-      // Use SITE_URL from environment with directory path
-      if (process.env.SITE_URL.endsWith('/')) {
-        domain = `${process.env.SITE_URL}${directoryId}`;
-      } else {
-        domain = `${process.env.SITE_URL}/${directoryId}`;
-      }
+      domain = `https://${directory.data.domain}`;
     } else {
-      // Fallback to a placeholder URL format that follows your path structure
-      domain = `https://YOUR-PROJECT-NAME.pages.dev/${directoryId}`;
-      console.warn(`No domain or SITE_URL configured for ${directoryId}, using placeholder URL: ${domain}`);
+      // Use a default domain or environment variable
+      domain = process.env.SITE_URL || 'https://example.com';
     }
     
-    // Define directory output path
-    const outputPath = path.resolve(`./dist/${directoryId}`);
-    
-    // Create directory if it doesn't exist
-    if (!fs.existsSync(outputPath)) {
-      fs.mkdirSync(outputPath, { recursive: true });
-    }
-    
-    // Fetch all listings for the directory
+    // Fetch listings and landing pages for the directory
     const listings = await getListings(directoryId);
-    
-    // Fetch all landing pages for the directory
     const landingPages = await getLandingPages(directoryId);
     
     // Start sitemap XML string
@@ -94,9 +84,9 @@ async function generateDirectorySitemap(directoryId, directoryData) {
     <priority>0.8</priority>
   </url>`;
     
-    // Add category pages
-    if (directoryData.categories && directoryData.categories.length > 0) {
-      for (const category of directoryData.categories) {
+    // Add category pages - important to use root paths for single directory build
+    if (directory.data.categories && directory.data.categories.length > 0) {
+      for (const category of directory.data.categories) {
         sitemap += `
   <!-- Category: ${category.name} -->
   <url>
@@ -108,8 +98,9 @@ async function generateDirectorySitemap(directoryId, directoryData) {
       }
     }
     
-    // Add listing pages
+    // Add listing pages - important to use root paths for single directory build
     for (const listing of listings) {
+      // For single directory builds, we remove the directory prefix from the slug
       const slug = listing.slug.replace(`${directoryId}/`, '');
       const lastMod = listing.data.updatedAt || new Date();
       
@@ -136,7 +127,7 @@ async function generateDirectorySitemap(directoryId, directoryData) {
   </url>`;
     }
     
-    // Add landing pages
+    // Add landing pages - important to use root paths for single directory build
     for (const page of landingPages) {
       const slug = page.slug.replace(`${directoryId}/`, '');
       const lastMod = page.data.updatedAt || new Date();
@@ -166,9 +157,11 @@ async function generateDirectorySitemap(directoryId, directoryData) {
     sitemap += `
 </urlset>`;
     
-    // Write sitemap to file
-    fs.writeFileSync(path.join(outputPath, 'sitemap.xml'), sitemap);
-    console.log(`Sitemap generated for ${directoryId} at ${outputPath}/sitemap.xml`);
+    // Write sitemap to file in the output directory
+    const outputPath = path.resolve(outputDir, 'sitemap.xml');
+    fs.writeFileSync(outputPath, sitemap);
+    
+    console.log(`Single directory sitemap generated at ${outputPath}`);
     
     return {
       id: directoryId,
@@ -176,82 +169,28 @@ async function generateDirectorySitemap(directoryId, directoryData) {
       url: `${domain}/sitemap.xml`
     };
   } catch (error) {
-    console.error(`Error generating sitemap for ${directoryId}:`, error);
-    return null;
+    console.error(`Error generating single directory sitemap for ${directoryId}:`, error);
+    throw error;
   }
 }
 
-/**
- * Generate sitemap index for the main domain
- * @param {Array} sitemaps - Array of sitemap info
- */
-function generateSitemapIndex(sitemaps) {
-  try {
-    console.log('Generating sitemap index...');
-    
-    // Start sitemap index XML
-    let sitemapIndex = `<?xml version="1.0" encoding="UTF-8"?>
-<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`;
-    
-    // Add each sitemap
-    for (const sitemap of sitemaps) {
-      if (sitemap) {
-        sitemapIndex += `
-  <sitemap>
-    <loc>${sitemap.url}</loc>
-    <lastmod>${formatDate(new Date())}</lastmod>
-  </sitemap>`;
-      }
-    }
-    
-    // Close sitemap index
-    sitemapIndex += `
-</sitemapindex>`;
-    
-    // Write sitemap index to file
-    fs.writeFileSync(path.resolve('./dist/sitemap.xml'), sitemapIndex);
-    console.log('Sitemap index generated at dist/sitemap.xml');
-  } catch (error) {
-    console.error('Error generating sitemap index:', error);
+// If run directly, generate sitemap for the specified directory
+if (process.argv[1] === import.meta.url) {
+  const directoryId = process.argv[2] || process.env.CURRENT_DIRECTORY;
+  
+  if (!directoryId) {
+    console.error('Error: Directory ID is required.');
+    console.error('Usage: node generate-sitemaps.js <directoryId>');
+    process.exit(1);
   }
+  
+  generateSingleSitemap(directoryId)
+    .then(() => {
+      console.log('Sitemap generation completed successfully.');
+      process.exit(0);
+    })
+    .catch(error => {
+      console.error('Error generating sitemap:', error);
+      process.exit(1);
+    });
 }
-
-/**
- * Main function to generate all sitemaps
- */
-export async function generateAllSitemaps() {
-  try {
-    // Get all directories
-    const directories = await getDirectories();
-    
-    if (!directories || directories.length === 0) {
-      throw new Error('No directories found');
-    }
-    
-    console.log(`Found ${directories.length} directories`);
-    
-    // Generate sitemap for each directory
-    const sitemapPromises = directories.map(directory => 
-      generateDirectorySitemap(directory.id, directory.data)
-    );
-    
-    // Wait for all sitemaps to be generated
-    const sitemaps = await Promise.all(sitemapPromises);
-    
-    // Filter out null results (errors)
-    const validSitemaps = sitemaps.filter(s => s !== null);
-    
-    // Generate sitemap index
-    generateSitemapIndex(validSitemaps);
-    
-    console.log('All sitemaps generated successfully');
-  } catch (error) {
-    console.error('Error generating sitemaps:', error);
-  }
-}
-
-// Run the sitemap generator
-generateAllSitemaps().catch(error => {
-  console.error('Unhandled error in sitemap generation:', error);
-  process.exit(1);
-});

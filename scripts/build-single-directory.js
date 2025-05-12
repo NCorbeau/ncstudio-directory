@@ -1,12 +1,12 @@
-/**
- * Optimized Single Directory Build Script
- * Only fetches and builds content for the target directory
- */
+// scripts/build-single-directory.js
+// This script builds a single directory directly to the root output
 
 import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
+import { generateSingleSitemap } from './generate-sitemaps.js';
+import { generateSingleRobotsTxt } from './generate-robots.js';
 
 // Load environment variables
 dotenv.config();
@@ -202,6 +202,26 @@ try {
     });
   }
   
+  // Generate sitemap.xml for the single directory
+  console.log('Step 6: Generating sitemap.xml...');
+  try {
+    await generateSingleSitemap(TARGET_DIRECTORY, OUTPUT_DIR);
+    console.log('Sitemap generated successfully');
+  } catch (error) {
+    console.error('Error generating sitemap:', error);
+    // Don't fail the build for sitemap errors
+  }
+  
+  // Generate robots.txt for the single directory
+  console.log('Step 7: Generating robots.txt...');
+  try {
+    await generateSingleRobotsTxt(TARGET_DIRECTORY, OUTPUT_DIR);
+    console.log('Robots.txt generated successfully');
+  } catch (error) {
+    console.error('Error generating robots.txt:', error);
+    // Don't fail the build for robots.txt errors
+  }
+  
   // Create a build info file
   const buildInfoContent = {
     directory: TARGET_DIRECTORY,
@@ -228,6 +248,16 @@ try {
     console.log('✅ Root index.html is present');
   } else {
     console.warn('⚠️ Root index.html not found!');
+  }
+  if (rootContents.includes('sitemap.xml')) {
+    console.log('✅ sitemap.xml is present');
+  } else {
+    console.warn('⚠️ sitemap.xml not found!');
+  }
+  if (rootContents.includes('robots.txt')) {
+    console.log('✅ robots.txt is present');
+  } else {
+    console.warn('⚠️ robots.txt not found!');
   }
   
   process.exit(0);
