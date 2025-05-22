@@ -164,10 +164,10 @@ breadcrumbs.push({
           </div>
         )}
         
-        {typeof listing.data.rating === 'number' && (
+        {typeof listing.data.fields.rating === 'number' && (
           <div class="rating">
-            <div class="stars" style={`--rating: ${listing.data.rating}`}>
-              <span class="sr-only">{listing.data.rating} out of 5 stars</span>
+            <div class="stars" style={`--rating: ${listing.data.fields.rating}`}>
+              <span class="sr-only">{listing.data.fields.rating} out of 5 stars</span>
             </div>
           </div>
         )}
@@ -201,10 +201,10 @@ breadcrumbs.push({
       
       <div class="listing-info">
         <div class="info-sidebar">
-          {listing.data.address && (
+          {listing.data.fields.address && (
             <div class="info-section">
               <h3>Address</h3>
-              <p>{listing.data.address}</p>
+              <p>{listing.data.fields.address}</p>
               
               <a 
                 href={`https://maps.google.com/?q=${encodeURIComponent(listing.data.address)}`}
@@ -217,11 +217,11 @@ breadcrumbs.push({
             </div>
           )}
           
-          {listing.data.website && (
+          {listing.data.fields.website && (
             <div class="info-section">
               <h3>Website</h3>
               <a 
-                href={listing.data.website}
+                href={listing.data.fields.website}
                 target="_blank"
                 rel="noopener noreferrer"
                 class="website-link"
@@ -231,18 +231,18 @@ breadcrumbs.push({
             </div>
           )}
           
-          {listing.data.phone && (
+          {listing.data.fields.phone && (
             <div class="info-section">
               <h3>Phone</h3>
-              <a href={`tel:${listing.data.phone}`}>{listing.data.phone}</a>
+              <a href={`tel:${listing.data.fields.phone}`}>{listing.data.fields.phone}</a>
             </div>
           )}
           
-          {listing.data.openingHours && listing.data.openingHours.length > 0 && (
+          {listing.data.fields.openingHours && listing.data.fields.openingHours.length > 0 && (
             <div class="info-section">
               <h3>Opening Hours</h3>
               <ul class="hours-list">
-                {listing.data.openingHours.map(timeSlot => (
+                {listing.data.fields.openingHours.map(timeSlot => (
                   <li>
                     <span class="day">{timeSlot.day}</span>
                     <span class="hours">{timeSlot.hours}</span>
@@ -253,11 +253,11 @@ breadcrumbs.push({
           )}
           
           {/* Display custom fields if available */}
-          {listing.data.customFields && Object.keys(listing.data.customFields).length > 0 && (
+          {listing.data.fields && Object.keys(listing.data.fields).length > 0 && (
             <div class="info-section">
               <h3>Additional Information</h3>
               <ul class="custom-fields">
-                {Object.entries(listing.data.customFields).map(([key, value]) => (
+                {Object.entries(listing.data.fields).map(([key, value]) => (
                   <li>
                     <span class="label">{key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1')}</span>
                     <span class="value">

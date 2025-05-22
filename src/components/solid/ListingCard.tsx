@@ -42,20 +42,20 @@ export default function ListingCard(props: ListingCardProps) {
             <p class="card-description">{listing.description}</p>
             
             <div class="card-meta">
-              <Show when={typeof listing.rating === 'number'}>
-                <span class="card-rating" style={`--rating: ${listing.rating}`}>
+              <Show when={typeof listing.fields.rating === 'number'}>
+                <span class="card-rating" style={`--rating: ${listing.fields.rating}`}>
                   <span class="stars"></span>
-                  <span class="rating-value">{listing.rating?.toFixed(1)}</span>
+                  <span class="rating-value">{listing.fields.rating?.toFixed(1)}</span>
                 </span>
               </Show>
               
-              <Show when={listing.address}>
+              <Show when={listing.fields.address}>
                 <div class="card-address">
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
                     <circle cx="12" cy="10" r="3"></circle>
                   </svg>
-                  <span>{listing.address?.split(',')[0]}</span>
+                  <span>{listing.fields.address?.split(',')[0]}</span>
                 </div>
               </Show>
             </div>
@@ -90,23 +90,23 @@ export default function ListingCard(props: ListingCardProps) {
           <div class="card-content">
             <h3 class="card-title">{listing.title}</h3>
             
-            <Show when={typeof listing.rating === 'number'}>
-              <div class="card-rating" style={`--rating: ${listing.rating}`}>
+            <Show when={typeof listing.fields.rating === 'number'}>
+              <div class="card-rating" style={`--rating: ${listing.fields.rating}`}>
                 <span class="stars"></span>
-                <span class="rating-value">{listing.rating?.toFixed(1)}</span>
+                <span class="rating-value">{listing.fields.rating?.toFixed(1)}</span>
               </div>
             </Show>
             
             <p class="card-description">{listing.description}</p>
             
             <div class="card-meta">
-              <Show when={listing.address}>
+              <Show when={listing.fields.address}>
                 <div class="card-address">
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
                     <circle cx="12" cy="10" r="3"></circle>
                   </svg>
-                  <span>{listing.address?.split(',')[0]}</span>
+                  <span>{listing.fields.address?.split(',')[0]}</span>
                 </div>
               </Show>
               
@@ -140,9 +140,9 @@ export default function ListingCard(props: ListingCardProps) {
                 <span class="card-category">{categoryName()}</span>
               </Show>
               
-              <Show when={typeof listing.rating === 'number'}>
-                <span class="card-rating" style={`--rating: ${listing.rating}`}>
-                  <span class="rating-value">{listing.rating?.toFixed(1)}</span>
+              <Show when={typeof listing.fields.rating === 'number'}>
+                <span class="card-rating" style={`--rating: ${listing.fields.rating}`}>
+                  <span class="rating-value">{listing.fields.rating?.toFixed(1)}</span>
                   <span class="stars"></span>
                 </span>
               </Show>
@@ -152,13 +152,13 @@ export default function ListingCard(props: ListingCardProps) {
             <p class="card-description">{listing.description}</p>
             
             <div class="card-footer">
-              <Show when={listing.address}>
+              <Show when={listing..fieldsaddress}>
                 <div class="card-address">
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
                     <circle cx="12" cy="10" r="3"></circle>
                   </svg>
-                  <span>{listing.address?.split(',')[0]}</span>
+                  <span>{listing.fields.address?.split(',')[0]}</span>
                 </div>
               </Show>
               
@@ -201,21 +201,21 @@ export default function ListingCard(props: ListingCardProps) {
               <span class="card-category">{categoryName()}</span>
             </Show>
             
-            <Show when={typeof listing.rating === 'number'}>
-              <span class="card-rating" style={`--rating: ${listing.rating}`}>
+            <Show when={typeof listing.fields.rating === 'number'}>
+              <span class="card-rating" style={`--rating: ${listing.fields.rating}`}>
                 <span class="stars"></span>
-                <span class="rating-value">{listing.rating?.toFixed(1)}</span>
+                <span class="rating-value">{listing.fields.rating?.toFixed(1)}</span>
               </span>
             </Show>
           </div>
           
-          <Show when={listing.address}>
+          <Show when={listing.fields.address}>
             <div class="card-address">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
                 <circle cx="12" cy="10" r="3"></circle>
               </svg>
-              <span>{listing.address?.split(',')[0]}</span>
+              <span>{listing.fields.address?.split(',')[0]}</span>
             </div>
           </Show>
           

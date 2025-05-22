@@ -49,25 +49,25 @@ function generateFoodItemSchema(baseSchema, listingData) {
     "recipeCategory": "Dessert",
     "recipeCuisine": "French",
     "keywords": listingData.tags ? listingData.tags.join(", ") : "",
-    "aggregateRating": listingData.rating ? {
+    "aggregateRating": listingData.fields.rating ? {
       "@type": "AggregateRating",
-      "ratingValue": listingData.rating,
+      "ratingValue": listingData.fields.rating,
       "ratingCount": 1 // Placeholder, could be replaced with actual review count
     } : null,
   };
 
   // Add custom fields if available
-  if (listingData.customFields) {
-    if (listingData.customFields.difficulty) {
-      foodSchema.recipeCategory += ` (${listingData.customFields.difficulty})`;
+  if (listingData.fields) {
+    if (listingData.fields.difficulty) {
+      foodSchema.recipeCategory += ` (${listingData.fields.difficulty})`;
     }
     
-    if (listingData.customFields.preparationTime) {
-      foodSchema.prepTime = convertToISO8601Duration(listingData.customFields.preparationTime);
+    if (listingData.fields.preparationTime) {
+      foodSchema.prepTime = convertToISO8601Duration(listingData.fields.preparationTime);
     }
     
-    if (listingData.customFields.origin) {
-      foodSchema.recipeCategory += ` - ${listingData.customFields.origin}`;
+    if (listingData.fields.origin) {
+      foodSchema.recipeCategory += ` - ${listingData.fields.origin}`;
     }
   }
 
@@ -88,16 +88,16 @@ function generatePlaceSchema(baseSchema, listingData) {
   const placeSchema = {
     ...baseSchema,
     "@type": "Park",
-    "address": listingData.address ? {
+    "address": listingData.fields.address ? {
       "@type": "PostalAddress",
-      "streetAddress": listingData.address
+      "streetAddress": listingData.fields.address
     } : null,
-    "telephone": listingData.phone || null,
-    "openingHoursSpecification": generateOpeningHours(listingData.openingHours),
+    "telephone": listingData.fields.phone || null,
+    "openingHoursSpecification": generateOpeningHours(listingData.fields.openingHours),
     "amenityFeature": generateAmenityFeatures(listingData),
-    "aggregateRating": listingData.rating ? {
+    "aggregateRating": listingData.fields.rating ? {
       "@type": "AggregateRating",
-      "ratingValue": listingData.rating,
+      "ratingValue": listingData.fields.rating,
       "ratingCount": 1 // Placeholder, could be replaced with actual review count
     } : null,
   };
@@ -168,7 +168,7 @@ function generateOpeningHours(openingHours) {
  * @returns {Array|null} - Array of amenity features or null
  */
 function generateAmenityFeatures(listingData) {
-  if (!listingData.tags && !listingData.customFields) return null;
+  if (!listingData.tags && !listingData.fields) return null;
   
   const amenities = [];
   
@@ -183,29 +183,29 @@ function generateAmenityFeatures(listingData) {
   }
   
   // Add relevant custom fields as amenities
-  if (listingData.customFields) {
+  if (listingData.fields) {
     // For dog parks, add specific custom fields
-    if (listingData.customFields.fenceStatus) {
+    if (listingData.fields.fenceStatus) {
       amenities.push({
         "@type": "LocationFeatureSpecification",
         "name": "Fence Status",
-        "value": listingData.customFields.fenceStatus
+        "value": listingData.fields.fenceStatus
       });
     }
     
-    if (listingData.customFields.size) {
+    if (listingData.fields.size) {
       amenities.push({
         "@type": "LocationFeatureSpecification",
         "name": "Size",
-        "value": listingData.customFields.size
+        "value": listingData.fields.size
       });
     }
     
-    if (listingData.customFields.waterAccess) {
+    if (listingData.fields.waterAccess) {
       amenities.push({
         "@type": "LocationFeatureSpecification",
         "name": "Water Access",
-        "value": listingData.customFields.waterAccess
+        "value": listingData.fields.waterAccess
       });
     }
   }

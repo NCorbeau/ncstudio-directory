@@ -64,7 +64,7 @@ export default function MapLayout(props: LayoutProps) {
         const listing = listings[i];
         
         // Skip listings without addresses
-        if (!listing.data.address) continue;
+        if (!listing.data.fields.address) continue;
         
         // In a real implementation, we would geocode the address
         // For this example, we'll use random coordinates around Warsaw
@@ -78,7 +78,7 @@ export default function MapLayout(props: LayoutProps) {
         const popupContent = `
           <div class="map-popup">
             <h3>${listing.data.title}</h3>
-            <p>${listing.data.address}</p>
+            <p>${listing.data.fields.address}</p>
             <a href="/${directoryId}/${listing.slug.replace(`${directoryId}/`, '')}">View details</a>
           </div>
         `;
@@ -105,7 +105,7 @@ export default function MapLayout(props: LayoutProps) {
       setMarkers(newMarkers);
       
       // Set active listing to first one with an address
-      const firstWithAddress = listings.findIndex(listing => listing.data.address);
+      const firstWithAddress = listings.findIndex(listing => listing.data.fields.address);
       if (firstWithAddress >= 0) {
         setActiveListingIndex(firstWithAddress);
       }
@@ -177,7 +177,7 @@ export default function MapLayout(props: LayoutProps) {
         <div class="listing-list">
           <For each={listings}>
             {(listing, index) => (
-              <Show when={listing.data.address}>
+              <Show when={listing.data.fields.address}>
                 <div 
                   id={`listing-item-${index()}`}
                   class={`listing-item ${index() === activeListingIndex() ? 'active' : ''}`}
@@ -191,14 +191,14 @@ export default function MapLayout(props: LayoutProps) {
                       <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
                       <circle cx="12" cy="10" r="3"></circle>
                     </svg>
-                    <span>{listing.data.address}</span>
+                    <span>{listing.data.fields.address}</span>
                   </div>
                 </div>
               </Show>
             )}
           </For>
           
-          <Show when={!listings.some(listing => listing.data.address)}>
+          <Show when={!listings.some(listing => listing.data.fields.address)}>
             <div class="no-address-message">
               <p>None of the listings have addresses to display on the map.</p>
             </div>

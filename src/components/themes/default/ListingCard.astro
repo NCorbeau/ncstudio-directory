@@ -42,21 +42,21 @@ if (listing.category) {
           <span class="card-category">{categoryName}</span>
         )}
         
-        {typeof listing.rating === 'number' && (
-          <span class="card-rating" style={`--rating: ${listing.rating}`}>
+        {typeof listing.fields.fields.rating === 'number' && (
+          <span class="card-rating" style={`--rating: ${listing.fields.rating}`}>
             <span class="stars"></span>
-            <span class="rating-value">{listing.rating.toFixed(1)}</span>
+            <span class="rating-value">{listing.fields.rating.toFixed(1)}</span>
           </span>
         )}
       </div>
       
-      {listing.address && (
+      {listing.fields.address && (
         <div class="card-address">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
             <circle cx="12" cy="10" r="3"></circle>
           </svg>
-          <span>{listing.address.split(',')[0]}</span>
+          <span>{listing.fields.address.split(',')[0]}</span>
         </div>
       )}
       

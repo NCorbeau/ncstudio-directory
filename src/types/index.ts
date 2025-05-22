@@ -39,13 +39,8 @@ export interface Directory {
     category?: string;
     featured: boolean;
     images: string[];
-    address?: string;
-    website?: string;
-    phone?: string;
-    rating?: number;
     tags: string[];
-    openingHours: OpeningHours[];
-    customFields: Record<string, unknown>;
+    fields: Record<string, unknown>;
     updatedAt?: string;
   }
   

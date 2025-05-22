@@ -30,7 +30,7 @@ export default function TableLayout(props: LayoutProps) {
       filtered = filtered.filter(listing => 
         listing.data.title.toLowerCase().includes(term) ||
         listing.data.description.toLowerCase().includes(term) ||
-        (listing.data.address && listing.data.address.toLowerCase().includes(term))
+        (listing.data.fields.address && listing.data.fields.address.toLowerCase().includes(term))
       );
     }
     
@@ -48,8 +48,8 @@ export default function TableLayout(props: LayoutProps) {
           comparison = catA.localeCompare(catB);
           break;
         case 'rating':
-          const ratingA = a.data.rating || 0;
-          const ratingB = b.data.rating || 0;
+          const ratingA = a.data.fields.rating || 0;
+          const ratingB = b.data.fields.rating || 0;
           comparison = ratingA - ratingB;
           break;
         case 'date':
@@ -163,13 +163,13 @@ export default function TableLayout(props: LayoutProps) {
                   </td>
                   <td>{getCategoryName(listing.data.category)}</td>
                   <td>
-                    <Show when={listing.data.rating} fallback={<span class="no-rating">No rating</span>}>
-                      <div class="rating-stars" style={`--rating: ${listing.data.rating}`}>
-                        <span class="sr-only">{listing.data.rating} out of 5 stars</span>
+                    <Show when={listing.data.fields.rating} fallback={<span class="no-rating">No rating</span>}>
+                      <div class="rating-stars" style={`--rating: ${listing.data.fields.rating}`}>
+                        <span class="sr-only">{listing.data.fields.rating} out of 5 stars</span>
                       </div>
                     </Show>
                   </td>
-                  <td class="address-cell">{listing.data.address || '-'}</td>
+                  <td class="address-cell">{listing.data.fields.address || '-'}</td>
                   <td>{listing.data.updatedAt ? formatDate(listing.data.updatedAt) : '-'}</td>
                   <td>
                     <a 

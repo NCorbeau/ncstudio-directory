@@ -118,20 +118,20 @@ export default function MagazineLayout(props: LayoutProps) {
               <p>{truncateText(heroListing()?.data?.description || '', 200)}</p>
               
               <div class="meta-info">
-                <Show when={heroListing()?.data?.rating}>
+                <Show when={heroListing()?.data?.fields.rating}>
                   <span class="rating">
-                    <span class="stars" style={`--rating: ${heroListing()?.data.rating}`}></span>
-                    <span class="rating-text">{heroListing()?.data.rating} out of 5</span>
+                    <span class="stars" style={`--rating: ${heroListing()?.data.fields.rating}`}></span>
+                    <span class="rating-text">{heroListing()?.data.fields.rating} out of 5</span>
                   </span>
                 </Show>
                 
-                <Show when={heroListing()?.data?.address}>
+                <Show when={heroListing()?.data?.fields.address}>
                   <span class="address">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
                       <circle cx="12" cy="10" r="3"></circle>
                     </svg>
-                    {heroListing()?.data.address}
+                    {heroListing()?.data.fields.address}
                   </span>
                 </Show>
               </div>
@@ -185,9 +185,9 @@ export default function MagazineLayout(props: LayoutProps) {
                           <h4>{listing.data.title}</h4>
                           <p>{truncateText(listing.data.description, 100)}</p>
                           
-                          <Show when={listing.data.rating}>
+                          <Show when={listing.data.fields.rating}>
                             <div class="rating-small">
-                              <span class="stars-small" style={`--rating: ${listing.data.rating}`}></span>
+                              <span class="stars-small" style={`--rating: ${listing.data.fields.rating}`}></span>
                             </div>
                           </Show>
                         </div>

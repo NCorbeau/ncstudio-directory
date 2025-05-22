@@ -109,14 +109,14 @@ export default function ListLayout(props: LayoutProps) {
                   </div>
                   <div class="listing-meta">
                     {categoryName && <span class="category-tag">{categoryName}</span>}
-                    {listing.data.rating && 
+                    {listing.data.fields.rating && 
                       <span class="rating">
-                        <span class="stars" style={`--rating: ${listing.data.rating}`}></span>
-                        <span class="rating-value">{listing.data.rating}</span>
+                        <span class="stars" style={`--rating: ${listing.data.fields.rating}`}></span>
+                        <span class="rating-value">{listing.data.fields.rating}</span>
                       </span>
                     }
                   </div>
-                  <p class="listing-excerpt">{truncateText(listing.data.description, 80)}</p>
+                  <p class="listing-excerpt">{truncateText(listing.data.fields.description, 80)}</p>
                 </div>
               );
             }}
@@ -162,35 +162,35 @@ export default function ListLayout(props: LayoutProps) {
               
               <div class="detail-info">
                 <div class="detail-meta">
-                  <Show when={listing().data.address}>
+                  <Show when={listing().data.fields.address}>
                     <div class="meta-item">
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
                         <circle cx="12" cy="10" r="3"></circle>
                       </svg>
-                      <span>{listing().data.address}</span>
+                      <span>{listing().data.fields.address}</span>
                     </div>
                   </Show>
                   
-                  <Show when={listing().data.website}>
+                  <Show when={listing().data.fields.website}>
                     <div class="meta-item">
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="12" cy="12" r="10"></circle>
                         <line x1="2" y1="12" x2="22" y2="12"></line>
                         <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
                       </svg>
-                      <a href={listing().data.website} target="_blank" rel="noopener noreferrer">
+                      <a href={listing().data.fields.website} target="_blank" rel="noopener noreferrer">
                         Visit Website
                       </a>
                     </div>
                   </Show>
                   
-                  <Show when={listing().data.phone}>
+                  <Show when={listing().data.fields.phone}>
                     <div class="meta-item">
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
                       </svg>
-                      <a href={`tel:${listing().data.phone}`}>{listing().data.phone}</a>
+                      <a href={`tel:${listing().data.fields.phone}`}>{listing().data.fields.phone}</a>
                     </div>
                   </Show>
                 </div>

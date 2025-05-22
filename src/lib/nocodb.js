@@ -41,8 +41,8 @@ const TABLES = {
 // Field mappings from NocoDB convention to JavaScript convention
 const FIELD_MAPPINGS = {
   // Common fields
-  'Id': 'autoId', // Mapping the auto-increment ID to a different name to avoid confusion
-  'Identifier': 'id', // Map Identifier to id in our code
+  'Id': 'autoId',
+  'Identifier': 'id',
   
   // Directories table
   'Name': 'name',
@@ -67,13 +67,8 @@ const FIELD_MAPPINGS = {
   'Category': 'category',
   'Featured': 'featured',
   'Images': 'images',
-  'Address': 'address',
-  'Website': 'website',
-  'Phone': 'phone',
-  'Rating': 'rating',
   'Tags': 'tags',
-  'Opening_Hours': 'openingHours',
-  'Custom_Fields': 'customFields',
+  'Fields': 'fields',
   'CreatedAt': 'createdAt',
   'UpdatedAt': 'updatedAt',
   
@@ -91,9 +86,37 @@ const REVERSE_FIELD_MAPPINGS = Object.entries(FIELD_MAPPINGS)
   }, {});
 
 /**
+ * Helper function for safely parsing JSON with a fallback value
+ */
+function safeParseJSON(jsonString, fallback) {
+  if (!jsonString) return fallback;
+  
+  try {
+    return JSON.parse(jsonString);
+  } catch (error) {
+    console.error(`Error parsing JSON: ${error}`);
+    return fallback;
+  }
+}
+
+/**
+ * Convert markdown to HTML
+ */
+async function renderMarkdown(markdown) {
+  if (!markdown) return () => '';
+  
+  try {
+    const { marked } = await import('marked');
+    const html = marked(markdown);
+    return () => html;
+  } catch (error) {
+    console.error('Error rendering markdown:', error);
+    return () => `<p>Error rendering content</p>`;
+  }
+}
+
+/**
  * Map fields from NocoDB naming to JavaScript naming
- * @param {object} data - Data from NocoDB
- * @returns {object} - Data with JavaScript naming
  */
 function mapNocoDbToJs(data) {
   if (!data) return null;
@@ -110,8 +133,6 @@ function mapNocoDbToJs(data) {
 
 /**
  * Map a query field from JavaScript naming to NocoDB naming
- * @param {string} field - Field name in JavaScript naming
- * @returns {string} - Field name in NocoDB naming
  */
 function mapJsFieldToNocoDb(field) {
   return REVERSE_FIELD_MAPPINGS[field] || field;
@@ -119,24 +140,19 @@ function mapJsFieldToNocoDb(field) {
 
 /**
  * Map query conditions from JavaScript naming to NocoDB naming for v2 API
- * @param {object} conditions - Query conditions with JavaScript naming
- * @returns {string} - Query conditions formatted for NocoDB v2 API
  */
 function mapQueryConditions(conditions) {
   if (!conditions) return null;
   
   // Handle simple conditions
   if (typeof conditions === 'object' && !conditions._or && !conditions._and) {
-    // Format for v2 API: (field,eq,value)
     const formattedConditions = Object.entries(conditions).map(([key, value]) => {
       const nocoKey = mapJsFieldToNocoDb(key);
       
       if (typeof value === 'object' && value !== null) {
-        // Handle operators like eq, neq, like, etc.
         const op = Object.keys(value)[0];
         return `(${nocoKey},${op},${value[op]})`;
       } else {
-        // Handle direct value (assume equality)
         return `(${nocoKey},eq,${value})`;
       }
     });
@@ -159,35 +175,12 @@ function mapQueryConditions(conditions) {
 }
 
 /**
- * Helper function for safely parsing JSON with a fallback value
- * @param {string} jsonString - JSON string to parse
- * @param {any} fallback - Fallback value if parsing fails
- * @returns {any} - Parsed object or fallback value
- */
-function safeParseJSON(jsonString, fallback) {
-  if (!jsonString) return fallback;
-  
-  try {
-    return JSON.parse(jsonString);
-  } catch (error) {
-    console.error(`Error parsing JSON: ${error}`);
-    return fallback;
-  }
-}
-
-/**
  * Sanitize search query to prevent SQL injection
- * @param {string} query - Raw search query
- * @returns {string} - Sanitized query
  */
 function sanitizeSearchQuery(query) {
   if (!query) return '';
   
-  // Basic sanitization to remove SQL injection risks
-  // Escape % and _ which are SQL wildcards
   let sanitized = query.replace(/%/g, '\\%').replace(/_/g, '\\_');
-  
-  // Remove any potentially harmful characters
   sanitized = sanitized.replace(/['";]/g, '');
   
   return sanitized;
@@ -195,34 +188,24 @@ function sanitizeSearchQuery(query) {
 
 /**
  * Enhanced fetchFromNocoDB with pagination support
- * @param {string} endpoint - API endpoint
- * @param {object} params - Query parameters
- * @param {number} ttl - Time to live in seconds
- * @param {boolean} fetchAll - Whether to fetch all pages (use with caution)
- * @returns {Promise<any>} - Response data
  */
 async function fetchFromNocoDB(endpoint, params = {}, ttl = cacheTTL.directories, fetchAll = false) {
-  // Format query parameters for v2 API
   const queryParams = {};
   
-  // Map 'where' conditions if present to v2 format
   if (params.where) {
     queryParams.where = mapQueryConditions(params.where);
   }
   
-  // Handle other parameters with direct mapping
   ['fields', 'sort', 'offset', 'limit'].forEach(param => {
     if (params[param]) {
       queryParams[param] = params[param];
     }
   });
   
-  // Set default limit if not provided and not fetching all
   if (!queryParams.limit && !fetchAll) {
-    queryParams.limit = 100; // Set a reasonable default
+    queryParams.limit = 100;
   }
   
-  // Build query string
   const queryString = Object.keys(queryParams)
     .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(typeof queryParams[key] === 'object' ? JSON.stringify(queryParams[key]) : queryParams[key])}`)
     .join('&');
@@ -230,12 +213,7 @@ async function fetchFromNocoDB(endpoint, params = {}, ttl = cacheTTL.directories
   const url = `${NOCODB_API_URL}${endpoint}${queryString ? `?${queryString}` : ''}`;
   
   try {
-    // Add agent: false to prevent connection hanging
-    const fetchOptions = { 
-      headers, 
-      agent: false // This prevents connection hanging by using a new agent for each request 
-    };
-    
+    const fetchOptions = { headers, agent: false };
     const response = await cachedFetch(url, fetchOptions, ttl);
     
     // Handle pagination if fetchAll is true
@@ -243,13 +221,9 @@ async function fetchFromNocoDB(endpoint, params = {}, ttl = cacheTTL.directories
       const allResults = [...response.list];
       let currentPage = 1;
       
-      // Fetch additional pages
-      while (response.pageInfo.hasNextPage && currentPage < 10) { // Safety limit to avoid infinite loops
+      while (response.pageInfo.hasNextPage && currentPage < 10) {
         const nextOffset = currentPage * (queryParams.limit || 100);
-        const nextPageParams = {
-          ...queryParams,
-          offset: nextOffset
-        };
+        const nextPageParams = { ...queryParams, offset: nextOffset };
         
         const nextPageQueryString = Object.keys(nextPageParams)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(typeof nextPageParams[key] === 'object' ? JSON.stringify(nextPageParams[key]) : nextPageParams[key])}`)
@@ -270,17 +244,12 @@ async function fetchFromNocoDB(endpoint, params = {}, ttl = cacheTTL.directories
         }
       }
       
-      // Return combined results
       return {
         list: allResults.map(mapNocoDbToJs),
-        pageInfo: {
-          ...response.pageInfo,
-          isLastPage: true
-        }
+        pageInfo: { ...response.pageInfo, isLastPage: true }
       };
     }
     
-    // Handle list response (map each item)
     if (response.list && Array.isArray(response.list)) {
       return {
         list: response.list.map(mapNocoDbToJs),
@@ -288,7 +257,6 @@ async function fetchFromNocoDB(endpoint, params = {}, ttl = cacheTTL.directories
       };
     }
     
-    // Handle single object response
     if (response && typeof response === 'object') {
       return mapNocoDbToJs(response);
     }
@@ -301,11 +269,107 @@ async function fetchFromNocoDB(endpoint, params = {}, ttl = cacheTTL.directories
 }
 
 /**
+ * Transform directory data from NocoDB to expected format
+ */
+function transformDirectory(directory) {
+  return {
+    id: directory.id,
+    data: {
+      id: directory.id,
+      name: directory.name,
+      description: directory.description,
+      domain: directory.domain,
+      theme: directory.theme || 'default',
+      availableLayouts: directory.availableLayouts?.split(',') || ['Card'],
+      defaultLayout: directory.defaultLayout || 'Card',
+      primaryColor: directory.primaryColor || '#3366cc',
+      secondaryColor: directory.secondaryColor,
+      logo: directory.logo,
+      categories: safeParseJSON(directory.categories, []),
+      metaTags: safeParseJSON(directory.metaTags, {}),
+      socialLinks: safeParseJSON(directory.socialLinks, []),
+      deployment: safeParseJSON(directory.deployment, {})
+    }
+  };
+}
+
+/**
+ * Transform listing data from NocoDB to expected format
+ */
+async function transformListing(listing) {
+  const renderedContent = await renderMarkdown(listing.content);
+  
+  return {
+    slug: `${listing.directory}/${listing.slug}`,
+    data: {
+      title: listing.title,
+      description: listing.description,
+      directory: listing.directory,
+      category: listing.category,
+      featured: listing.featured === 1 || listing.featured === true,
+      images: safeParseJSON(listing.images, []),
+      tags: safeParseJSON(listing.tags, []),
+      fields: safeParseJSON(listing.fields, {}),
+      updatedAt: listing.updatedAt
+    },
+    render: () => ({ Content: renderedContent })
+  };
+}
+
+/**
+ * Transform landing page data from NocoDB to expected format
+ */
+async function transformLandingPage(page) {
+  const renderedContent = await renderMarkdown(page.content);
+  
+  return {
+    slug: `${page.directory}/${page.slug}`,
+    data: {
+      title: page.title,
+      description: page.description,
+      directory: page.directory,
+      featuredImage: page.featuredImage,
+      keywords: safeParseJSON(page.keywords, []),
+      relatedCategories: safeParseJSON(page.relatedCategories, []),
+      updatedAt: page.updatedAt
+    },
+    render: () => ({ Content: renderedContent })
+  };
+}
+
+/**
+ * Fetch and transform multiple listings
+ */
+async function fetchListings(whereConditions, ttl = cacheTTL.listings, fetchAll = true) {
+  const response = await fetchFromNocoDB(`/tables/${TABLES.listings}/records`, {
+    where: whereConditions
+  }, ttl, fetchAll);
+  
+  return Promise.all(response.list.map(transformListing));
+}
+
+/**
+ * Fetch and transform a single listing
+ */
+async function fetchSingleListing(whereConditions, ttl = cacheTTL.listings) {
+  const response = await fetchFromNocoDB(`/tables/${TABLES.listings}/records`, {
+    where: whereConditions,
+    limit: 1
+  }, ttl);
+  
+  if (!response.list || response.list.length === 0) {
+    return null;
+  }
+  
+  return transformListing(response.list[0]);
+}
+
+// ==================== PUBLIC API FUNCTIONS ====================
+
+/**
  * Get all directory configurations
- * @returns {Promise<Array>} - Array of directory configurations
  */
 export async function getDirectories() {
-  // In single directory build mode, only get the current directory
   if (process.env.BUILD_MODE === 'single') {
     const currentDirId = process.env.CURRENT_DIRECTORY;
     if (!currentDirId) {
@@ -316,114 +380,41 @@ export async function getDirectories() {
     console.log(`Single directory mode: Only fetching directory ${currentDirId}`);
     
     try {
-      // Use the specific recordId endpoint
       const response = await fetchFromNocoDB(`/tables/${TABLES.directories}/records`, {
-        where: {
-          // Use Identifier column instead of Id
-          id: { eq: currentDirId }
-        },
+        where: { id: { eq: currentDirId } },
         limit: 1
       }, cacheTTL.directories);
       
-      // If no results, return empty array
       if (!response.list || response.list.length === 0) {
         return [];
       }
       
-      const directory = response.list[0];
-      
-      // Transform to expected format
-      return [{
-        id: directory.id,
-        data: {
-          name: directory.name,
-          description: directory.description,
-          domain: directory.domain,
-          theme: directory.theme || 'default',
-          availableLayouts: directory.availableLayouts.split(','),
-          defaultLayout: directory.defaultLayout || 'Card',
-          primaryColor: directory.primaryColor || '#3366cc',
-          secondaryColor: directory.secondaryColor,
-          logo: directory.logo,
-          categories: safeParseJSON(directory.categories, []),
-          metaTags: safeParseJSON(directory.metaTags, {}),
-          socialLinks: safeParseJSON(directory.socialLinks, []),
-          deployment: safeParseJSON(directory.deployment, {})
-        }
-      }];
+      return [transformDirectory(response.list[0])];
     } catch (error) {
       console.error(`Error fetching directory ${currentDirId}:`, error);
       return [];
     }
   }
   
-  // Normal multi-directory mode
   const response = await fetchFromNocoDB(`/tables/${TABLES.directories}/records`, {}, cacheTTL.directories);
-  
-  // Transform the response to match the expected format
-  return response.list.map(directory => ({
-    id: directory.id, // This is now from Identifier field
-    data: {
-      name: directory.name,
-      description: directory.description,
-      domain: directory.domain,
-      theme: directory.theme || 'default',
-      availableLayouts: directory.availableLayouts.split(','),
-      defaultLayout: directory.defaultLayout || 'Card',
-      primaryColor: directory.primaryColor || '#3366cc',
-      secondaryColor: directory.secondaryColor,
-      logo: directory.logo,
-      categories: safeParseJSON(directory.categories, []),
-      metaTags: safeParseJSON(directory.metaTags, {}),
-      socialLinks: safeParseJSON(directory.socialLinks, []),
-      deployment: safeParseJSON(directory.deployment, {})
-    }
-  }));
+  return response.list.map(transformDirectory);
 }
 
 /**
  * Get a specific directory configuration by ID
- * @param {string} id - Directory ID (Identifier in NocoDB)
- * @returns {Promise<object|null>} - Directory configuration or null if not found
  */
 export async function getDirectory(id) {
   try {
-    // In v2 API, use the specific recordId endpoint
     const response = await fetchFromNocoDB(`/tables/${TABLES.directories}/records`, {
-      where: {
-        // Use Identifier column instead of Id
-        id: { eq: id }
-      },
+      where: { id: { eq: id } },
       limit: 1
     }, cacheTTL.directories);
     
-    // If no results, return null
     if (!response.list || response.list.length === 0) {
       return null;
     }
     
-    const directory = response.list[0];
-    
-    // Transform to expected format
-    return {
-      id: directory.id,
-      data: {
-        id: directory.id,
-        name: directory.name,
-        description: directory.description,
-        domain: directory.domain,
-        theme: directory.theme || 'default',
-        availableLayouts: directory.availableLayouts.split(','),
-        defaultLayout: directory.defaultLayout || 'Card',
-        primaryColor: directory.primaryColor || '#3366cc',
-        secondaryColor: directory.secondaryColor,
-        logo: directory.logo,
-        categories: safeParseJSON(directory.categories, []),
-        metaTags: safeParseJSON(directory.metaTags, {}),
-        socialLinks: safeParseJSON(directory.socialLinks, []),
-        deployment: safeParseJSON(directory.deployment, {})
-      }
-    };
+    return transformDirectory(response.list[0]);
   } catch (error) {
     console.error(`Error fetching directory ${id}:`, error);
     return null;
@@ -432,256 +423,78 @@ export async function getDirectory(id) {
 
 /**
  * Get all listings for a specific directory
- * @param {string} directoryId - Directory ID
- * @param {boolean} fetchAll - Whether to fetch all pages (default: true)
- * @returns {Promise<Array>} - Array of listings
  */
 export async function getListings(directoryId, fetchAll = true) {
-  const response = await fetchFromNocoDB(`/tables/${TABLES.listings}/records`, {
-    where: {
-      directory: { eq: directoryId }
-    }
-  }, cacheTTL.listings, fetchAll);
-  
-  // Transform to match expected format with rendered markdown content
-  return Promise.all(response.list.map(async listing => {
-    // Convert markdown content to HTML
-    const renderedContent = await renderMarkdown(listing.content);
-    
-    return {
-      slug: `${listing.directory}/${listing.slug}`,
-      data: {
-        title: listing.title,
-        description: listing.description,
-        directory: listing.directory,
-        category: listing.category,
-        featured: listing.featured === 1 || listing.featured === true,
-        images: safeParseJSON(listing.images, []),
-        address: listing.address,
-        website: listing.website,
-        phone: listing.phone,
-        rating: listing.rating,
-        tags: safeParseJSON(listing.tags, []),
-        openingHours: safeParseJSON(listing.openingHours, []),
-        customFields: safeParseJSON(listing.customFields, {}),
-        updatedAt: listing.updatedAt
-      },
-      // Add a render function that returns the pre-rendered content
-      render: () => ({ Content: renderedContent })
-    };
-  }));
+  return fetchListings({ directory: { eq: directoryId } }, cacheTTL.listings, fetchAll);
 }
 
 /**
  * Get a specific listing by directory and slug
- * @param {string} directoryId - Directory ID
- * @param {string} slug - Listing slug
- * @returns {Promise<object|null>} - Listing data or null if not found
  */
 export async function getListing(directoryId, slug) {
-  try {
-    const response = await fetchFromNocoDB(`/tables/${TABLES.listings}/records`, {
-      where: {
-        directory: { eq: directoryId },
-        slug: { eq: slug }
-      },
-      limit: 1
-    }, cacheTTL.listings);
-    
-    // If no results, return null
-    if (!response.list || response.list.length === 0) {
-      return null;
-    }
-    
-    const listing = response.list[0];
-    
-    // Convert markdown content to HTML
-    const renderedContent = await renderMarkdown(listing.content);
-    
-    return {
-      slug: `${listing.directory}/${listing.slug}`,
-      data: {
-        title: listing.title,
-        description: listing.description,
-        directory: listing.directory,
-        category: listing.category,
-        featured: listing.featured === 1 || listing.featured === true,
-        images: safeParseJSON(listing.images, []),
-        address: listing.address,
-        website: listing.website,
-        phone: listing.phone,
-        rating: listing.rating,
-        tags: safeParseJSON(listing.tags, []),
-        openingHours: safeParseJSON(listing.openingHours, []),
-        customFields: safeParseJSON(listing.customFields, {}),
-        updatedAt: listing.updatedAt
-      },
-      // Add a render function that returns the pre-rendered content
-      render: () => ({ Content: renderedContent })
-    };
-  } catch (error) {
-    console.error(`Error fetching listing ${directoryId}/${slug}:`, error);
-    return null;
-  }
+  return fetchSingleListing({
+    directory: { eq: directoryId },
+    slug: { eq: slug }
+  }, cacheTTL.listings);
 }
 
 /**
  * Get listings for a specific category
- * @param {string} directoryId - Directory ID
- * @param {string} categoryId - Category ID
- * @returns {Promise<Array>} - Array of listings for the category
  */
 export async function getCategoryListings(directoryId, categoryId) {
-  const response = await fetchFromNocoDB(`/tables/${TABLES.listings}/records`, {
-    where: {
-      directory: { eq: directoryId },
-      category: { eq: categoryId }
-    }
+  return fetchListings({
+    directory: { eq: directoryId },
+    category: { eq: categoryId }
   }, cacheTTL.categories);
-  
-  // Transform to match expected format with rendered markdown content
-  return Promise.all(response.list.map(async listing => {
-    // Convert markdown content to HTML
-    const renderedContent = await renderMarkdown(listing.content);
-    
-    return {
-      slug: `${listing.directory}/${listing.slug}`,
-      data: {
-        title: listing.title,
-        description: listing.description,
-        directory: listing.directory,
-        category: listing.category,
-        featured: listing.featured === 1 || listing.featured === true,
-        images: safeParseJSON(listing.images, []),
-        address: listing.address,
-        website: listing.website,
-        phone: listing.phone,
-        rating: listing.rating,
-        tags: safeParseJSON(listing.tags, []),
-        openingHours: safeParseJSON(listing.openingHours, []),
-        customFields: safeParseJSON(listing.customFields, {}),
-        updatedAt: listing.updatedAt
-      },
-      // Add a render function that returns the pre-rendered content
-      render: () => ({ Content: renderedContent })
-    };
-  }));
 }
 
 /**
  * Search listings in a directory
- * @param {string} directoryId - Directory ID
- * @param {string} query - Search query
- * @returns {Promise<Array>} - Array of matching listings
  */
 export async function searchListings(directoryId, query) {
   if (!query || query.trim() === '') {
     return [];
   }
   
-  // Sanitize the search query
   const sanitizedQuery = sanitizeSearchQuery(query.trim());
   
-  // Use object format with logical operators for complex queries
-  const response = await fetchFromNocoDB(`/tables/${TABLES.listings}/records`, {
-    where: {
-      _and: [
-        { directory: { eq: directoryId } },
-        { 
-          _or: [
-            { title: { like: `%${sanitizedQuery}%` } },
-            { description: { like: `%${sanitizedQuery}%` } },
-            { content: { like: `%${sanitizedQuery}%` } }
-          ]
-        }
-      ]
-    }
-  }, cacheTTL.search);
+  const whereConditions = {
+    _and: [
+      { directory: { eq: directoryId } },
+      { 
+        _or: [
+          { title: { like: `%${sanitizedQuery}%` } },
+          { description: { like: `%${sanitizedQuery}%` } },
+          { content: { like: `%${sanitizedQuery}%` } }
+        ]
+      }
+    ]
+  };
   
-  // For JSON fields like tags, we need to filter client-side
-  const allResults = await Promise.all(response.list.map(async listing => {
-    // Convert markdown content to HTML
-    const renderedContent = await renderMarkdown(listing.content);
-    
-    // Parse JSON fields
-    const tags = safeParseJSON(listing.tags, []);
-    
-    // Additional client-side filtering for JSON fields
-    const tagsMatch = tags.some(tag => 
+  const allResults = await fetchListings(whereConditions, cacheTTL.search, false);
+  
+  // Additional client-side filtering for JSON fields like tags
+  return allResults.filter(result => {
+    const tagsMatch = result.data.tags.some(tag => 
       tag.toLowerCase().includes(sanitizedQuery.toLowerCase())
     );
-    
-    // Include if it matched the SQL query or tags match
-    return {
-      matchesTags: tagsMatch,
-      listing: {
-        slug: `${listing.directory}/${listing.slug}`,
-        data: {
-          title: listing.title,
-          description: listing.description,
-          directory: listing.directory,
-          category: listing.category,
-          featured: listing.featured === 1 || listing.featured === true,
-          images: safeParseJSON(listing.images, []),
-          address: listing.address,
-          website: listing.website,
-          phone: listing.phone,
-          rating: listing.rating,
-          tags: tags,
-          openingHours: safeParseJSON(listing.openingHours, []),
-          customFields: safeParseJSON(listing.customFields, {}),
-          updatedAt: listing.updatedAt
-        },
-        render: () => ({ Content: renderedContent })
-      }
-    };
-  }));
-  
-  // Return all matches (from SQL or client-side filtering)
-  return allResults
-    .filter(result => result.matchesTags || true) // Include SQL matches or tag matches
-    .map(result => result.listing);
+    return true; // Include SQL matches or tag matches
+  });
 }
 
 /**
  * Get all landing pages for a specific directory
- * @param {string} directoryId - Directory ID
- * @returns {Promise<Array>} - Array of landing pages
  */
 export async function getLandingPages(directoryId) {
   const response = await fetchFromNocoDB(`/tables/${TABLES.landingPages}/records`, {
-    where: {
-      directory: { eq: directoryId }
-    }
+    where: { directory: { eq: directoryId } }
   }, cacheTTL.landingPages);
   
-  // Transform to match expected format with rendered markdown content
-  return Promise.all(response.list.map(async page => {
-    // Convert markdown content to HTML
-    const renderedContent = await renderMarkdown(page.content);
-    
-    return {
-      slug: `${page.directory}/${page.slug}`,
-      data: {
-        title: page.title,
-        description: page.description,
-        directory: page.directory,
-        featuredImage: page.featuredImage,
-        keywords: safeParseJSON(page.keywords, []),
-        relatedCategories: safeParseJSON(page.relatedCategories, []),
-        updatedAt: page.updatedAt
-      },
-      // Add a render function that returns the pre-rendered content
-      render: () => ({ Content: renderedContent })
-    };
-  }));
+  return Promise.all(response.list.map(transformLandingPage));
 }
 
 /**
  * Get featured listings for a directory
- * @param {string} directoryId - Directory ID
- * @param {number} limit - Maximum number of listings to return
- * @returns {Promise<Array>} - Array of featured listings
  */
 export async function getFeaturedListings(directoryId, limit = 6) {
   const response = await fetchFromNocoDB(`/tables/${TABLES.listings}/records`, {
@@ -692,106 +505,37 @@ export async function getFeaturedListings(directoryId, limit = 6) {
     limit
   }, cacheTTL.listings);
   
-  // Transform and limit results
-  const listings = await Promise.all(response.list.map(async listing => {
-    // Convert markdown content to HTML
-    const renderedContent = await renderMarkdown(listing.content);
-    
-    return {
-      slug: `${listing.directory}/${listing.slug}`,
-      data: {
-        title: listing.title,
-        description: listing.description,
-        directory: listing.directory,
-        category: listing.category,
-        featured: true,
-        images: safeParseJSON(listing.images, []),
-        address: listing.address,
-        website: listing.website,
-        phone: listing.phone,
-        rating: listing.rating,
-        tags: safeParseJSON(listing.tags, []),
-        openingHours: safeParseJSON(listing.openingHours, []),
-        customFields: safeParseJSON(listing.customFields, {}),
-        updatedAt: listing.updatedAt
-      },
-      render: () => ({ Content: renderedContent })
-    };
-  }));
-  
-  return listings;
+  return Promise.all(response.list.map(transformListing));
 }
 
 /**
  * Get recent listings for a directory
- * @param {string} directoryId - Directory ID
- * @param {number} limit - Maximum number of listings to return
- * @returns {Promise<Array>} - Array of recent listings
  */
 export async function getRecentListings(directoryId, limit = 4) {
   const response = await fetchFromNocoDB(`/tables/${TABLES.listings}/records`, {
-    where: {
-      directory: { eq: directoryId }
-    },
+    where: { directory: { eq: directoryId } },
     sort: '-UpdatedAt',
     limit
   }, cacheTTL.listings);
   
-  // Transform results
-  const listings = await Promise.all(response.list.map(async listing => {
-    // Convert markdown content to HTML
-    const renderedContent = await renderMarkdown(listing.content);
-    
-    return {
-      slug: `${listing.directory}/${listing.slug}`,
-      data: {
-        title: listing.title,
-        description: listing.description,
-        directory: listing.directory,
-        category: listing.category,
-        featured: listing.featured === 1 || listing.featured === true,
-        images: safeParseJSON(listing.images, []),
-        address: listing.address,
-        website: listing.website,
-        phone: listing.phone,
-        rating: listing.rating,
-        tags: safeParseJSON(listing.tags, []),
-        openingHours: safeParseJSON(listing.openingHours, []),
-        customFields: safeParseJSON(listing.customFields, {}),
-        updatedAt: listing.updatedAt
-      },
-      render: () => ({ Content: renderedContent })
-    };
-  }));
-  
-  return listings;
+  return Promise.all(response.list.map(transformListing));
 }
 
 /**
  * Get related listings for a specific listing
- * @param {string} directoryId - Directory ID
- * @param {object} listing - The listing to find related items for
- * @param {number} limit - Maximum number of listings to return
- * @returns {Promise<Array>} - Array of related listings
  */
 export async function getRelatedListings(directoryId, listing, limit = 3) {
   try {
-    // Get all listings except the current one
     const allListings = await getListings(directoryId);
-    const otherListings = allListings.filter(item => 
-      item.slug !== listing.slug
-    );
+    const otherListings = allListings.filter(item => item.slug !== listing.slug);
     
-    // Calculate relevance score for each listing
     const scoredListings = otherListings.map(item => {
       let score = 0;
       
-      // Same category gets highest score
       if (item.data.category === listing.data.category) {
         score += 5;
       }
       
-      // Matching tags add to score
       if (item.data.tags && listing.data.tags) {
         const matchingTags = item.data.tags.filter(tag => 
           listing.data.tags.includes(tag)
@@ -802,13 +546,10 @@ export async function getRelatedListings(directoryId, listing, limit = 3) {
       return { listing: item, score };
     });
     
-    // Sort by score and take top results
-    const relatedListings = scoredListings
+    return scoredListings
       .sort((a, b) => b.score - a.score)
       .slice(0, limit)
       .map(item => item.listing);
-    
-    return relatedListings;
   } catch (error) {
     console.error(`Error getting related listings for ${directoryId}:`, error);
     return [];
@@ -817,12 +558,9 @@ export async function getRelatedListings(directoryId, listing, limit = 3) {
 
 /**
  * Cache invalidation for webhook-based updates
- * @param {string} [type] - Specific cache type to clear, or all if not specified
- * @param {string} [directoryId] - Specific directory to clear cache for
  */
 export function clearCache(type, directoryId) {
   if (typeof globalThis.__memoryCache !== 'undefined') {
-    // If a specific type and directory are requested
     if (type && directoryId) {
       const tableName = TABLES[type] || type;
       const cachePattern = new RegExp(`/tables/${tableName}/.*${directoryId}`);
@@ -834,9 +572,7 @@ export function clearCache(type, directoryId) {
       });
       
       console.log(`Cleared cache for ${type} in directory ${directoryId}`);
-    }
-    // If only a type is specified
-    else if (type) {
+    } else if (type) {
       const tableName = TABLES[type] || type;
       const cachePattern = new RegExp(`/tables/${tableName}/`);
       
@@ -847,32 +583,9 @@ export function clearCache(type, directoryId) {
       });
       
       console.log(`Cleared all ${type} caches`);
-    }
-    // Clear all caches
-    else {
+    } else {
       globalThis.__memoryCache.clear();
       console.log('Cleared all caches');
     }
-  }
-}
-
-/**
- * Convert markdown to HTML
- * @param {string} markdown - Markdown content
- * @returns {Promise<Function>} - Function that returns HTML component
- */
-async function renderMarkdown(markdown) {
-  if (!markdown) return () => '';
-  
-  try {
-    // Import the markdown parser
-    const { marked } = await import('marked');
-    const html = marked(markdown);
-    
-    // Return a function that Astro can use to render HTML
-    return () => html;
-  } catch (error) {
-    console.error('Error rendering markdown:', error);
-    return () => `<p>Error rendering content</p>`;
   }
 }
