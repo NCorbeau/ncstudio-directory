@@ -138,7 +138,7 @@ export async function generateSingleSitemap(directoryId, outputDir = './dist') {
     <loc>${domain}/page/${slug}</loc>
     <lastmod>${formatDate(lastMod)}</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.6</priority>`;
+    <priority>0.8</priority>`;
       
       // Add featured image if available
       if (page.data.featuredImage) {
