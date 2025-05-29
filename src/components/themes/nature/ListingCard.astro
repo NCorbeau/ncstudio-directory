@@ -1,27 +1,24 @@
 ---
-import { getDirectoryConfig } from "@/utils/directory-helpers";
+import { getCategoryName, getThumbnailImage, limitTags } from "@/utils/listing-helpers";
+import Rating from "@/components/core/Rating.astro";
+import CardAddress from "@/components/core/CardAddress.astro";
+import type { ListingData } from "@/types";
 
 // src/components/themes/nature/ListingCard.astro
+export interface Props {
+  listing: ListingData;
+  url: string;
+}
+
 const { listing, url } = Astro.props;
 
-// Format the first image as the thumbnail
-const thumbnail = listing.images && listing.images.length > 0 
-  ? listing.images[0] 
-  : '/placeholder-image.jpg';
+// Get thumbnail image
+const thumbnail = getThumbnailImage(listing.images);
 
 // Get category name if available
-let categoryName = '';
-if (listing.category) {
-  try {
-    const directory = await getDirectoryConfig(listing.directory);
-    if (directory.length > 0) {
-      const category = directory[0].data.categories.find(c => c.id === listing.category);
-      categoryName = category?.name || '';
-    }
-  } catch (error) {
-    console.error('Error loading category name:', error);
-  }
-}
+const categoryName = listing.category 
+  ? await getCategoryName(listing.directory, listing.category)
+  : '';
 ---
 
 <div class="listing-card">
@@ -42,28 +39,17 @@ if (listing.category) {
       <h3 class="card-title">{listing.title}</h3>
       
       {typeof listing.fields.rating === 'number' && (
-        <div class="card-rating" style={`--rating: ${listing.fields.rating}`}>
-          <span class="stars"></span>
-          <span class="rating-value">{listing.fields.rating.toFixed(1)}</span>
-        </div>
+        <Rating rating={listing.fields.rating} theme="nature" />
       )}
       
       <p class="card-description">{listing.description}</p>
       
       <div class="card-meta">
-        {listing.fields.address && (
-          <div class="card-address">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-              <circle cx="12" cy="10" r="3"></circle>
-            </svg>
-            <span>{listing.fields.address.split(',')[0]}</span>
-          </div>
-        )}
+        <CardAddress address={listing.fields.address} theme="nature" />
         
         {listing.tags && listing.tags.length > 0 && (
           <div class="card-tags">
-            {listing.tags.slice(0, 3).map(tag => (
+            {limitTags(listing.tags).map((tag: string) => (
               <span class="tag">{tag}</span>
             ))}
           </div>
@@ -171,43 +157,6 @@ if (listing.category) {
     color: var(--textColor, #2d3c2e);
   }
   
-  .card-rating {
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-    margin-bottom: 0.75rem;
-  }
-  
-  .stars {
-    position: relative;
-    display: inline-block;
-    font-size: 0.9rem;
-    width: 5em;
-  }
-  
-  .stars::before {
-    content: "★★★★★";
-    letter-spacing: 2px;
-    color: #ddd;
-  }
-  
-  .stars::after {
-    content: "★★★★★";
-    letter-spacing: 2px;
-    color: var(--secondaryColor, #f9a825);
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: calc(var(--rating) / 5 * 100%);
-    overflow: hidden;
-  }
-  
-  .rating-value {
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: var(--textColorLight, #5a6b5b);
-  }
-  
   .card-description {
     font-size: 0.95rem;
     color: var(--textColorLight, #5a6b5b);
@@ -222,20 +171,9 @@ if (listing.category) {
   
   .card-meta {
     margin-top: auto;
-  }
-  
-  .card-address {
     display: flex;
-    align-items: center;
-    font-size: 0.85rem;
-    color: var(--textColorLight, #5a6b5b);
-    margin-bottom: 1rem;
-    gap: 0.4rem;
-  }
-  
-  .card-address svg {
-    flex-shrink: 0;
-    color: var(--primaryColor, #4b7f52);
+    flex-direction: column;
+    gap: 1rem;
   }
   
   .card-tags {

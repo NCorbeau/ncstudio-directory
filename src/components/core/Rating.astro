@@ -1,0 +1,71 @@
+---
+export interface Props {
+  rating: number;
+  theme?: string;
+}
+
+const { rating, theme = 'default' } = Astro.props;
+---
+
+<div class={`card-rating ${theme}`} style={`--rating: ${rating}`}>
+  <span class="stars"></span>
+  <span class="rating-value">{rating.toFixed(1)}</span>
+</div>
+
+<style>
+  .card-rating {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+  
+  .stars {
+    position: relative;
+    display: inline-block;
+    font-size: 0.9rem;
+    width: 5em;
+  }
+  
+  .stars::before {
+    content: "★★★★★";
+    letter-spacing: 2px;
+    color: #ddd;
+  }
+  
+  .stars::after {
+    content: "★★★★★";
+    letter-spacing: 2px;
+    color: var(--rating-color, #f9a825);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: calc(var(--rating) / 5 * 100%);
+    overflow: hidden;
+  }
+  
+  .rating-value {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-color-light, #666);
+  }
+  
+  /* Theme variations */
+  .nature {
+    --rating-color: var(--secondaryColor, #f9a825);
+  }
+  
+  .modern .stars::before {
+    letter-spacing: 3px;
+  }
+  
+  .modern .stars::after {
+    letter-spacing: 3px;
+    color: #ffb400;
+  }
+  
+  .modern .rating-value {
+    font-size: 0.9rem;
+    font-weight: 700;
+    order: -1;
+  }
+</style> 

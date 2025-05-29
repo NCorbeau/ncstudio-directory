@@ -1,0 +1,46 @@
+---
+import { formatAddress } from "@/utils/listing-helpers";
+
+export interface Props {
+  address: unknown;
+  theme?: string;
+}
+
+const { address, theme = 'default' } = Astro.props;
+
+const formattedAddress = formatAddress(address);
+---
+
+{formattedAddress && (
+  <div class={`card-address ${theme}`}>
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+      <circle cx="12" cy="10" r="3"></circle>
+    </svg>
+    <span>{formattedAddress}</span>
+  </div>
+)}
+
+<style>
+  .card-address {
+    display: flex;
+    align-items: center;
+    font-size: 0.85rem;
+    color: var(--text-color-light, #666);
+    gap: 0.4rem;
+  }
+  
+  .card-address svg {
+    flex-shrink: 0;
+    color: var(--primary-color, #666);
+  }
+  
+  /* Theme variations */
+  .nature svg {
+    color: var(--primaryColor, #4b7f52);
+  }
+  
+  .nature {
+    color: var(--textColorLight, #5a6b5b);
+  }
+</style> 
