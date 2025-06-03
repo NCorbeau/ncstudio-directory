@@ -1,10 +1,12 @@
 ---
-import { getCategoryName, getThumbnailImage } from "@/utils/listing-helpers";
+import { normalizeListing, getThumbnailImage, formatLocation, getGoogleMapsUrl } from "@/utils/listing-helpers";
 import { getThemeConfig } from "@/config/themes";
-import Rating from "@/components/core/Rating.astro";
+import EnhancedRating from "@/components/core/EnhancedRating.astro";
 import CardAddress from "@/components/core/CardAddress.astro";
 import CardTags from "@/components/core/CardTags.astro";
 import FeaturedBadge from "@/components/core/FeaturedBadge.astro";
+import BusinessStatus from "@/components/core/BusinessStatus.astro";
+import ContactInfo from "@/components/core/ContactInfo.astro";
 import type { ListingData } from "@/types";
 
 export interface Props {
@@ -15,14 +17,16 @@ export interface Props {
 
 const { listing, url, theme = 'default' } = Astro.props;
 
+// Normalize the listing data
+const normalizedListing = normalizeListing(listing);
+
 // Get theme configuration
 const config = getThemeConfig(theme);
 
 // Prepare data
-const thumbnail = getThumbnailImage(listing.images);
-const categoryName = listing.category && config.elements.showCategory
-  ? await getCategoryName(listing.directory, listing.category)
-  : '';
+const thumbnail = getThumbnailImage(normalizedListing.images);
+const location = formatLocation(normalizedListing);
+const mapsUrl = getGoogleMapsUrl(normalizedListing.coordinates, normalizedListing.address);
 
 // Determine layout classes
 const layoutClass = `layout-${config.layout}`;
@@ -41,61 +45,113 @@ const shadowClass = `shadow-${config.styling.shadowIntensity}`;
   <a href={url} class="card-link">
     <!-- Image Section -->
     <div class="card-image">
-      <img src={thumbnail} alt={listing.title} loading="lazy" />
+      <img src={thumbnail} alt={normalizedListing.title} loading="lazy" />
       
-      {listing.featured && config.elements.showFeaturedBadge && (
+      {normalizedListing.featured && config.elements.showFeaturedBadge && (
         <FeaturedBadge theme={theme} position="top-right" />
       )}
       
-      {categoryName && config.elements.categoryPosition === 'overlay' && (
-        <div class="card-category overlay">{categoryName}</div>
+      {normalizedListing.category && config.elements.categoryPosition === 'overlay' && (
+        <div class="card-category overlay">{normalizedListing.category}</div>
       )}
     </div>
     
     <!-- Content Section -->
     <div class="card-content">
       <!-- Top Meta (category + rating when positioned at top) -->
-      {(categoryName && config.elements.categoryPosition === 'top') || 
-       (typeof listing.fields.rating === 'number' && config.elements.ratingPosition === 'top') ? (
+      {(normalizedListing.category && config.elements.categoryPosition === 'top') || 
+       (normalizedListing.rating && config.elements.ratingPosition === 'top') ? (
         <div class="card-meta-top">
-          {categoryName && config.elements.categoryPosition === 'top' && (
-            <div class="card-category top">{categoryName}</div>
+          {normalizedListing.category && config.elements.categoryPosition === 'top' && (
+            <div class="card-category top">{normalizedListing.category}</div>
           )}
           
-          {typeof listing.fields.rating === 'number' && config.elements.showRating && config.elements.ratingPosition === 'top' && (
-            <Rating rating={listing.fields.rating} theme={theme} />
+          {normalizedListing.rating && config.elements.showRating && config.elements.ratingPosition === 'top' && (
+            <EnhancedRating 
+              rating={normalizedListing.rating} 
+              reviewCount={normalizedListing.reviewCount}
+              theme={theme} 
+              size="small"
+            />
           )}
         </div>
       ) : null}
       
       <!-- Title -->
-      <h3 class="card-title">{listing.title}</h3>
+      <h3 class="card-title">{normalizedListing.title}</h3>
+      
+      <!-- Business Status (for business listings) -->
+      {(normalizedListing.isOpen !== undefined || normalizedListing.openingHours) && (
+        <BusinessStatus 
+          isOpen={normalizedListing.isOpen}
+          openingHours={normalizedListing.openingHours}
+          theme={theme}
+        />
+      )}
       
       <!-- Inline Rating (for elegant theme) -->
-      {typeof listing.fields.rating === 'number' && config.elements.showRating && config.elements.ratingPosition === 'inline' && (
-        <Rating rating={listing.fields.rating} theme={theme} />
+      {normalizedListing.rating && config.elements.showRating && config.elements.ratingPosition === 'inline' && (
+        <EnhancedRating 
+          rating={normalizedListing.rating} 
+          reviewCount={normalizedListing.reviewCount}
+          theme={theme} 
+          size="medium"
+        />
       )}
       
       <!-- Description -->
-      <p class="card-description">{listing.description}</p>
+      {normalizedListing.description && (
+        <p class="card-description">{normalizedListing.description}</p>
+      )}
+      
+      <!-- Location (simplified address) -->
+      {location && (
+        <div class="card-location">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+            <circle cx="12" cy="10" r="3"></circle>
+          </svg>
+          {mapsUrl ? (
+            <a href={mapsUrl} target="_blank" rel="noopener noreferrer" class="location-link">
+              {location}
+            </a>
+          ) : (
+            <span>{location}</span>
+          )}
+        </div>
+      )}
       
       <!-- Bottom Meta -->
       <div class="card-meta-bottom">
-        {categoryName && config.elements.categoryPosition === 'bottom' && (
-          <div class="card-category bottom">{categoryName}</div>
+        {normalizedListing.category && config.elements.categoryPosition === 'bottom' && (
+          <div class="card-category bottom">{normalizedListing.category}</div>
         )}
         
-        {typeof listing.fields.rating === 'number' && config.elements.showRating && config.elements.ratingPosition === 'bottom' && (
-          <Rating rating={listing.fields.rating} theme={theme} />
+        {normalizedListing.rating && config.elements.showRating && config.elements.ratingPosition === 'bottom' && (
+          <EnhancedRating 
+            rating={normalizedListing.rating} 
+            reviewCount={normalizedListing.reviewCount}
+            theme={theme} 
+            size="medium"
+          />
         )}
         
-        {config.elements.showAddress && (
-          <CardAddress address={listing.fields.address} theme={theme} />
+        {config.elements.showAddress && normalizedListing.address && (
+          <CardAddress address={normalizedListing.address} theme={theme} />
         )}
         
-        {config.elements.showTags && (
+        {(normalizedListing.phone || normalizedListing.website) && (
+          <ContactInfo 
+            phone={normalizedListing.phone}
+            website={normalizedListing.website}
+            theme={theme}
+            layout="horizontal"
+          />
+        )}
+        
+        {config.elements.showTags && normalizedListing.tags && normalizedListing.tags.length > 0 && (
           <CardTags 
-            tags={listing.tags} 
+            tags={normalizedListing.tags} 
             maxTags={config.elements.maxTags} 
             theme={theme} 
             showMore={true} 
@@ -200,39 +256,63 @@ const shadowClass = `shadow-${config.styling.shadowIntensity}`;
     display: flex;
     flex-direction: column;
     flex-grow: 1;
+    gap: 0.75rem;
   }
   
   .card-meta-top {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1rem;
   }
   
   .card-meta-bottom {
     margin-top: auto;
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 0.75rem;
   }
   
   .card-title {
     font-size: 1.25rem;
-    margin: 0 0 0.75rem;
+    margin: 0;
     font-weight: 600;
     color: var(--text-color, #333);
+    line-height: 1.3;
   }
   
   .card-description {
-    font-size: 0.95rem;
+    font-size: 0.9rem;
     color: var(--text-color-light, #666);
-    margin-bottom: 1.5rem;
+    margin: 0;
     display: -webkit-box;
-    -webkit-line-clamp: 3;
+    -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
-    line-height: 1.5;
-    flex-grow: 1;
+    line-height: 1.4;
+  }
+  
+  .card-location {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.85rem;
+    color: var(--text-color-light, #666);
+  }
+  
+  .card-location svg {
+    flex-shrink: 0;
+    color: var(--primary-color, #666);
+  }
+  
+  .location-link {
+    color: inherit;
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+  
+  .location-link:hover {
+    color: var(--primary-color, #3366cc);
+    text-decoration: underline;
   }
   
   /* Category styling */
@@ -267,6 +347,7 @@ const shadowClass = `shadow-${config.styling.shadowIntensity}`;
     --category-color: var(--primaryColor, #4b7f52);
     --text-color: var(--textColor, #2d3c2e);
     --text-color-light: var(--textColorLight, #5a6b5b);
+    --primary-color: var(--primaryColor, #4b7f52);
   }
   
   .nature::before {
@@ -291,6 +372,7 @@ const shadowClass = `shadow-${config.styling.shadowIntensity}`;
     --category-color: var(--primaryColor, #0070f3);
     --text-color: #111111;
     --text-color-light: #666;
+    --primary-color: var(--primaryColor, #0070f3);
   }
   
   .elegant {
@@ -298,6 +380,7 @@ const shadowClass = `shadow-${config.styling.shadowIntensity}`;
     --category-color: var(--textColorLight, #7f8c8d);
     --text-color: var(--textColor, #2c3e50);
     --text-color-light: var(--textColorLight, #7f8c8d);
+    --primary-color: var(--primaryColor, #9c7c38);
   }
   
   .elegant .card-title {
@@ -310,7 +393,6 @@ const shadowClass = `shadow-${config.styling.shadowIntensity}`;
     background: none;
     padding: 0;
     font-style: italic;
-    margin-bottom: 0.75rem;
   }
   
   /* Responsive adjustments */
@@ -326,6 +408,14 @@ const shadowClass = `shadow-${config.styling.shadowIntensity}`;
     
     .card-image {
       height: 180px;
+    }
+    
+    .card-content {
+      gap: 0.5rem;
+    }
+    
+    .card-description {
+      -webkit-line-clamp: 2;
     }
   }
 </style> 

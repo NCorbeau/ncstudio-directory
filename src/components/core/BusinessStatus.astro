@@ -1,0 +1,86 @@
+import { parseOpeningStatus } from "@/utils/listing-helpers";
+
+export interface Props {
+  isOpen?: boolean;
+  openingHours?: string;
+  theme?: string;
+}
+
+const { isOpen, openingHours, theme = 'default' } = Astro.props;
+
+const status = parseOpeningStatus(openingHours, isOpen);
+
+{(status.isOpen !== undefined || status.todayHours) && (
+  <div class={`business-status ${theme}`}>
+    {status.isOpen !== undefined && (
+      <span class={`status-indicator ${status.isOpen ? 'open' : 'closed'}`}>
+        <span class="status-dot"></span>
+        {status.isOpen ? 'Open' : 'Closed'}
+      </span>
+    )}
+    
+    {status.todayHours && (
+      <span class="today-hours">{status.todayHours}</span>
+    )}
+  </div>
+)}
+
+<style>
+  .business-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+  }
+  
+  .status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-weight: 600;
+  }
+  
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  
+  .open .status-dot {
+    background-color: #10b981;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+  }
+  
+  .closed .status-dot {
+    background-color: #ef4444;
+    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
+  }
+  
+  .open {
+    color: #10b981;
+  }
+  
+  .closed {
+    color: #ef4444;
+  }
+  
+  .today-hours {
+    color: var(--text-color-light, #666);
+    font-size: 0.8rem;
+  }
+  
+  /* Theme variations */
+  .nature .today-hours {
+    color: var(--textColorLight, #5a6b5b);
+  }
+  
+  .modern .status-indicator {
+    font-weight: 700;
+  }
+  
+  .elegant .status-indicator {
+    font-style: italic;
+    font-weight: 500;
+  }
+</style> 

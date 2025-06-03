@@ -26,6 +26,7 @@ export interface Directory {
     featured?: boolean;
   }
   
+  // Legacy listing structure (keep for backward compatibility)
   export interface Listing {
     slug: string;
     data: ListingData;
@@ -40,7 +41,88 @@ export interface Directory {
     featured: boolean;
     images: string[];
     tags: string[];
-    fields: Record<string, unknown>;
+    fields: ListingFields;
+    updatedAt?: string;
+  }
+  
+  // Extended fields interface that can contain both legacy and business data
+  export interface ListingFields {
+    // Legacy fields
+    rating?: number;
+    address?: string;
+    phone?: string;
+    website?: string;
+    
+    // Business listing fields
+    businessName?: string;
+    googleMapsrating?: number;
+    reviewCount?: number;
+    fullAddress?: string;
+    neighborhood?: string;
+    city?: string;
+    countryCode?: string;
+    openingHours?: string;
+    coordinates?: string;
+    isOpen?: boolean;
+    imageCount?: number;
+    reviewDistribution?: ReviewDistribution;
+    topReviewTags?: string;
+    
+    // Allow any additional fields
+    [key: string]: unknown;
+  }
+  
+  export interface ReviewDistribution {
+    oneStar: number;
+    twoStar: number;
+    threeStar: number;
+    fourStar: number;
+    fiveStar: number;
+  }
+  
+  // Type guards
+  export function isBusinessListing(listing: ListingData): boolean {
+    return 'businessName' in listing.fields;
+  }
+  
+  export function isLegacyListing(listing: ListingData): boolean {
+    return !('businessName' in listing.fields);
+  }
+  
+  // Normalized listing interface for components
+  export interface NormalizedListing {
+    title: string;
+    description?: string;
+    directory: string;
+    category: string;
+    featured: boolean;
+    images: string[];
+    tags: string[];
+    
+    // Unified rating system
+    rating?: number;
+    reviewCount?: number;
+    
+    // Unified address system
+    address?: string;
+    neighborhood?: string;
+    city?: string;
+    
+    // Contact info
+    phone?: string;
+    website?: string;
+    
+    // Business status
+    isOpen?: boolean;
+    openingHours?: string;
+    
+    // Additional data
+    coordinates?: string;
+    imageCount?: number;
+    reviewDistribution?: ReviewDistribution;
+    topReviewTags?: string[];
+    
+    // Meta
     updatedAt?: string;
   }
   
@@ -84,17 +166,9 @@ export interface Directory {
     url: string;
   }
   
-  // Types for layout-specific props
-  export interface LayoutProps {
-    listings: Listing[];
-    directory: Directory;
-    categories: Category[];
-    directoryId: string;
-  }
-  
-  // Types for components
+  // Updated component prop types
   export interface ListingCardProps {
-    listing: ListingData;
+    listing: NormalizedListing;
     url: string;
     theme?: string;
   }
