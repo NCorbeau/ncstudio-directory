@@ -201,10 +201,10 @@ breadcrumbs.push({
       
       <div class="listing-info">
         <div class="info-sidebar">
-          {listing.data.fields.address && (
+          {listing.data.fields.fullAddress && (
             <div class="info-section">
               <h3>Address</h3>
-              <p>{listing.data.fields.address}</p>
+              <p>{listing.data.fields.fullAddress}</p>
               
               <a 
                 href={`https://maps.google.com/?q=${encodeURIComponent(listing.data.address)}`}
@@ -238,17 +238,27 @@ breadcrumbs.push({
             </div>
           )}
           
-          {listing.data.fields.openingHours && listing.data.fields.openingHours.length > 0 && (
+          {listing.data.fields.openingHours && (
             <div class="info-section">
               <h3>Opening Hours</h3>
-              <ul class="hours-list">
-                {listing.data.fields.openingHours.map(timeSlot => (
-                  <li>
-                    <span class="day">{timeSlot.day}</span>
-                    <span class="hours">{timeSlot.hours}</span>
-                  </li>
-                ))}
-              </ul>
+              {typeof listing.data.fields.openingHours === 'string' ? (
+                <div class="hours-text">
+                  {listing.data.fields.openingHours.split(',').map(dayHours => (
+                    <div class="hours-line">
+                      {dayHours.trim()}
+                    </div>
+                  ))}
+                </div>
+              ) : Array.isArray(listing.data.fields.openingHours) && listing.data.fields.openingHours.length > 0 ? (
+                <ul class="hours-list">
+                  {listing.data.fields.openingHours.map(timeSlot => (
+                    <li>
+                      <span class="day">{timeSlot.day}</span>
+                      <span class="hours">{timeSlot.hours}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
             </div>
           )}
           
@@ -274,7 +284,7 @@ breadcrumbs.push({
         </div>
         
         <div class="content">
-          <Fragment set:html={Content} />
+          <Content />
         </div>
       </div>
     </div>
@@ -425,6 +435,8 @@ breadcrumbs.push({
   }
   
   .info-sidebar {
+    max-width: 450px;
+    overflow: hidden;
     background-color: #f9f9f9;
     border-radius: 8px;
     padding: 1.5rem;

@@ -88,9 +88,9 @@ function generatePlaceSchema(baseSchema, listingData) {
   const placeSchema = {
     ...baseSchema,
     "@type": "Park",
-    "address": listingData.fields.address ? {
+    "address": listingData.fields.fullAddress ? {
       "@type": "PostalAddress",
-      "streetAddress": listingData.fields.address
+      "streetAddress": listingData.fields.fullAddress
     } : null,
     "telephone": listingData.fields.phone || null,
     "openingHoursSpecification": generateOpeningHours(listingData.fields.openingHours),

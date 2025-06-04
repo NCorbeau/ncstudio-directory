@@ -1,3 +1,4 @@
+---
 import { parseOpeningStatus } from "@/utils/listing-helpers";
 
 export interface Props {
@@ -7,8 +8,8 @@ export interface Props {
 }
 
 const { isOpen, openingHours, theme = 'default' } = Astro.props;
-
 const status = parseOpeningStatus(openingHours, isOpen);
+---
 
 {(status.isOpen !== undefined || status.todayHours) && (
   <div class={`business-status ${theme}`}>
@@ -18,7 +19,6 @@ const status = parseOpeningStatus(openingHours, isOpen);
         {status.isOpen ? 'Open' : 'Closed'}
       </span>
     )}
-    
     {status.todayHours && (
       <span class="today-hours">{status.todayHours}</span>
     )}
@@ -70,7 +70,6 @@ const status = parseOpeningStatus(openingHours, isOpen);
     font-size: 0.8rem;
   }
   
-  /* Theme variations */
   .nature .today-hours {
     color: var(--textColorLight, #5a6b5b);
   }

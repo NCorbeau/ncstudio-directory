@@ -268,7 +268,7 @@ The normalization system intelligently prioritizes fields:
 
 - **Title:** `fields.businessName` → `title`
 - **Rating:** `fields.googleMapsrating` → `fields.rating`
-- **Address:** `fields.fullAddress` → `fields.address`
+- **Address:** `fields.fullAddress` → `fields.fullAddress`
 - **Tags:** `parseTopReviewTags(fields.topReviewTags)` → `tags`
 
 ### **Smart Location Handling**

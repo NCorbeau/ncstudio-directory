@@ -45,7 +45,7 @@ const categoryName = listing.category
       <p class="card-description">{listing.description}</p>
       
       <div class="card-meta">
-        <CardAddress address={listing.fields.address} theme="nature" />
+        <CardAddress address={listing.fields.fullAddress} theme="nature" />
         
         {listing.tags && listing.tags.length > 0 && (
           <div class="card-tags">

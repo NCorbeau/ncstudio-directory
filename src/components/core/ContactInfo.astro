@@ -1,3 +1,4 @@
+---
 import { formatPhoneNumber, formatWebsiteUrl } from "@/utils/listing-helpers";
 
 export interface Props {
@@ -8,9 +9,9 @@ export interface Props {
 }
 
 const { phone, website, theme = 'default', layout = 'horizontal' } = Astro.props;
-
 const formattedPhone = formatPhoneNumber(phone);
 const formattedWebsite = formatWebsiteUrl(website);
+---
 
 {(phone || website) && (
   <div class={`contact-info ${theme} ${layout}`}>
@@ -22,7 +23,6 @@ const formattedWebsite = formatWebsiteUrl(website);
         <span>{formattedPhone}</span>
       </a>
     )}
-    
     {website && (
       <a href={website} class="contact-item website" target="_blank" rel="noopener noreferrer">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -73,7 +73,6 @@ const formattedWebsite = formatWebsiteUrl(website);
     font-weight: 500;
   }
   
-  /* Theme variations */
   .nature .contact-item {
     color: var(--textColorLight, #5a6b5b);
   }
@@ -101,7 +100,6 @@ const formattedWebsite = formatWebsiteUrl(website);
     color: var(--primaryColor, #9c7c38);
   }
   
-  /* Responsive */
   @media (max-width: 480px) {
     .contact-info.horizontal {
       flex-direction: column;

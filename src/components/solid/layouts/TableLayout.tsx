@@ -30,7 +30,7 @@ export default function TableLayout(props: LayoutProps) {
       filtered = filtered.filter(listing => 
         listing.data.title.toLowerCase().includes(term) ||
         listing.data.description.toLowerCase().includes(term) ||
-        (listing.data.fields.address && listing.data.fields.address.toLowerCase().includes(term))
+        (listing.data.fields.fullAddress && listing.data.fields.fullAddress.toLowerCase().includes(term))
       );
     }
     
@@ -169,7 +169,7 @@ export default function TableLayout(props: LayoutProps) {
                       </div>
                     </Show>
                   </td>
-                  <td class="address-cell">{listing.data.fields.address || '-'}</td>
+                  <td class="address-cell">{listing.data.fields.fullAddress || '-'}</td>
                   <td>{listing.data.updatedAt ? formatDate(listing.data.updatedAt) : '-'}</td>
                   <td>
                     <a 

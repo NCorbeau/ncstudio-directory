@@ -35,7 +35,7 @@ export function normalizeListing(listing: ListingData): NormalizedListing {
     reviewCount: fields.reviewCount,
     
     // Address - prefer fullAddress, fallback to address
-    address: fields.fullAddress || fields.address,
+    address: fields.fullAddress || fields.fullAddress,
     neighborhood: fields.neighborhood,
     city: fields.city,
     
@@ -173,23 +173,182 @@ export function parseOpeningStatus(openingHours?: string, isOpen?: boolean): {
   todayHours?: string; 
   nextOpenTime?: string;
 } {
+  // If isOpen is explicitly provided, use it
   if (isOpen !== undefined) {
-    return { isOpen };
+    return { 
+      isOpen, 
+      todayHours: openingHours ? getTodayHours(openingHours) ?? undefined : undefined 
+    };
   }
   
   if (!openingHours) {
     return { isOpen: false };
   }
   
-  // Simple parsing for now - could be enhanced with proper time parsing
-  const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
-  const todayPattern = new RegExp(`${today}:\\s*([^,]+)`, 'i');
-  const match = openingHours.match(todayPattern);
+  // Parse the opening hours string and determine current status
+  const todayHours = getTodayHours(openingHours);
+  const isCurrentlyOpen = checkIfCurrentlyOpen(openingHours);
   
   return {
-    isOpen: false, // Default to false, would need proper time checking
-    todayHours: match ? match[1].trim() : undefined
+    isOpen: isCurrentlyOpen,
+    todayHours: todayHours ?? undefined
   };
+}
+
+/**
+ * Extract today's hours from opening hours string
+ */
+function getTodayHours(openingHours: string): string | null {
+  if (!openingHours) return null;
+  
+  const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+  
+  // Handle both formats: "Monday: 11 AM to 9:30 PM" and "Monday-Friday: 11 AM to 9:30 PM"
+  const patterns = [
+    new RegExp(`${today}:\\s*([^,]+)`, 'i'),
+    new RegExp(`\\b${today}\\b[^:]*:\\s*([^,]+)`, 'i')
+  ];
+  
+  for (const pattern of patterns) {
+    const match = openingHours.match(pattern);
+    if (match) {
+      return match[1].trim();
+    }
+  }
+  
+  // Check for day ranges like "Monday-Friday"
+  const dayRangePattern = /(\w+)-(\w+):\s*([^,]+)/gi;
+  let match;
+  
+  while ((match = dayRangePattern.exec(openingHours)) !== null) {
+    const [, startDay, endDay, hours] = match;
+    if (isDayInRange(today, startDay, endDay)) {
+      return hours.trim();
+    }
+  }
+  
+  return null;
+}
+
+/**
+ * Check if the business is currently open based on opening hours
+ */
+function checkIfCurrentlyOpen(openingHours: string): boolean {
+  const todayHours = getTodayHours(openingHours);
+  if (!todayHours) return false;
+  
+  // Check if it's "Closed" or similar
+  if (/closed|fermé|geschlossen|cerrado/i.test(todayHours)) {
+    return false;
+  }
+  
+  // Parse time ranges like "11 AM to 9:30 PM" or "11:00-21:30"
+  const timeRanges = parseTimeRanges(todayHours);
+  if (timeRanges.length === 0) return false;
+  
+  const now = new Date();
+  const currentTime = now.getHours() * 60 + now.getMinutes(); // Convert to minutes
+  
+  // Check if current time falls within any of the time ranges
+  return timeRanges.some(({ start, end }) => {
+    if (end < start) {
+      // Handle overnight hours (e.g., 11 PM to 2 AM)
+      return currentTime >= start || currentTime <= end;
+    }
+    return currentTime >= start && currentTime <= end;
+  });
+}
+
+/**
+ * Parse time ranges from a string like "11 AM to 9:30 PM" or "11:00-21:30"
+ */
+function parseTimeRanges(hoursString: string): Array<{ start: number; end: number }> {
+  const ranges: Array<{ start: number; end: number }> = [];
+  
+  // Handle multiple time ranges separated by commas or "and"
+  const timeRangeStrings = hoursString.split(/,|\sand\s/i);
+  
+  for (const timeRange of timeRangeStrings) {
+    const trimmed = timeRange.trim();
+    
+    // Try different time range patterns
+    const patterns = [
+      /(\d{1,2}(?::\d{2})?\s*(?:AM|PM))\s*(?:to|-)\s*(\d{1,2}(?::\d{2})?\s*(?:AM|PM))/i,
+      /(\d{1,2}:\d{2})\s*(?:to|-)\s*(\d{1,2}:\d{2})/,
+      /(\d{1,2})\s*(?:to|-)\s*(\d{1,2}:\d{2}\s*(?:AM|PM))/i
+    ];
+    
+    for (const pattern of patterns) {
+      const match = trimmed.match(pattern);
+      if (match) {
+        const startTime = parseTimeToMinutes(match[1]);
+        const endTime = parseTimeToMinutes(match[2]);
+        
+        if (startTime !== null && endTime !== null) {
+          ranges.push({ start: startTime, end: endTime });
+          break;
+        }
+      }
+    }
+  }
+  
+  return ranges;
+}
+
+/**
+ * Convert time string to minutes since midnight
+ */
+function parseTimeToMinutes(timeString: string): number | null {
+  const trimmed = timeString.trim();
+  
+  // Handle 12-hour format (e.g., "11 AM", "9:30 PM")
+  const ampmMatch = trimmed.match(/(\d{1,2})(?::(\d{2}))?\s*(AM|PM)/i);
+  if (ampmMatch) {
+    let hours = parseInt(ampmMatch[1], 10);
+    const minutes = parseInt(ampmMatch[2] || '0', 10);
+    const ampm = ampmMatch[3].toUpperCase();
+    
+    if (ampm === 'PM' && hours !== 12) hours += 12;
+    if (ampm === 'AM' && hours === 12) hours = 0;
+    
+    return hours * 60 + minutes;
+  }
+  
+  // Handle 24-hour format (e.g., "21:30", "09:00")
+  const time24Match = trimmed.match(/(\d{1,2}):(\d{2})/);
+  if (time24Match) {
+    const hours = parseInt(time24Match[1], 10);
+    const minutes = parseInt(time24Match[2], 10);
+    return hours * 60 + minutes;
+  }
+  
+  // Handle simple hour format (e.g., "12", "9")
+  const hourMatch = trimmed.match(/^(\d{1,2})$/);
+  if (hourMatch) {
+    const hours = parseInt(hourMatch[1], 10);
+    return hours * 60;
+  }
+  
+  return null;
+}
+
+/**
+ * Check if a day falls within a day range (e.g., "Monday-Friday")
+ */
+function isDayInRange(targetDay: string, startDay: string, endDay: string): boolean {
+  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const targetIndex = days.findIndex(day => day.toLowerCase() === targetDay.toLowerCase());
+  const startIndex = days.findIndex(day => day.toLowerCase() === startDay.toLowerCase());
+  const endIndex = days.findIndex(day => day.toLowerCase() === endDay.toLowerCase());
+  
+  if (targetIndex === -1 || startIndex === -1 || endIndex === -1) return false;
+  
+  if (startIndex <= endIndex) {
+    return targetIndex >= startIndex && targetIndex <= endIndex;
+  } else {
+    // Handle ranges that cross the week boundary (e.g., "Friday-Monday")
+    return targetIndex >= startIndex || targetIndex <= endIndex;
+  }
 }
 
 /**

@@ -96,8 +96,8 @@ export const layoutConfig = {
   export const apiConfig = {
     // Update the base URL for API endpoints
     baseUrl: typeof window !== 'undefined' 
-      ? import.meta.env.PUBLIC_API_BASE_URL || 'https://ncstudio-directory-functions.glownia.workers.dev'
-      : process.env.PUBLIC_API_BASE_URL || import.meta.env.PUBLIC_API_BASE_URL || 'https://ncstudio-directory-functions.glownia.workers.dev',
+      ? import.meta.env.PUBLIC_API_BASE_URL || 'https://ncstudio-directory-functions.ncstudio.workers.dev'
+      : process.env.PUBLIC_API_BASE_URL || import.meta.env.PUBLIC_API_BASE_URL || 'https://ncstudio-directory-functions.ncstudio.workers.dev',
     
     // Rest of the configuration stays the same
     useLocalApi: typeof window !== 'undefined'
