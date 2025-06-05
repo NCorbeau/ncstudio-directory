@@ -1,6 +1,6 @@
 ---
 import DirectoryLayout from '../../../layouts/DirectoryLayout.astro';
-import ListingCard from '../../../components/core/ListingCard.astro';
+import BaseListingCard from '../../../components/core/BaseListingCard.astro';
 import SearchBar from '../../../components/core/SearchBar.astro';
 import { generateCategorySchema } from '../../../utils/schema-generator';
 import { 
@@ -146,7 +146,7 @@ const breadcrumbs = [
     {listings.length > 0 ? (
       <div class="listing-grid">
         {listings.map(listing => (
-          <ListingCard 
+          <BaseListingCard 
             listing={listing.data} 
             url={`/${directoryId}/${listing.slug.replace(`${directoryId}/`, '')}`}
             theme={directoryConfig.data.theme}

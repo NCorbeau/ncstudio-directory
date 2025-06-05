@@ -2,9 +2,13 @@
 import { createSignal, createEffect, Show, For } from 'solid-js';
 import type { ListingCardProps } from '../../types';
 import { useDirectory } from './providers/AppContext';
+import { normalizeListing, getThumbnailImage } from '../../utils/listing-helpers';
 
 export default function ListingCard(props: ListingCardProps) {
   const { listing, url, theme = 'default' } = props;
+  
+  // Normalize the listing data
+  const normalizedListing = normalizeListing(listing);
   
   // Get directory context for category info to avoid API calls
   const directoryContext = useDirectory();
@@ -12,16 +16,14 @@ export default function ListingCard(props: ListingCardProps) {
   // Local state for category name
   const [categoryName, setCategoryName] = createSignal('');
   
-  // Format the first image as the thumbnail
-  const thumbnail = listing.images && listing.images.length > 0 
-    ? listing.images[0] 
-    : '/placeholder-image.jpg';
+  // Get thumbnail image using helper
+  const thumbnail = getThumbnailImage(normalizedListing.images);
   
   // Get category name from context instead of API
   createEffect(() => {
-    if (listing.category && directoryContext.directory) {
+    if (normalizedListing.category && directoryContext.directory) {
       const category = directoryContext.directory.categories.find(
-        cat => cat.id === listing.category
+        cat => cat.id === normalizedListing.category
       );
       setCategoryName(category?.name || '');
     }
@@ -33,38 +35,38 @@ export default function ListingCard(props: ListingCardProps) {
       <div class="listing-card">
         <a href={url} class="card-link">
           <div class="card-content">
-            <h3 class="card-title">{listing.title}</h3>
+            <h3 class="card-title">{normalizedListing.title}</h3>
             
             <Show when={categoryName()}>
               <span class="card-category">{categoryName()}</span>
             </Show>
             
-            <p class="card-description">{listing.description}</p>
+            <p class="card-description">{normalizedListing.description}</p>
             
             <div class="card-meta">
-              <Show when={typeof listing.fields.rating === 'number'}>
-                <span class="card-rating" style={`--rating: ${listing.fields.rating}`}>
+              <Show when={normalizedListing.rating}>
+                <span class="card-rating" style={`--rating: ${normalizedListing.rating}`}>
                   <span class="stars"></span>
-                  <span class="rating-value">{listing.fields.rating?.toFixed(1)}</span>
+                  <span class="rating-value">{normalizedListing.rating?.toFixed(1)}</span>
                 </span>
               </Show>
               
-              <Show when={listing.fields.fullAddress}>
+              <Show when={normalizedListing.address}>
                 <div class="card-address">
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
                     <circle cx="12" cy="10" r="3"></circle>
                   </svg>
-                  <span>{listing.fields.fullAddress?.split(',')[0]}</span>
+                  <span>{normalizedListing.address?.split(',')[0]}</span>
                 </div>
               </Show>
             </div>
           </div>
           
           <div class="card-image">
-            <img src={thumbnail} alt={listing.title} loading="lazy" />
+            <img src={thumbnail} alt={normalizedListing.title} loading="lazy" />
             
-            <Show when={listing.featured}>
+            <Show when={normalizedListing.featured}>
               <span class="featured-badge">Featured</span>
             </Show>
           </div>
@@ -76,9 +78,9 @@ export default function ListingCard(props: ListingCardProps) {
       <div class="listing-card">
         <a href={url} class="card-link">
           <div class="card-image">
-            <img src={thumbnail} alt={listing.title} loading="lazy" />
+            <img src={thumbnail} alt={normalizedListing.title} loading="lazy" />
             
-            <Show when={listing.featured}>
+            <Show when={normalizedListing.featured}>
               <span class="featured-badge">Featured</span>
             </Show>
             
@@ -88,31 +90,31 @@ export default function ListingCard(props: ListingCardProps) {
           </div>
           
           <div class="card-content">
-            <h3 class="card-title">{listing.title}</h3>
+            <h3 class="card-title">{normalizedListing.title}</h3>
             
-            <Show when={typeof listing.fields.rating === 'number'}>
-              <div class="card-rating" style={`--rating: ${listing.fields.rating}`}>
+            <Show when={normalizedListing.rating}>
+              <div class="card-rating" style={`--rating: ${normalizedListing.rating}`}>
                 <span class="stars"></span>
-                <span class="rating-value">{listing.fields.rating?.toFixed(1)}</span>
+                <span class="rating-value">{normalizedListing.rating?.toFixed(1)}</span>
               </div>
             </Show>
             
-            <p class="card-description">{listing.description}</p>
+            <p class="card-description">{normalizedListing.description}</p>
             
             <div class="card-meta">
-              <Show when={listing.fields.fullAddress}>
+              <Show when={normalizedListing.address}>
                 <div class="card-address">
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
                     <circle cx="12" cy="10" r="3"></circle>
                   </svg>
-                  <span>{listing.fields.fullAddress?.split(',')[0]}</span>
+                  <span>{normalizedListing.address?.split(',')[0]}</span>
                 </div>
               </Show>
               
-              <Show when={listing.tags && listing.tags.length > 0}>
+              <Show when={normalizedListing.tags && normalizedListing.tags.length > 0}>
                 <div class="card-tags">
-                  <For each={listing.tags.slice(0, 3)}>
+                  <For each={normalizedListing.tags.slice(0, 3)}>
                     {(tag) => <span class="tag">{tag}</span>}
                   </For>
                 </div>
@@ -127,9 +129,9 @@ export default function ListingCard(props: ListingCardProps) {
       <div class="listing-card">
         <a href={url} class="card-link">
           <div class="card-image">
-            <img src={thumbnail} alt={listing.title} loading="lazy" />
+            <img src={thumbnail} alt={normalizedListing.title} loading="lazy" />
             
-            <Show when={listing.featured}>
+            <Show when={normalizedListing.featured}>
               <span class="featured-badge">Featured</span>
             </Show>
           </div>
@@ -140,36 +142,36 @@ export default function ListingCard(props: ListingCardProps) {
                 <span class="card-category">{categoryName()}</span>
               </Show>
               
-              <Show when={typeof listing.fields.rating === 'number'}>
-                <span class="card-rating" style={`--rating: ${listing.fields.rating}`}>
-                  <span class="rating-value">{listing.fields.rating?.toFixed(1)}</span>
+              <Show when={normalizedListing.rating}>
+                <span class="card-rating" style={`--rating: ${normalizedListing.rating}`}>
+                  <span class="rating-value">{normalizedListing.rating?.toFixed(1)}</span>
                   <span class="stars"></span>
                 </span>
               </Show>
             </div>
             
-            <h3 class="card-title">{listing.title}</h3>
-            <p class="card-description">{listing.description}</p>
+            <h3 class="card-title">{normalizedListing.title}</h3>
+            <p class="card-description">{normalizedListing.description}</p>
             
             <div class="card-footer">
-              <Show when={listing.fields.fullAddress}>
+              <Show when={normalizedListing.address}>
                 <div class="card-address">
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
                     <circle cx="12" cy="10" r="3"></circle>
                   </svg>
-                  <span>{listing.fields.fullAddress?.split(',')[0]}</span>
+                  <span>{normalizedListing.address?.split(',')[0]}</span>
                 </div>
               </Show>
               
-              <Show when={listing.tags && listing.tags.length > 0}>
+              <Show when={normalizedListing.tags && normalizedListing.tags.length > 0}>
                 <div class="card-tags">
-                  <For each={listing.tags.slice(0, 2)}>
+                  <For each={normalizedListing.tags.slice(0, 2)}>
                     {(tag) => <span class="tag">{tag}</span>}
                   </For>
                   
-                  <Show when={listing.tags.length > 2}>
-                    <span class="tag-more">+{listing.tags.length - 2}</span>
+                  <Show when={normalizedListing.tags.length > 2}>
+                    <span class="tag-more">+{normalizedListing.tags.length - 2}</span>
                   </Show>
                 </div>
               </Show>
@@ -185,48 +187,48 @@ export default function ListingCard(props: ListingCardProps) {
     <div class="listing-card">
       <a href={url} class="card-link">
         <div class="card-image">
-          <img src={thumbnail} alt={listing.title} loading="lazy" />
+          <img src={thumbnail} alt={normalizedListing.title} loading="lazy" />
           
-          <Show when={listing.featured}>
+          <Show when={normalizedListing.featured}>
             <span class="featured-badge">Featured</span>
           </Show>
         </div>
         
         <div class="card-content">
-          <h3 class="card-title">{listing.title}</h3>
-          <p class="card-description">{listing.description}</p>
+          <h3 class="card-title">{normalizedListing.title}</h3>
+          <p class="card-description">{normalizedListing.description}</p>
           
           <div class="card-meta">
             <Show when={categoryName()}>
               <span class="card-category">{categoryName()}</span>
             </Show>
             
-            <Show when={typeof listing.fields.rating === 'number'}>
-              <span class="card-rating" style={`--rating: ${listing.fields.rating}`}>
+            <Show when={normalizedListing.rating}>
+              <span class="card-rating" style={`--rating: ${normalizedListing.rating}`}>
                 <span class="stars"></span>
-                <span class="rating-value">{listing.fields.rating?.toFixed(1)}</span>
+                <span class="rating-value">{normalizedListing.rating?.toFixed(1)}</span>
               </span>
             </Show>
           </div>
           
-          <Show when={listing.fields.fullAddress}>
+          <Show when={normalizedListing.address}>
             <div class="card-address">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
                 <circle cx="12" cy="10" r="3"></circle>
               </svg>
-              <span>{listing.fields.fullAddress?.split(',')[0]}</span>
+              <span>{normalizedListing.address?.split(',')[0]}</span>
             </div>
           </Show>
           
-          <Show when={listing.tags && listing.tags.length > 0}>
+          <Show when={normalizedListing.tags && normalizedListing.tags.length > 0}>
             <div class="card-tags">
-              <For each={listing.tags.slice(0, 3)}>
+              <For each={normalizedListing.tags.slice(0, 3)}>
                 {(tag) => <span class="tag">{tag}</span>}
               </For>
               
-              <Show when={listing.tags.length > 3}>
-                <span class="tag-more">+{listing.tags.length - 3}</span>
+              <Show when={normalizedListing.tags.length > 3}>
+                <span class="tag-more">+{normalizedListing.tags.length - 3}</span>
               </Show>
             </div>
           </Show>

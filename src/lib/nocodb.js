@@ -312,7 +312,7 @@ async function transformListing(listing) {
       fields: safeParseJSON(listing.fields, {}),
       updatedAt: listing.updatedAt
     },
-    render: () => ({ Content: renderedContent })
+    render: () => ({ Content: renderedContent() })
   };
 }
 
@@ -333,7 +333,7 @@ async function transformLandingPage(page) {
       relatedCategories: safeParseJSON(page.relatedCategories, []),
       updatedAt: page.updatedAt
     },
-    render: () => ({ Content: renderedContent })
+    render: () => ({ Content: renderedContent() })
   };
 }
 
