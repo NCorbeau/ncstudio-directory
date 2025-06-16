@@ -1,0 +1,654 @@
+/* Dark Mode Styles - Universal */
+
+/* Root dark mode variables */
+:root.dark {
+  /* Base colors */
+  --backgroundColor: #0f0f0f;
+  --backgroundColor-rgb: 15, 15, 15;
+  --textColor: #e5e5e5;
+  --textColor-rgb: 229, 229, 229;
+  --textSecondary: #a3a3a3;
+  --textSecondary-rgb: 163, 163, 163;
+  --borderColor: #262626;
+  --borderColor-rgb: 38, 38, 38;
+  --cardBackground: #1a1a1a;
+  --cardBackground-rgb: 26, 26, 26;
+  --inputBackground: #262626;
+  --inputBorder: #404040;
+  
+  /* Header colors */
+  --header-background: #1a1a1a;
+  --text-on-primary: #e5e5e5;
+  
+  /* Shadow adjustments */
+  --shadow-light: 0 2px 8px rgba(0, 0, 0, 0.5);
+  --shadow-medium: 0 4px 16px rgba(0, 0, 0, 0.6);
+  --shadow-heavy: 0 8px 32px rgba(0, 0, 0, 0.7);
+  
+  /* Overlay colors */
+  --overlay-bg: rgba(0, 0, 0, 0.8);
+  
+  /* Interactive elements */
+  --hover-bg: rgba(255, 255, 255, 0.1);
+  --active-bg: rgba(255, 255, 255, 0.2);
+}
+
+/* Dark mode body styles */
+.dark {
+  background-color: var(--backgroundColor) !important;
+  color: var(--textColor) !important;
+}
+
+.dark body {
+  background-color: var(--backgroundColor) !important;
+  color: var(--textColor) !important;
+}
+
+.dark main {
+  background-color: var(--backgroundColor) !important;
+  color: var(--textColor) !important;
+}
+
+/* Ensure dark mode applies to directory layout */
+.dark .directory-container {
+  background-color: var(--backgroundColor) !important;
+  color: var(--textColor) !important;
+}
+
+/* Dark mode header styles */
+.dark .site-header {
+  background-color: var(--header-background);
+  color: var(--text-on-primary);
+  border-bottom: 1px solid var(--borderColor);
+}
+
+.dark .main-nav a {
+  color: var(--text-on-primary);
+}
+
+.dark .main-nav a:hover {
+  background-color: var(--hover-bg);
+}
+
+.dark .dropdown {
+  background-color: var(--cardBackground);
+  color: var(--textColor);
+  border: 1px solid var(--borderColor);
+}
+
+.dark .dropdown a {
+  color: var(--textColor);
+}
+
+.dark .dropdown a:hover {
+  background-color: var(--hover-bg);
+}
+
+/* Dark mode cards and content */
+.dark .listing-card,
+.dark .category-card,
+.dark .recent-card,
+.dark .guide-card {
+  background-color: var(--cardBackground) !important;
+  border-color: var(--borderColor) !important;
+  color: var(--textColor) !important;
+}
+
+.dark .listing-card:hover,
+.dark .category-card:hover,
+.dark .recent-card:hover,
+.dark .guide-card:hover {
+  box-shadow: var(--shadow-medium) !important;
+  border-color: #404040 !important;
+}
+
+/* Dark mode specific card content */
+.dark .category-card h3,
+.dark .recent-card h3,
+.dark .guide-card h3 {
+  color: var(--primaryColor) !important;
+}
+
+.dark .category-card p,
+.dark .recent-card p,
+.dark .guide-card p {
+  color: var(--textSecondary) !important;
+}
+
+.dark .recent-card h3 a {
+  color: var(--primaryColor) !important;
+}
+
+.dark .date-added {
+  color: var(--textSecondary) !important;
+}
+
+.dark .listing-count {
+  color: var(--textSecondary) !important;
+}
+
+.dark .no-listings-message {
+  background-color: var(--cardBackground) !important;
+  color: var(--textSecondary) !important;
+}
+
+/* Dark mode text elements */
+.dark h1,
+.dark h2,
+.dark h3,
+.dark h4,
+.dark h5,
+.dark h6 {
+  color: var(--textColor);
+}
+
+.dark p,
+.dark span,
+.dark div {
+  color: var(--textColor);
+}
+
+.dark .text-secondary {
+  color: var(--textSecondary);
+}
+
+/* Dark mode inputs and forms */
+.dark input,
+.dark textarea,
+.dark select {
+  background-color: var(--inputBackground);
+  border-color: var(--inputBorder);
+  color: var(--textColor);
+}
+
+.dark input:focus,
+.dark textarea:focus,
+.dark select:focus {
+  border-color: var(--primaryColor);
+  box-shadow: 0 0 0 2px rgba(var(--primaryColor-rgb), 0.2);
+}
+
+/* Dark mode buttons */
+.dark .button,
+.dark .btn,
+.dark .reset-button,
+.dark .view-button,
+.dark .view-full-button,
+.dark .view-all-button,
+.dark .cta-button {
+  background-color: var(--primaryColor) !important;
+  color: white !important;
+  border-color: var(--primaryColor) !important;
+}
+
+.dark .button:hover,
+.dark .btn:hover,
+.dark .reset-button:hover,
+.dark .view-button:hover,
+.dark .view-full-button:hover,
+.dark .view-all-button:hover,
+.dark .cta-button:hover {
+  background-color: var(--primaryColor-dark, #2a549f) !important;
+}
+
+.dark .button-outline,
+.dark .btn-outline {
+  background-color: transparent !important;
+  color: var(--primaryColor) !important;
+  border-color: var(--primaryColor) !important;
+}
+
+.dark .button-outline:hover,
+.dark .btn-outline:hover {
+  background-color: var(--primaryColor) !important;
+  color: white !important;
+}
+
+/* Dark mode sections */
+.dark section:nth-child(even) {
+  background-color: #141414 !important;
+}
+
+.dark section {
+  background-color: var(--backgroundColor) !important;
+}
+
+.dark .hero {
+  background-color: var(--primaryColor) !important;
+  color: white !important;
+}
+
+/* Dark mode main content */
+.dark .main-listings {
+  background-color: var(--backgroundColor) !important;
+}
+
+/* Dark mode containers */
+.dark .container {
+  background-color: transparent !important;
+}
+
+/* Dark mode footer */
+.dark .site-footer {
+  background-color: #0a0a0a;
+  color: var(--textColor);
+  border-top: 1px solid var(--borderColor);
+}
+
+.dark .site-footer a {
+  color: var(--textSecondary);
+}
+
+.dark .site-footer a:hover {
+  color: var(--textColor);
+}
+
+/* Dark mode mobile navigation */
+.dark .mobile-menu-toggle span {
+  background-color: var(--text-on-primary);
+}
+
+.dark .main-nav {
+  background-color: var(--header-background);
+  border-bottom: 1px solid var(--borderColor);
+}
+
+/* Dark mode search components */
+.dark .search-wrapper input {
+  background-color: var(--inputBackground);
+  border-color: var(--inputBorder);
+  color: var(--textColor);
+}
+
+.dark .search-wrapper input::placeholder {
+  color: var(--textSecondary);
+}
+
+/* Dark mode listing components */
+.dark .listing-info {
+  background-color: var(--cardBackground);
+  border-color: var(--borderColor);
+}
+
+.dark .listing-gallery {
+  background-color: var(--cardBackground);
+}
+
+.dark .rating-stars {
+  color: #fbbf24;
+}
+
+/* Dark mode layout switcher */
+.dark .layout-switcher {
+  background-color: var(--cardBackground) !important;
+  border: 1px solid var(--borderColor) !important;
+}
+
+.dark .layout-label {
+  color: var(--textSecondary) !important;
+}
+
+.dark .layout-option {
+  color: var(--textColor) !important;
+}
+
+.dark .layout-option:hover {
+  background-color: var(--hover-bg) !important;
+}
+
+.dark .layout-option.active {
+  background-color: var(--primaryColor) !important;
+  color: white !important;
+}
+
+/* Dark mode filters and controls */
+.dark .filters-bar {
+  background-color: var(--cardBackground) !important;
+  border: 1px solid var(--borderColor) !important;
+}
+
+.dark .filter-section label {
+  color: var(--textSecondary) !important;
+}
+
+.dark .filter-select,
+.dark .category-select {
+  background-color: var(--inputBackground) !important;
+  border-color: var(--inputBorder) !important;
+  color: var(--textColor) !important;
+}
+
+.dark .search-box input {
+  background-color: var(--inputBackground) !important;
+  border-color: var(--inputBorder) !important;
+  color: var(--textColor) !important;
+}
+
+.dark .search-box input::placeholder {
+  color: var(--textSecondary) !important;
+}
+
+/* Dark mode list layout sidebar */
+.dark .list-layout .sidebar {
+  background-color: var(--cardBackground) !important;
+}
+
+.dark .list-layout .listing-list {
+  background-color: var(--cardBackground) !important;
+  border-color: var(--borderColor) !important;
+}
+
+.dark .list-layout .listing-item {
+  background-color: var(--cardBackground) !important;
+  border-color: var(--borderColor) !important;
+  color: var(--textColor) !important;
+}
+
+.dark .list-layout .listing-item:hover {
+  background-color: var(--hover-bg) !important;
+}
+
+.dark .list-layout .listing-item.active {
+  background-color: rgba(var(--primaryColor-rgb, 51, 102, 204), 0.2) !important;
+  border-left-color: var(--primaryColor) !important;
+}
+
+.dark .list-layout .listing-item h3 {
+  color: var(--textColor) !important;
+}
+
+.dark .list-layout .main-content {
+  background-color: var(--cardBackground) !important;
+  border-color: var(--borderColor) !important;
+}
+
+.dark .list-layout .detail-info {
+  background-color: var(--cardBackground) !important;
+  color: var(--textColor) !important;
+}
+
+.dark .list-layout .detail-description {
+  color: var(--textColor) !important;
+}
+
+.dark .list-layout .meta-item {
+  color: var(--textColor) !important;
+}
+
+.dark .list-layout .tag {
+  background-color: var(--inputBackground) !important;
+  color: var(--textSecondary) !important;
+}
+
+.dark .list-layout .no-selection-message,
+.dark .list-layout .no-listings-message {
+  background-color: var(--cardBackground) !important;
+  color: var(--textSecondary) !important;
+}
+
+/* Dark mode table layout */
+.dark .table-layout .listings-table {
+  background-color: var(--cardBackground) !important;
+  border-color: var(--borderColor) !important;
+}
+
+.dark .table-layout .listings-table th {
+  background-color: var(--inputBackground) !important;
+  color: var(--textColor) !important;
+  border-color: var(--borderColor) !important;
+}
+
+.dark .table-layout .listings-table td {
+  color: var(--textColor) !important;
+  border-color: var(--borderColor) !important;
+}
+
+.dark .table-layout .listings-table tbody tr:hover {
+  background-color: var(--hover-bg) !important;
+}
+
+.dark .table-layout .no-results-message {
+  background-color: var(--cardBackground) !important;
+  color: var(--textSecondary) !important;
+}
+
+/* Dark mode magazine layout */
+.dark .magazine-layout .hero-feature {
+  background-color: var(--cardBackground) !important;
+  border-color: var(--borderColor) !important;
+}
+
+.dark .magazine-layout .section-header h3 {
+  color: var(--textColor) !important;
+}
+
+.dark .magazine-layout .listing-card {
+  background-color: var(--cardBackground) !important;
+  border-color: var(--borderColor) !important;
+}
+
+.dark .magazine-layout .pick-card {
+  background-color: var(--cardBackground) !important;
+  border-color: var(--borderColor) !important;
+  color: var(--textColor) !important;
+}
+
+.dark .magazine-layout .pick-tag {
+  background-color: var(--inputBackground) !important;
+  color: var(--textSecondary) !important;
+}
+
+/* Dark mode pagination */
+.dark .pagination a,
+.dark .pagination button {
+  background-color: var(--cardBackground);
+  border-color: var(--borderColor);
+  color: var(--textColor);
+}
+
+.dark .pagination a:hover,
+.dark .pagination button:hover {
+  background-color: var(--hover-bg);
+}
+
+.dark .pagination .active {
+  background-color: var(--primaryColor);
+  color: white;
+}
+
+/* Dark mode theme-specific overrides */
+
+/* Nature theme dark mode */
+.dark.theme-nature {
+  --backgroundColor: #0a0f0a;
+  --cardBackground: #141a14;
+  --borderColor: #1f2d1f;
+}
+
+.dark.theme-nature .site-header {
+  background-color: #1a2e1a;
+}
+
+.dark.theme-nature section:nth-child(even) {
+  background-color: #0f140f;
+}
+
+/* Modern theme dark mode */
+.dark.theme-modern {
+  --backgroundColor: #0f0f0f;
+  --cardBackground: #1a1a1a;
+  --borderColor: #2a2a2a;
+}
+
+.dark.theme-modern .site-header {
+  background-color: #1a1a1a;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.dark.theme-modern .main-nav a:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Elegant theme dark mode */
+.dark.theme-elegant {
+  --backgroundColor: #0a0a0a;
+  --cardBackground: #161616;
+  --borderColor: #2d2d2d;
+}
+
+.dark.theme-elegant .site-header {
+  background-color: #161616;
+  border-bottom: 1px solid var(--borderColor);
+}
+
+.dark.theme-elegant .site-name {
+  color: var(--primaryColor);
+}
+
+/* Dark mode scrollbar */
+.dark::-webkit-scrollbar {
+  width: 8px;
+}
+
+.dark::-webkit-scrollbar-track {
+  background: var(--backgroundColor);
+}
+
+.dark::-webkit-scrollbar-thumb {
+  background: var(--borderColor);
+  border-radius: 4px;
+}
+
+.dark::-webkit-scrollbar-thumb:hover {
+  background: #404040;
+}
+
+/* Dark mode selection */
+.dark ::selection {
+  background-color: var(--primaryColor);
+  color: white;
+}
+
+/* Dark mode focus indicators */
+.dark *:focus {
+  outline: 2px solid var(--primaryColor);
+  outline-offset: 2px;
+}
+
+/* Dark mode transitions */
+.dark * {
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+/* Prevent transition on theme change */
+.dark.theme-transitioning * {
+  transition: none !important;
+}
+
+/* Dark mode loading states */
+.dark .loading,
+.dark .layout-loading {
+  background-color: rgba(var(--backgroundColor-rgb, 15, 15, 15), 0.8) !important;
+  color: var(--textSecondary) !important;
+}
+
+.dark .spinner,
+.dark .layout-loading .spinner {
+  border-color: var(--borderColor) !important;
+  border-top-color: var(--primaryColor) !important;
+}
+
+.dark .layout-loading p {
+  color: var(--textSecondary) !important;
+}
+
+/* Dark mode map layout */
+.dark .map-layout .sidebar {
+  background-color: var(--cardBackground) !important;
+  border-color: var(--borderColor) !important;
+}
+
+.dark .map-layout .listing-summary {
+  background-color: var(--cardBackground) !important;
+  border-color: var(--borderColor) !important;
+  color: var(--textColor) !important;
+}
+
+.dark .map-layout .map-container {
+  border-color: var(--borderColor) !important;
+}
+
+/* Dark mode tooltips and overlays */
+.dark .tooltip {
+  background-color: var(--cardBackground) !important;
+  color: var(--textColor) !important;
+  border-color: var(--borderColor) !important;
+}
+
+.dark .modal,
+.dark .overlay {
+  background-color: var(--overlay-bg) !important;
+}
+
+.dark .modal-content {
+  background-color: var(--cardBackground) !important;
+  color: var(--textColor) !important;
+  border-color: var(--borderColor) !important;
+}
+
+/* Dark mode tables */
+.dark table {
+  background-color: var(--cardBackground);
+  border-color: var(--borderColor);
+}
+
+.dark th,
+.dark td {
+  border-color: var(--borderColor);
+  color: var(--textColor);
+}
+
+.dark thead th {
+  background-color: var(--inputBackground);
+}
+
+.dark tbody tr:nth-child(even) {
+  background-color: var(--inputBackground);
+}
+
+/* Dark mode code blocks */
+.dark pre,
+.dark code {
+  background-color: #1a1a1a;
+  color: #e5e5e5;
+  border-color: var(--borderColor);
+}
+
+/* Dark mode images */
+.dark img {
+  opacity: 0.9;
+}
+
+.dark img:hover {
+  opacity: 1;
+}
+
+/* Dark mode accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .dark * {
+    transition: none !important;
+  }
+}
+
+/* Dark mode print styles */
+@media print {
+  .dark {
+    background-color: white !important;
+    color: black !important;
+  }
+  
+  .dark * {
+    background-color: white !important;
+    color: black !important;
+  }
+} 

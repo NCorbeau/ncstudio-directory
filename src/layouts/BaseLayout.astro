@@ -72,6 +72,27 @@ const safeDirectoryData = directoryData || {
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     
+    <!-- Dark mode initialization script (must load before page renders) -->
+    <script is:inline>
+      // Initialize theme immediately to prevent flash
+      (function() {
+        const saved = localStorage.getItem('darkMode');
+        const isDark = saved !== null 
+          ? saved === 'true' 
+          : window.matchMedia('(prefers-color-scheme: dark)').matches;
+        
+        if (isDark) {
+          document.documentElement.classList.add('dark');
+        }
+        
+        // Update meta theme-color
+        const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+        if (themeColorMeta) {
+          themeColorMeta.setAttribute('content', isDark ? '#1a1a1a' : '#ffffff');
+        }
+      })();
+    </script>
+    
     <!-- Global base styles - using absolute paths -->
     <!-- <link rel="stylesheet" href="/styles/global.css" /> -->
     

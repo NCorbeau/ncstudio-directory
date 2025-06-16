@@ -1,6 +1,7 @@
 ---
 import { getDirectoryConfig } from '@/utils/directory-helpers';
 import { makeDirUrl } from './PathUtils';
+import DarkModeToggle from '../ui/DarkModeToggle.astro';
 
 const { directoryName, logo, theme = 'default' } = Astro.props;
 
@@ -18,7 +19,7 @@ try {
 }
 
 // Categories for navigation
-const categories = directoryData?.categories || [];
+const categories = (directoryData?.categories as any[]) || [];
 ---
 
 <header class={`site-header theme-${theme}`}>
@@ -77,6 +78,9 @@ const categories = directoryData?.categories || [];
             </svg>
             <span class="sr-only">Search</span>
           </a>
+        </li>
+        <li class="dark-mode-toggle-container">
+          <DarkModeToggle />
         </li>
       </ul>
     </nav>
@@ -235,6 +239,11 @@ const categories = directoryData?.categories || [];
   
   .search-link svg {
     vertical-align: middle;
+  }
+  
+  .dark-mode-toggle-container {
+    display: flex;
+    align-items: center;
   }
   
   .sr-only {

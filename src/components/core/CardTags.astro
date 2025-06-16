@@ -66,4 +66,15 @@ const hasMoreTags = tags.length > maxTags;
     --tag-bg: rgba(var(--primaryColor-rgb, 156, 124, 56), 0.1);
     --tag-color: var(--primaryColor, #9c7c38);
   }
+
+  /* Dark mode styles */
+  :global(.dark) .tag {
+    background-color: #374151 !important;
+    color: #d1d5db !important;
+  }
+
+  :global(.dark) .tag-more {
+    background-color: #4b5563 !important;
+    color: #d1d5db !important;
+  }
 </style> 

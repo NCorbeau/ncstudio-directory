@@ -269,7 +269,6 @@ label {
 .hero {
   text-align: center;
   padding: var(--spacingXl) 0;
-  background-color: #f8f9fa;
 }
 
 .hero h1 {

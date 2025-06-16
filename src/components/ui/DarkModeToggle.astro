@@ -1,0 +1,240 @@
+---
+// src/components/ui/DarkModeToggle.astro
+---
+
+<button
+  class="dark-mode-toggle"
+  aria-label="Toggle dark mode"
+  title="Toggle dark mode"
+>
+  <div class="toggle-track">
+    <div class="toggle-thumb">
+      <!-- Sun icon -->
+      <svg
+        class="sun-icon"
+        xmlns="http://www.w3.org/2000/svg"
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <circle cx="12" cy="12" r="5"></circle>
+        <line x1="12" y1="1" x2="12" y2="3"></line>
+        <line x1="12" y1="21" x2="12" y2="23"></line>
+        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+        <line x1="1" y1="12" x2="3" y2="12"></line>
+        <line x1="21" y1="12" x2="23" y2="12"></line>
+        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+      </svg>
+      <!-- Moon icon -->
+      <svg
+        class="moon-icon"
+        xmlns="http://www.w3.org/2000/svg"
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+      </svg>
+    </div>
+  </div>
+</button>
+
+<style>
+  .dark-mode-toggle {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 20px;
+    position: relative;
+    transition: all 0.2s ease;
+    margin-left: 0.75rem;
+  }
+
+  .dark-mode-toggle:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .toggle-track {
+    width: 40px;
+    height: 20px;
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    position: relative;
+    transition: all 0.3s ease;
+  }
+
+  .toggle-thumb {
+    width: 16px;
+    height: 16px;
+    background-color: white;
+    border-radius: 50%;
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+
+  .sun-icon,
+  .moon-icon {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    color: #666;
+    transition: all 0.3s ease;
+  }
+
+  .sun-icon {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  .moon-icon {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+
+  /* Dark mode styles */
+  :global(.dark) .toggle-track {
+    background-color: rgba(0, 0, 0, 0.3);
+  }
+
+  :global(.dark) .toggle-thumb {
+    left: 22px;
+    background-color: #333;
+  }
+
+  :global(.dark) .sun-icon {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+
+  :global(.dark) .moon-icon {
+    opacity: 1;
+    transform: scale(1);
+    color: #fbbf24;
+  }
+
+  :global(.dark) .dark-mode-toggle:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+  }
+
+  /* Theme-specific overrides for header */
+  :global(.theme-modern) .dark-mode-toggle:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+  }
+
+  :global(.dark.theme-modern) .dark-mode-toggle:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+
+  :global(.theme-elegant) .toggle-track {
+    border: 1px solid rgba(0, 0, 0, 0.1);
+  }
+
+  :global(.dark.theme-elegant) .toggle-track {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+</style>
+
+<script>
+  // Theme management functionality
+  class ThemeManager {
+    private isDarkMode: boolean = false;
+    private initialized: boolean = false;
+
+    constructor() {
+      this.initialize();
+      this.setupToggle();
+    }
+
+    private initialize() {
+      if (this.initialized) return;
+      
+      // Check localStorage first
+      const saved = localStorage.getItem('darkMode');
+      if (saved !== null) {
+        this.isDarkMode = saved === 'true';
+      } else {
+        // Fall back to system preference
+        this.isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      }
+
+      this.applyTheme(this.isDarkMode);
+      this.initialized = true;
+    }
+
+    private applyTheme(isDark: boolean) {
+      const root = document.documentElement;
+      
+      if (isDark) {
+        root.classList.add('dark');
+      } else {
+        root.classList.remove('dark');
+      }
+      
+      // Update meta theme-color for mobile browsers
+      const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+      if (themeColorMeta) {
+        themeColorMeta.setAttribute('content', isDark ? '#1a1a1a' : '#ffffff');
+      }
+
+      // Update button aria-label
+      const toggleButton = document.querySelector('.dark-mode-toggle');
+      if (toggleButton) {
+        toggleButton.setAttribute(
+          'aria-label', 
+          isDark ? 'Switch to light mode' : 'Switch to dark mode'
+        );
+        toggleButton.setAttribute(
+          'title', 
+          isDark ? 'Switch to light mode' : 'Switch to dark mode'
+        );
+      }
+    }
+
+    private setupToggle() {
+      const toggleButton = document.querySelector('.dark-mode-toggle');
+      if (toggleButton) {
+        toggleButton.addEventListener('click', () => {
+          this.isDarkMode = !this.isDarkMode;
+          localStorage.setItem('darkMode', this.isDarkMode.toString());
+          this.applyTheme(this.isDarkMode);
+        });
+      }
+    }
+  }
+
+  // Ensure we don't create multiple instances
+  if (!(window as any)._themeManager) {
+    // Initialize theme manager when DOM is loaded
+    const initTheme = () => {
+      if (!(window as any)._themeManager) {
+        (window as any)._themeManager = new ThemeManager();
+      }
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initTheme);
+    } else {
+      // DOMContentLoaded has already fired
+      initTheme();
+    }
+  }
+</script> 
