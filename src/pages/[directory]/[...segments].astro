@@ -1,0 +1,444 @@
+---
+// src/pages/[directory]/[...segments].astro
+import DirectoryLayout from '../../layouts/DirectoryLayout.astro';
+import { AppProvider } from '../../components/solid/providers/AppContext';
+import SearchBar from '../../components/solid/SearchBar';
+import LayoutContainer from '../../components/solid/LayoutContainer';
+import BaseListingCard from '../../components/core/BaseListingCard.astro';
+import { generateListingSchema, generateCategorySchema, generateBreadcrumbSchema } from '../../utils/schema-generator';
+import { 
+  getAllDirectories,
+  getDirectoryConfig,
+  getDirectoryListings,
+  getCategoryListings,
+  getListingByFullPath,
+  getLocationListings
+} from '../../utils/directory-helpers';
+import { 
+  parseUrlPattern, 
+  parseUrlToSegments, 
+  determinePageType,
+  buildFiltersFromSegments,
+  generateBreadcrumbs,
+  generateUrlFromPattern
+} from '../../utils/url-pattern';
+
+export async function getStaticPaths() {
+  const paths = [];
+  
+  // Check if single directory mode
+  const isSingleDirectoryBuild = process.env.BUILD_MODE === 'single';
+  const currentDirectory = process.env.CURRENT_DIRECTORY;
+  
+  // Get directories to process
+  const directories = isSingleDirectoryBuild && currentDirectory 
+    ? [{ id: currentDirectory }]
+    : await getAllDirectories();
+  
+  for (const directory of directories) {
+    const config = await getDirectoryConfig(directory.id);
+    if (!config) continue;
+    
+    const pattern = config.data.url_pattern || '{slug}';
+    const segmentConfig = config.data.url_segments || {};
+    
+    // Get all listings for this directory
+    const listings = await getDirectoryListings(directory.id);
+    
+    // Generate paths for listings
+    for (const listing of listings) {
+      // Generate the full path for this listing
+      const fullPath = generateUrlFromPattern(pattern, segmentConfig, listing.data);
+      const segments = fullPath.split('/').filter(Boolean);
+      
+      paths.push({
+        params: {
+          directory: directory.id,
+          segments: segments.length > 0 ? segments : undefined
+        },
+        props: {
+          directoryId: directory.id,
+          directoryConfig: config,
+          pattern,
+          segmentConfig,
+          type: 'listing',
+          data: listing,
+          fullPath
+        }
+      });
+    }
+    
+    // Generate paths for category pages
+    if (config.data.categories) {
+      for (const category of config.data.categories) {
+        // Check if pattern includes category
+        if (pattern.includes('{category}')) {
+          // Generate category page path
+          const categoryPath = pattern
+            .replace('{category}', category.id)
+            .replace('{slug}', '')
+            .replace(/\/+$/, ''); // Remove trailing slashes
+          
+          const segments = categoryPath.split('/').filter(Boolean);
+          
+          paths.push({
+            params: {
+              directory: directory.id,
+              segments: segments.length > 0 ? segments : undefined
+            },
+            props: {
+              directoryId: directory.id,
+              directoryConfig: config,
+              pattern,
+              segmentConfig,
+              type: 'category',
+              data: category,
+              fullPath: categoryPath
+            }
+          });
+        }
+      }
+    }
+    
+    // Generate paths for location pages
+    // This would require knowing all possible locations in advance
+    // For now, we'll handle these dynamically or generate from known locations
+  }
+  
+  return paths;
+}
+
+// Get props
+const { directoryId, directoryConfig, pattern, segmentConfig, type, data, fullPath } = Astro.props;
+const segments = Astro.params.segments;
+
+// Parse current URL segments
+const urlPath = segments ? (Array.isArray(segments) ? segments.join('/') : segments) : '';
+const parsedSegments = parseUrlToSegments(urlPath, pattern);
+
+// Determine page type if not provided
+const pageType = type || determinePageType(parsedSegments, pattern);
+
+// Generate breadcrumbs
+let breadcrumbLabels = {};
+let pageTitle = '';
+let pageDescription = '';
+let listings = [];
+let structuredData = null;
+
+// Handle different page types
+switch (pageType) {
+  case 'listing':
+    // Individual listing page
+    const listing = data;
+    pageTitle = `${listing.data.title} | ${directoryConfig.data.name}`;
+    pageDescription = listing.data.description;
+    breadcrumbLabels = {
+      home: directoryConfig.data.name,
+      category: listing.data.category_name || listing.data.category,
+      current: listing.data.title
+    };
+    structuredData = generateListingSchema(listing, directoryConfig.data, Astro.site);
+    break;
+    
+  case 'category':
+  case 'category-location':
+    // Category or filtered category page
+    const category = data || directoryConfig.data.categories.find(c => c.id === parsedSegments.category);
+    const location = parsedSegments.city || parsedSegments.location || '';
+    
+    pageTitle = location 
+      ? `${category.name} in ${formatLocation(location)} | ${directoryConfig.data.name}`
+      : `${category.name} | ${directoryConfig.data.name}`;
+    
+    pageDescription = location
+      ? `Find the best ${category.name.toLowerCase()} in ${formatLocation(location)}`
+      : category.description || `Browse all ${category.name.toLowerCase()} listings`;
+    
+    // Fetch listings based on filters
+    const filters = buildFiltersFromSegments(parsedSegments, segmentConfig);
+    listings = await getCategoryListings(directoryId, category.id, filters);
+    
+    breadcrumbLabels = {
+      home: directoryConfig.data.name,
+      location: formatLocation(location),
+      category: category.name
+    };
+    
+    structuredData = generateCategorySchema(category, listings, directoryConfig.data, Astro.site);
+    break;
+    
+  case 'location':
+    // Location page
+    const locationName = parsedSegments.city || parsedSegments.location || '';
+    pageTitle = `${formatLocation(locationName)} | ${directoryConfig.data.name}`;
+    pageDescription = `Explore all listings in ${formatLocation(locationName)}`;
+    
+    // Fetch all listings for this location
+    const locationFilters = buildFiltersFromSegments(parsedSegments, segmentConfig);
+    listings = await getLocationListings(directoryId, locationFilters);
+    
+    breadcrumbLabels = {
+      home: directoryConfig.data.name,
+      location: formatLocation(locationName)
+    };
+    break;
+    
+  default:
+    // Handle unknown page types
+    return Astro.redirect(`/${directoryId}/`);
+}
+
+// Generate breadcrumbs
+const breadcrumbs = generateBreadcrumbs(urlPath, pattern, segmentConfig, directoryId, breadcrumbLabels);
+const breadcrumbSchema = generateBreadcrumbSchema(breadcrumbs);
+
+// Combine structured data
+if (structuredData) {
+  structuredData = [structuredData, breadcrumbSchema];
+} else {
+  structuredData = breadcrumbSchema;
+}
+
+// Format location name for display
+function formatLocation(location) {
+  return location
+    .split('-')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
+// Construct canonical URL
+const canonicalUrl = new URL(
+  `/${directoryId}/${urlPath}`,
+  Astro.site || "http://localhost:4321"
+).toString();
+---
+
+<DirectoryLayout
+  title={pageTitle}
+  description={pageDescription}
+  directoryData={directoryConfig.data}
+  canonicalUrl={canonicalUrl}
+  breadcrumbs={breadcrumbs}
+  structuredData={structuredData}
+>
+  {pageType === 'listing' ? (
+    <!-- Listing Detail Page -->
+    <article class="listing-detail">
+      <header class="listing-header">
+        <h1>{data.data.title}</h1>
+        {data.data.description && (
+          <p class="listing-description">{data.data.description}</p>
+        )}
+      </header>
+      
+      <!-- Images -->
+      {data.data.images && data.data.images.length > 0 && (
+        <div class="listing-images">
+          {data.data.images.map((image, index) => (
+            <img 
+              src={image.url} 
+              alt={image.alt || `${data.data.title} - Image ${index + 1}`}
+              loading={index === 0 ? "eager" : "lazy"}
+            />
+          ))}
+        </div>
+      )}
+      
+      <!-- Content -->
+      <div class="listing-content">
+        <data.render />
+      </div>
+      
+      <!-- Custom Fields -->
+      {data.data.fields && Object.keys(data.data.fields).length > 0 && (
+        <div class="listing-fields">
+          <h2>Details</h2>
+          <dl>
+            {Object.entries(data.data.fields).map(([key, value]) => (
+              <div>
+                <dt>{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</dt>
+                <dd>{value}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      )}
+      
+      <!-- Tags -->
+      {data.data.tags && data.data.tags.length > 0 && (
+        <div class="listing-tags">
+          {data.data.tags.map(tag => (
+            <span class="tag">{tag}</span>
+          ))}
+        </div>
+      )}
+    </article>
+  ) : (
+    <!-- Category/Location Page -->
+    <div class="category-page">
+      <header class="category-header">
+        <h1>{pageTitle.split(' | ')[0]}</h1>
+        <p>{pageDescription}</p>
+        
+        <div class="search-wrapper">
+          <AppProvider initialDirectoryId={directoryId} client:load>
+            <SearchBar 
+              directoryId={directoryId}
+              placeholder={`Search in ${pageTitle.split(' | ')[0]}...`}
+              client:load
+            />
+          </AppProvider>
+        </div>
+      </header>
+      
+      <!-- Listings Grid -->
+      <div class="listings-container">
+        <AppProvider initialDirectoryId={directoryId} client:load>
+          <LayoutContainer
+            listings={listings}
+            directoryId={directoryId}
+            theme={directoryConfig.data.theme}
+            defaultLayout={directoryConfig.data.defaultLayout || 'Card'}
+            availableLayouts={directoryConfig.data.availableLayouts || ['Card']}
+            client:visible
+          />
+        </AppProvider>
+      </div>
+      
+      <!-- No results message -->
+      {listings.length === 0 && (
+        <div class="no-results">
+          <p>No listings found in this category.</p>
+          <a href={`/${directoryId}/`}>Browse all listings</a>
+        </div>
+      )}
+    </div>
+  )}
+</DirectoryLayout>
+
+<style>
+  .listing-detail {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+  
+  .listing-header {
+    margin-bottom: 2rem;
+  }
+  
+  .listing-header h1 {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+  }
+  
+  .listing-description {
+    font-size: 1.25rem;
+    color: var(--text-muted);
+  }
+  
+  .listing-images {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  
+  .listing-images img {
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+  }
+  
+  .listing-content {
+    margin-bottom: 2rem;
+    line-height: 1.8;
+  }
+  
+  .listing-fields {
+    background: var(--bg-secondary);
+    padding: 2rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+  }
+  
+  .listing-fields h2 {
+    margin-bottom: 1rem;
+  }
+  
+  .listing-fields dl {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+  }
+  
+  .listing-fields dt {
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+  }
+  
+  .listing-fields dd {
+    color: var(--text-muted);
+  }
+  
+  .listing-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  
+  .tag {
+    background: var(--primary-color-rgb);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+  }
+  
+  .category-page {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+  
+  .category-header {
+    text-align: center;
+    margin-bottom: 3rem;
+  }
+  
+  .category-header h1 {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+  }
+  
+  .search-wrapper {
+    max-width: 600px;
+    margin: 2rem auto 0;
+  }
+  
+  .listings-container {
+    margin-bottom: 2rem;
+  }
+  
+  .no-results {
+    text-align: center;
+    padding: 4rem 2rem;
+  }
+  
+  .no-results p {
+    font-size: 1.25rem;
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+  }
+  
+  .no-results a {
+    color: var(--primary-color);
+    text-decoration: none;
+  }
+  
+  .no-results a:hover {
+    text-decoration: underline;
+  }
+</style>

@@ -186,7 +186,7 @@ const mainListings = allListings;
               {recentListings.map((listing) => (
                 <div class="recent-card">
                   <h3>
-                    <a href={`/${directoryId}/${listing.slug.replace(`${directoryId}/`, "")}`}>
+                    <a href={`/${directoryId}/${listing.data.full_path || listing.slug.replace(`${directoryId}/`, "")}`}>
                       {listing.data.title}
                     </a>
                   </h3>

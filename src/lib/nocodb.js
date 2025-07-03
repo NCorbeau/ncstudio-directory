@@ -58,6 +58,8 @@ const FIELD_MAPPINGS = {
   'Meta_Tags': 'metaTags',
   'Social_Links': 'socialLinks',
   'Deployment': 'deployment',
+  'URL Pattern': 'urlPattern',
+  'URL Segments': 'urlSegments',
   
   // Listings table
   'Title': 'title',
@@ -71,6 +73,9 @@ const FIELD_MAPPINGS = {
   'Fields': 'fields',
   'CreatedAt': 'createdAt',
   'UpdatedAt': 'updatedAt',
+  'Location Data': 'locationData',
+  'Category Slug': 'categorySlug',
+  'Full Path': 'fullPath',
   
   // Landing Pages table
   'Featured_Image': 'featuredImage',
@@ -267,53 +272,261 @@ async function fetchFromNocoDB(endpoint, params = {}, ttl = cacheTTL.directories
     throw error;
   }
 }
+// src/lib/nocodb.js - Updated sections for URL pattern support
+
+// Add to existing imports and setup...
+
+/**
+ * Get listings by custom filter
+ * @param {object} filters - Filter object with field names and values
+ * @returns {Promise<Array>} Array of listings matching the filters
+ */
+export async function getListingsByFilter(filters) {
+  // Build where conditions from filters
+  const whereConditions = {
+    _and: []
+  };
+  
+  // Handle directory filter
+  if (filters.directory) {
+    whereConditions._and.push({ directory: { eq: filters.directory } });
+  }
+  
+  // Handle category filter
+  if (filters.category) {
+    whereConditions._and.push({ category: { eq: filters.category } });
+  }
+  
+  // Handle category_slug filter
+  if (filters.category_slug) {
+    whereConditions._and.push({ category_slug: { eq: filters.category_slug } });
+  }
+  
+  // Handle full_path filter
+  if (filters.full_path) {
+    whereConditions._and.push({ full_path: { eq: filters.full_path } });
+  }
+  
+  // Handle location filters (nested JSON fields)
+  if (filters['location_data.city']) {
+    // For JSON fields, we'll need to do client-side filtering
+    // as NocoDB doesn't support deep JSON queries well
+  }
+  
+  // If no conditions, return empty array
+  if (whereConditions._and.length === 0) {
+    return [];
+  }
+  
+  // Fetch listings with basic filters
+  const response = await fetchFromNocoDB(`/tables/${TABLES.listings}/records`, {
+    where: whereConditions._and.length === 1 ? whereConditions._and[0] : whereConditions
+  }, cacheTTL.listings);
+  
+  let listings = await Promise.all(response.list.map(transformListing));
+  
+  // Apply client-side filters for JSON fields
+  if (filters['location_data.city']) {
+    listings = listings.filter(listing => 
+      listing.data.location_data?.city === filters['location_data.city']
+    );
+  }
+  
+  if (filters['location_data.district']) {
+    listings = listings.filter(listing => 
+      listing.data.location_data?.district === filters['location_data.district']
+    );
+  }
+  
+  return listings;
+}
 
 /**
  * Transform directory data from NocoDB to expected format
+ * Updated to include URL pattern fields
  */
 function transformDirectory(directory) {
   return {
     id: directory.id,
     data: {
-      id: directory.id,
       name: directory.name,
       description: directory.description,
       domain: directory.domain,
       theme: directory.theme || 'default',
-      availableLayouts: directory.availableLayouts?.split(',') || ['Card'],
+      availableLayouts: directory.availableLayouts.split(','),
       defaultLayout: directory.defaultLayout || 'Card',
-      primaryColor: directory.primaryColor || '#3366cc',
+      primaryColor: directory.primaryColor,
       secondaryColor: directory.secondaryColor,
       logo: directory.logo,
       categories: safeParseJSON(directory.categories, []),
       metaTags: safeParseJSON(directory.metaTags, {}),
-      socialLinks: safeParseJSON(directory.socialLinks, []),
-      deployment: safeParseJSON(directory.deployment, {})
+      socialLinks: safeParseJSON(directory.socialLinks, {}),
+      deployment: safeParseJSON(directory.deployment, {}),
+      // New URL pattern fields
+      url_pattern: directory.url_pattern || '{slug}',
+      url_segments: safeParseJSON(directory.url_segments, {})
     }
   };
 }
 
 /**
  * Transform listing data from NocoDB to expected format
+ * Updated to include location data and full path
  */
 async function transformListing(listing) {
   const renderedContent = await renderMarkdown(listing.content);
   
   return {
-    slug: `${listing.directory}/${listing.slug}`,
+    slug: listing.slug, // Keep original slug
     data: {
       title: listing.title,
       description: listing.description,
       directory: listing.directory,
       category: listing.category,
+      category_slug: listing.category_slug || slugify(listing.category || ''),
       featured: listing.featured === 1 || listing.featured === true,
       images: safeParseJSON(listing.images, []),
       tags: safeParseJSON(listing.tags, []),
       fields: safeParseJSON(listing.fields, {}),
+      // New fields for URL patterns
+      location_data: safeParseJSON(listing.location_data, {}),
+      full_path: listing.full_path || listing.slug,
       updatedAt: listing.updatedAt
     },
     render: () => ({ Content: renderedContent() })
   };
+}
+
+/**
+ * Create or update a listing with full path generation
+ * @param {string} directoryId - The directory ID
+ * @param {object} listingData - The listing data
+ * @returns {Promise<object>} The created/updated listing
+ */
+export async function createOrUpdateListing(directoryId, listingData) {
+  // Get directory config to access URL pattern
+  const directory = await getDirectory(directoryId);
+  if (!directory) {
+    throw new Error(`Directory ${directoryId} not found`);
+  }
+  
+  const pattern = directory.data.url_pattern || '{slug}';
+  const segmentConfig = directory.data.url_segments || {};
+  
+  // Generate full path if not provided
+  if (!listingData.full_path && pattern !== '{slug}') {
+    const { generateUrlFromPattern } = await import('../utils/url-pattern.js');
+    listingData.full_path = generateUrlFromPattern(pattern, segmentConfig, listingData);
+  }
+  
+  // Ensure slug is clean
+  if (!listingData.slug) {
+    listingData.slug = slugify(listingData.title, { lower: true, strict: true });
+  }
+  
+  // Prepare data for NocoDB
+  const nocdbData = {
+    title: listingData.title,
+    description: listingData.description,
+    content: listingData.content || '',
+    slug: listingData.slug,
+    directory: directoryId,
+    category: listingData.category,
+    category_slug: listingData.category_slug || slugify(listingData.category || ''),
+    featured: listingData.featured || false,
+    images: JSON.stringify(listingData.images || []),
+    tags: JSON.stringify(listingData.tags || []),
+    fields: JSON.stringify(listingData.fields || {}),
+    location_data: JSON.stringify(listingData.location_data || {}),
+    full_path: listingData.full_path
+  };
+  
+  // Check if listing exists
+  const existingListings = await fetchFromNocoDB(`/tables/${TABLES.listings}/records`, {
+    where: {
+      _and: [
+        { directory: { eq: directoryId } },
+        { slug: { eq: listingData.slug } }
+      ]
+    }
+  });
+  
+  let response;
+  if (existingListings.list.length > 0) {
+    // Update existing listing
+    const listingId = existingListings.list[0].Id;
+    response = await fetch(`${NOCODB_API_URL}/tables/${TABLES.listings}/records`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({
+        Id: listingId,
+        ...nocdbData
+      })
+    });
+  } else {
+    // Create new listing
+    response = await fetch(`${NOCODB_API_URL}/tables/${TABLES.listings}/records`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(nocdbData)
+    });
+  }
+  
+  if (!response.ok) {
+    throw new Error(`Failed to save listing: ${response.statusText}`);
+  }
+  
+  const savedListing = await response.json();
+  return transformListing(savedListing);
+}
+
+/**
+ * Batch create/update listings
+ * @param {string} directoryId - The directory ID
+ * @param {Array} listings - Array of listing data
+ * @returns {Promise<Array>} Array of created/updated listings
+ */
+export async function batchCreateOrUpdateListings(directoryId, listings) {
+  const results = [];
+  
+  // Process in batches to avoid overwhelming the API
+  const batchSize = 10;
+  for (let i = 0; i < listings.length; i += batchSize) {
+    const batch = listings.slice(i, i + batchSize);
+    const batchResults = await Promise.all(
+      batch.map(listing => createOrUpdateListing(directoryId, listing))
+    );
+    results.push(...batchResults);
+  }
+  
+  return results;
+}
+
+/**
+ * Helper function to slugify text
+ */
+function slugify(text, options = {}) {
+  const defaults = {
+    lower: true,
+    strict: true,
+    locale: 'en'
+  };
+  
+  const opts = { ...defaults, ...options };
+  
+  let slug = text
+    .toString()
+    .normalize('NFD') // Normalize unicode
+    .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
+    .replace(/\s+/g, '-') // Replace spaces with hyphens
+    .replace(/-+/g, '-') // Remove multiple hyphens
+    .replace(/^-+/, '') // Remove leading hyphens
+    .replace(/-+$/, ''); // Remove trailing hyphens
+  
+  return slug;
 }
 
 /**

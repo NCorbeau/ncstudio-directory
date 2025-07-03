@@ -100,14 +100,14 @@ export async function generateSingleSitemap(directoryId, outputDir = './dist') {
     
     // Add listing pages - important to use root paths for single directory build
     for (const listing of listings) {
-      // For single directory builds, we remove the directory prefix from the slug
-      const slug = listing.slug.replace(`${directoryId}/`, '');
+      // For single directory builds, use fullPath or fallback to slug
+      const path = listing.data.full_path || listing.slug.replace(`${directoryId}/`, '');
       const lastMod = listing.data.updatedAt || new Date();
       
       sitemap += `
   <!-- Listing: ${listing.data.title} -->
   <url>
-    <loc>${domain}/${slug}</loc>
+    <loc>${domain}/${path}</loc>
     <lastmod>${formatDate(lastMod)}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>`;
