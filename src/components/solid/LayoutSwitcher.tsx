@@ -58,8 +58,8 @@ export default function LayoutSwitcher(props: LayoutSwitcherProps) {
     }
   });
 
-  // Build the base URL for switching layouts
-  const baseUrl = `/${directoryId}`;
+  // Build the base URL for switching layouts (root in single directory mode)
+  const baseUrl = ``;
   
   return (
     <div class="layout-switcher">

@@ -173,7 +173,7 @@ export default function TableLayout(props: LayoutProps) {
                   <td>{listing.data.updatedAt ? formatDate(listing.data.updatedAt) : '-'}</td>
                   <td>
                     <a 
-                      href={`/${directoryId}/${listing.slug.replace(`${directoryId}/`, '')}`} 
+                      href={listing.data.full_path || `/${listing.slug.replace(`${directoryId}/`, '')}`} 
                       class="view-button"
                     >
                       View

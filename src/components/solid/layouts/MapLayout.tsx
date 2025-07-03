@@ -79,7 +79,7 @@ export default function MapLayout(props: LayoutProps) {
           <div class="map-popup">
             <h3>${listing.data.title}</h3>
             <p>${listing.data.fields.fullAddress}</p>
-            <a href="/${directoryId}/${listing.slug.replace(`${directoryId}/`, '')}">View details</a>
+                            <a href="${listing.data.fullPath || `/${listing.slug.replace(`${directoryId}/`, '')}` }">View details</a>
           </div>
         `;
         

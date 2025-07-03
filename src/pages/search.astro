@@ -1,37 +1,13 @@
 ---
-import DirectoryLayout from "../../layouts/DirectoryLayout.astro";
-import { getAllDirectories, getDirectoryConfig } from "../../utils/directory-helpers";
-import { AppProvider } from "../../components/solid/providers/AppContext";
-import SearchBar from "../../components/solid/SearchBar";
-import SearchResults from "../../components/solid/SearchResults";
+import DirectoryLayout from "../layouts/DirectoryLayout.astro";
+import { getDirectoryConfig } from "../utils/directory-helpers";
+import { AppProvider } from "../components/solid/providers/AppContext";
+import SearchBar from "../components/solid/SearchBar";
+import SearchResults from "../components/solid/SearchResults";
+import type { Directory } from "../types";
 
-// Generate all dynamic routes
-export async function getStaticPaths() {
-  // Check if we're in single directory mode
-  const isSingleDirectoryBuild = process.env.BUILD_MODE === 'single';
-  const currentDirectory = process.env.CURRENT_DIRECTORY;
-  
-  // In single directory mode, only get the current directory
-  if (isSingleDirectoryBuild && currentDirectory) {
-    console.log(`Single directory build: Only generating search page for ${currentDirectory}`);
-    
-    return [{
-      params: { directory: currentDirectory },
-      props: { directoryId: currentDirectory }
-    }];
-  }
-  
-  // Regular multi-directory mode
-  const directories = await getAllDirectories();
-  
-  return directories.map((directory) => ({
-    params: { directory: directory.id },
-    props: { directoryId: directory.id },
-  }));
-}
-
-// Get directory ID from props
-const { directoryId } = Astro.props;
+// Get directory ID from environment variable
+const directoryId = process.env.CURRENT_DIRECTORY || 'default';
 
 // Fetch directory data
 const directoryData = await getDirectoryConfig(directoryId);
@@ -41,15 +17,18 @@ if (!directoryData) {
   return Astro.redirect("/404");
 }
 
+// Type cast the directory data
+const typedDirectoryData = directoryData as { data: Directory };
+
 // Construct canonical URL (without query parameter for base URL)
-const baseUrl = new URL(`/${directoryId}/search`, Astro.site || "http://localhost:4321").toString();
+const baseUrl = new URL("/search", Astro.site || "http://localhost:4321").toString();
 const canonicalUrl = baseUrl;
 
 // Generate breadcrumbs
 const breadcrumbs = [
   {
-    name: directoryData.data.name,
-    url: `/${directoryId}/`,
+    name: typedDirectoryData.data.name,
+    url: "/",
   },
   {
     name: "Search",
@@ -59,9 +38,9 @@ const breadcrumbs = [
 ---
 
 <DirectoryLayout
-  title={`Search | ${directoryData.data.name}`}
-  description={`Search for listings in ${directoryData.data.name}`}
-  directoryData={directoryData.data}
+  title={`Search | ${typedDirectoryData.data.name}`}
+  description={`Search for listings in ${typedDirectoryData.data.name}`}
+  directoryData={typedDirectoryData.data}
   canonicalUrl={canonicalUrl}
   breadcrumbs={breadcrumbs}
 >
@@ -73,7 +52,7 @@ const breadcrumbs = [
         <div class="search-wrapper">
           <SearchBar 
             directoryId={directoryId}
-            placeholder={`Search ${directoryData.data.name}...`}
+            placeholder={`Search ${typedDirectoryData.data.name}...`}
             client:load
           />
         </div>
@@ -82,7 +61,7 @@ const breadcrumbs = [
       <!-- Search Results Component -->
       <SearchResults
         directoryId={directoryId}
-        theme={directoryData.data.theme}
+        theme={typedDirectoryData.data.theme}
         client:visible
       />
       
@@ -90,8 +69,8 @@ const breadcrumbs = [
       <div id="browse-categories" class="browse-categories">
         <h2>Browse by Category</h2>
         <div class="category-grid">
-          {directoryData.data.categories.map(category => (
-            <a href={`/${directoryId}/category/${category.id}`} class="category-card">
+          {typedDirectoryData.data.categories.map(category => (
+            <a href={`/category/${category.id}`} class="category-card">
               <h3>{category.name}</h3>
               {category.description && <p>{category.description}</p>}
             </a>
@@ -166,4 +145,4 @@ const breadcrumbs = [
     color: #666;
     margin: 0;
   }
-</style>
+</style> 

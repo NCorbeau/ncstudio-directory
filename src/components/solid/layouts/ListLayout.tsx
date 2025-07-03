@@ -147,7 +147,7 @@ export default function ListLayout(props: LayoutProps) {
                 <h2>{listing().data.title}</h2>
                 
                 <a 
-                  href={`/${directoryId}/${listing().slug.replace(`${directoryId}/`, '')}`} 
+                  href={listing().data.full_path || `/${listing().slug.replace(`${directoryId}/`, '')}`} 
                   class="view-full-button"
                 >
                   View Full Details

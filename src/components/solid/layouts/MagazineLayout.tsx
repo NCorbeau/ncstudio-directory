@@ -77,7 +77,7 @@ export default function MagazineLayout(props: LayoutProps) {
     if (!hero || !hero.slug) return '#'; // Fallback URL
     
     try {
-      return `/${directoryId}/${hero.slug.replace(`${directoryId}/`, '')}`;
+      return `/${hero.slug.replace(`${directoryId}/`, '')}`;
     } catch (e) {
       console.error('Error creating hero URL:', e);
       return '#';
@@ -164,7 +164,7 @@ export default function MagazineLayout(props: LayoutProps) {
                 <div class="listing-row">
                   <For each={listingsByCategory()[category.id].slice(0, 3)}>
                     {(listing) => (
-                      <a href={`/${directoryId}/${listing.slug.replace(`${directoryId}/`, '')}`} class="listing-card">
+                      <a href={listing.data.full_path || `/${listing.slug.replace(`${directoryId}/`, '')}`} class="listing-card">
                         <div class="card-image">
                           <Show 
                             when={listing.data.images && listing.data.images.length > 0}
@@ -211,7 +211,7 @@ export default function MagazineLayout(props: LayoutProps) {
           <div class="picks-grid">
             <For each={featuredListings().slice(0, 6)}>
               {(listing) => (
-                <a href={`/${directoryId}/${listing.slug.replace(`${directoryId}/`, '')}`} class="pick-card">
+                                  <a href={listing.data.fullPath || `/${listing.slug.replace(`${directoryId}/`, '')}`} class="pick-card">
                   <div class="pick-image">
                     <Show 
                       when={listing.data.images && listing.data.images.length > 0}

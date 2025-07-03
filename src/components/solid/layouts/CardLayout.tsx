@@ -109,7 +109,7 @@ export default function CardLayout(props: LayoutProps) {
           {(listing) => (
             <ListingCard 
               listing={listing.data} 
-              url={`/${directoryId}/${listing.slug.replace(`${directoryId}/`, '')}`}
+              url={listing.data.full_path || `/${listing.slug.replace(`${directoryId}/`, '')}`}
               theme={directory.theme}
             />
           )}

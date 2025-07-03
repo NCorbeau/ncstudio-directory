@@ -16,6 +16,8 @@ export interface Directory {
     metaTags: MetaTags;
     socialLinks: SocialLink[];
     deployment?: Record<string, unknown>;
+    url_pattern?: string;
+    url_segments?: Record<string, unknown>;
   }
   
   export interface Category {
@@ -230,4 +232,11 @@ export interface Directory {
       categories: Category[];
     };
     error?: string;
+  }
+
+  export interface LayoutProps {
+    listings: Listing[];
+    directory: Directory;
+    categories: Category[];
+    directoryId: string;
   }

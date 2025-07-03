@@ -135,11 +135,11 @@ export default function SearchResults(props: SearchResultsProps) {
         <div class="listing-grid">
           <For each={results()}>
             {(listing) => (
-              <ListingCard
-                listing={listing.data}
-                url={`/${directoryId}/${listing.slug.replace(`${directoryId}/`, '')}`}
-                theme={theme}
-              />
+                          <ListingCard
+              listing={listing.data}
+              url={listing.data.full_path || `/${listing.slug.replace(`${directoryId}/`, '')}`}
+              theme={theme}
+            />
             )}
           </For>
         </div>
@@ -151,7 +151,7 @@ export default function SearchResults(props: SearchResultsProps) {
             <div>
               <p>No listings found matching your search.</p>
               <p>Try using different keywords or browse by category.</p>
-              <a href={`/${directoryId}/`} class="back-link">Back to homepage</a>
+              <a href="/" class="back-link">Back to homepage</a>
             </div>
           </div>
         </div>
