@@ -11,7 +11,7 @@ export default function SearchBar(props: SearchBarProps) {
     e.preventDefault();
     if (searchQuery().trim()) {
       // Navigate to search page with query
-      const url = new URL(`/${directoryId}/search`, window.location.origin);
+      const url = new URL(`/search`, window.location.origin);
       url.searchParams.set('q', searchQuery().trim());
       window.location.href = url.toString();
     }
@@ -40,7 +40,7 @@ export default function SearchBar(props: SearchBarProps) {
   return (
     <div class="search-container">
       <form
-        action={`/${directoryId}/search`}
+        action="/search"
         method="get"
         class="search-form"
         onSubmit={handleSubmit}

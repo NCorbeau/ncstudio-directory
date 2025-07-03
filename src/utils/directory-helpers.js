@@ -13,35 +13,13 @@ import {
   getListingsByFilter
 } from '../lib/nocodb.js';
 
-// Check if we're in single directory mode
-const isSingleDirectoryBuild = process.env.BUILD_MODE === 'single';
-
 /**
- * Get the current directory ID from the URL or environment variable
- * @param {URL} url - The current URL
+ * Get the current directory ID from environment variable (single directory mode)
+ * @param {URL} url - The current URL (unused in single directory mode)
  * @returns {string} The directory ID
  */
 export function getCurrentDirectoryId(url) {
-  // Defensive check for url parameter
-  if (!url) {
-    console.error('getCurrentDirectoryId: URL is undefined');
-    return process.env.CURRENT_DIRECTORY || 'default';
-  }
-
-  // Try to get directory from URL path
-  try {
-    const urlParts = url.pathname.split('/');
-    const directoryFromUrl = urlParts[1];
-    
-    // Fallback to environment variable if available
-    if (directoryFromUrl) {
-      return directoryFromUrl;
-    } 
-  } catch (error) {
-    console.error('Error parsing URL in getCurrentDirectoryId:', error);
-  }
-  
-  // Return from environment or default
+  // Always use environment variable in single directory mode
   return process.env.CURRENT_DIRECTORY || 'default';
 }
 
@@ -65,31 +43,20 @@ export async function getDirectoryConfig(directoryId) {
 }
 
 /**
- * Get all directories
- * With optimization for single directory builds
+ * Get all directories (single directory mode - returns current directory only)
  * @returns {Promise<Array>} Array of directory configurations
  */
 export async function getAllDirectories() {
-  // In single directory mode, just return the current directory
-  if (isSingleDirectoryBuild) {
-    const currentDirId = process.env.CURRENT_DIRECTORY;
-    if (!currentDirId) {
-      console.error('getAllDirectories: CURRENT_DIRECTORY is not set in single directory mode');
-      return [];
-    }
-    
-    console.log(`Single directory mode: Only fetching directory ${currentDirId}`);
-    const dirConfig = await getDirectoryConfig(currentDirId);
-    return dirConfig ? [dirConfig] : [];
-  }
-  
-  // In multi-directory mode, get all directories
-  try {
-    return await getDirectories();
-  } catch (error) {
-    console.error('Error loading all directories:', error);
+  // Always return only the current directory in single directory mode
+  const currentDirId = process.env.CURRENT_DIRECTORY;
+  if (!currentDirId) {
+    console.error('getAllDirectories: CURRENT_DIRECTORY is not set');
     return [];
   }
+  
+  console.log(`Single directory mode: Only fetching directory ${currentDirId}`);
+  const dirConfig = await getDirectoryConfig(currentDirId);
+  return dirConfig ? [dirConfig] : [];
 }
 
 /**

@@ -346,25 +346,37 @@ export async function getListingsByFilter(filters) {
  * Updated to include URL pattern fields
  */
 function transformDirectory(directory) {
+  // Handle URL Pattern - remove extra quotes if present
+  let urlPattern = directory.url_pattern || directory['URL Pattern'] || directory.urlPattern || '{slug}';
+  if (typeof urlPattern === 'string' && urlPattern.startsWith('"') && urlPattern.endsWith('"')) {
+    urlPattern = urlPattern.slice(1, -1); // Remove outer quotes
+  }
+  
+  // Handle available layouts - could be string or array
+  let availableLayouts = directory.availableLayouts || directory['Available Layouts'] || 'Card';
+  if (typeof availableLayouts === 'string') {
+    availableLayouts = availableLayouts.split(',').map(l => l.trim());
+  }
+  
   return {
-    id: directory.id,
+    id: directory.id || directory.Identifier || directory.identifier,
     data: {
-      name: directory.name,
-      description: directory.description,
-      domain: directory.domain,
-      theme: directory.theme || 'default',
-      availableLayouts: directory.availableLayouts.split(','),
-      defaultLayout: directory.defaultLayout || 'Card',
-      primaryColor: directory.primaryColor,
-      secondaryColor: directory.secondaryColor,
-      logo: directory.logo,
-      categories: safeParseJSON(directory.categories, []),
-      metaTags: safeParseJSON(directory.metaTags, {}),
-      socialLinks: safeParseJSON(directory.socialLinks, {}),
-      deployment: safeParseJSON(directory.deployment, {}),
+      name: directory.name || directory.Name,
+      description: directory.description || directory.Description,
+      domain: directory.domain || directory.Domain,
+      theme: directory.theme || directory.Theme || 'default',
+      availableLayouts: availableLayouts,
+      defaultLayout: directory.defaultLayout || directory['Default Layout'] || 'Card',
+      primaryColor: directory.primaryColor || directory['Primary Color'],
+      secondaryColor: directory.secondaryColor || directory['Secondary Color'],
+      logo: directory.logo || directory.Logo,
+      categories: safeParseJSON(directory.categories || directory.Categories, []),
+      metaTags: safeParseJSON(directory.metaTags || directory['Meta Tags'], {}),
+      socialLinks: safeParseJSON(directory.socialLinks || directory['Social Links'], []),
+      deployment: safeParseJSON(directory.deployment || directory.Deployment, {}),
       // New URL pattern fields
-      url_pattern: directory.url_pattern || '{slug}',
-      url_segments: safeParseJSON(directory.url_segments, {})
+      url_pattern: urlPattern,
+      url_segments: safeParseJSON(directory.url_segments || directory['URL Segments'] || directory.urlSegments, {})
     }
   };
 }
@@ -376,22 +388,46 @@ function transformDirectory(directory) {
 async function transformListing(listing) {
   const renderedContent = await renderMarkdown(listing.content);
   
+  // Generate full path if not present
+  let fullPath = listing.full_path || listing.fullPath;
+  if (!fullPath) {
+    // Try to generate full path based on directory URL pattern
+    try {
+      const directory = await getDirectory(listing.directory);
+      if (directory && directory.data.url_pattern && directory.data.url_pattern !== '{slug}') {
+        const { generateUrlFromPattern } = await import('../utils/url-pattern.js');
+        fullPath = generateUrlFromPattern(
+          directory.data.url_pattern,
+          directory.data.url_segments || {},
+          listing
+        );
+      } else {
+        // Fallback to slug
+        fullPath = listing.slug;
+      }
+    } catch (error) {
+      console.warn(`Error generating full path for listing ${listing.slug}:`, error);
+      fullPath = listing.slug;
+    }
+  }
+  
   return {
-    slug: listing.slug, // Keep original slug
+    slug: listing.slug || listing.Slug, // Keep original slug
     data: {
-      title: listing.title,
-      description: listing.description,
-      directory: listing.directory,
-      category: listing.category,
-      category_slug: listing.category_slug || slugify(listing.category || ''),
-      featured: listing.featured === 1 || listing.featured === true,
-      images: safeParseJSON(listing.images, []),
-      tags: safeParseJSON(listing.tags, []),
-      fields: safeParseJSON(listing.fields, {}),
+      title: listing.title || listing.Title,
+      description: listing.description || listing.Description,
+      directory: listing.directory || listing['Directory Identifier'],
+      category: listing.category || listing.Category,
+      category_slug: listing.category_slug || listing['Category Slug'] || listing.categorySlug || slugify((listing.category || listing.Category) || ''),
+      featured: (listing.featured === 1 || listing.featured === true) || (listing.Featured === 1 || listing.Featured === true),
+      images: safeParseJSON(listing.images || listing.Images, []),
+      tags: safeParseJSON(listing.tags || listing.Tags, []),
+      fields: safeParseJSON(listing.fields || listing.Fields, {}),
       // New fields for URL patterns
-      location_data: safeParseJSON(listing.location_data, {}),
-      full_path: listing.full_path || listing.slug,
-      updatedAt: listing.updatedAt
+      location_data: safeParseJSON(listing.location_data || listing['Location Data'] || listing.locationData, {}),
+      full_path: fullPath,
+      fullPath: fullPath, // Also add as fullPath for compatibility
+      updatedAt: listing.updatedAt || listing.UpdatedAt
     },
     render: () => ({ Content: renderedContent() })
   };
@@ -619,7 +655,7 @@ export async function getDirectories() {
 export async function getDirectory(id) {
   try {
     const response = await fetchFromNocoDB(`/tables/${TABLES.directories}/records`, {
-      where: { id: { eq: id } },
+      where: { Identifier: { eq: id } },
       limit: 1
     }, cacheTTL.directories);
     
@@ -631,6 +667,75 @@ export async function getDirectory(id) {
   } catch (error) {
     console.error(`Error fetching directory ${id}:`, error);
     return null;
+  }
+}
+
+/**
+ * Update a directory configuration
+ * @param {string} id - Directory ID
+ * @param {object} directoryData - Directory data to update
+ * @returns {Promise<object>} Updated directory
+ */
+export async function updateDirectory(id, directoryData) {
+  if (!id) {
+    throw new Error('Directory ID is required');
+  }
+  
+  try {
+    // First, get the existing directory to get its database ID
+    const existingDirectory = await fetchFromNocoDB(`/tables/${TABLES.directories}/records`, {
+      where: { Identifier: { eq: id } },
+      limit: 1
+    }, cacheTTL.directories);
+    
+    if (!existingDirectory || !existingDirectory.list || existingDirectory.list.length === 0) {
+      throw new Error(`Directory not found: ${id}`);
+    }
+    
+    const dbId = existingDirectory.list[0].Id;
+    
+    // Prepare the update data
+    const updateData = {
+      Id: dbId,
+      Name: directoryData.name,
+      Description: directoryData.description,
+      Domain: directoryData.domain,
+      Theme: directoryData.theme,
+      'Available Layouts': Array.isArray(directoryData.availableLayouts) 
+        ? directoryData.availableLayouts.join(',') 
+        : directoryData.availableLayouts,
+      'Default Layout': directoryData.defaultLayout,
+      'Primary_Color': directoryData.primaryColor,
+      'Secondary_Color': directoryData.secondaryColor,
+      Logo: directoryData.logo,
+      Categories: JSON.stringify(directoryData.categories || []),
+      'Meta_Tags': JSON.stringify(directoryData.metaTags || {}),
+      'Social_Links': JSON.stringify(directoryData.socialLinks || []),
+      Deployment: JSON.stringify(directoryData.deployment || {}),
+      'URL Pattern': directoryData.url_pattern,
+      'URL Segments': JSON.stringify(directoryData.url_segments || {})
+    };
+    
+    // Update the directory using the specific record ID
+    const response = await fetch(`${NOCODB_API_URL}/tables/${TABLES.directories}/records/${dbId}`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify(updateData)
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to update directory: ${response.statusText}`);
+    }
+    
+    const updatedDirectory = await response.json();
+    
+    // Clear cache for directories
+    clearCache('directories');
+    
+    return transformDirectory(updatedDirectory);
+  } catch (error) {
+    console.error(`Error updating directory ${id}:`, error);
+    throw error;
   }
 }
 

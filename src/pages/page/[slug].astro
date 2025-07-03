@@ -1,0 +1,258 @@
+---
+import DirectoryLayout from '../../layouts/DirectoryLayout.astro';
+import { generateBreadcrumbSchema } from '../../utils/schema-generator';
+import { 
+  getDirectoryConfig,
+  getDirectoryLandingPages,
+  getLandingPageBySlug
+} from '../../utils/directory-helpers';
+import type { Directory } from '../../types';
+
+// Generate all dynamic routes for landing pages
+export async function getStaticPaths() {
+  const paths: any[] = [];
+  
+  // Get directory ID from environment variable
+  const directoryId = process.env.CURRENT_DIRECTORY || 'default';
+  
+  try {
+    const landingPages = await getDirectoryLandingPages(directoryId);
+    
+    for (const page of landingPages) {
+      // Handle slug extraction correctly
+      let slug = page.slug;
+      
+      // If the slug includes the directory prefix, remove it
+      if (slug.startsWith(`${directoryId}/`)) {
+        slug = slug.replace(`${directoryId}/`, '');
+      }
+      
+      paths.push({
+        params: { 
+          slug
+        },
+        props: { 
+          directoryId,
+          slug
+        }
+      });
+    }
+  } catch (error) {
+    console.error(`Error fetching landing pages for ${directoryId}:`, error);
+  }
+  
+  return paths;
+}
+
+// Get params from props
+const { directoryId, slug } = Astro.props;
+
+// Fetch the directory config and landing page data
+const directoryData = await getDirectoryConfig(directoryId);
+const landingPage = await getLandingPageBySlug(directoryId, slug);
+
+// Handle case where data isn't found
+if (!directoryData || !landingPage) {
+  return Astro.redirect('/404');
+}
+
+// Type cast the directory data
+const typedDirectoryData = directoryData as { data: Directory };
+
+// Type cast the landing page data
+const typedLandingPage = landingPage as any;
+
+// Get Content from render function
+const { Content } = await typedLandingPage.render();
+
+// Construct the canonical URL
+const canonicalUrl = new URL(`/page/${slug}`, Astro.site || 'http://localhost:4321').toString();
+
+// Generate structured data for this page
+const structuredData = {
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "name": typedLandingPage.data.title,
+  "description": typedLandingPage.data.description,
+  "url": canonicalUrl,
+  "image": typedLandingPage.data.featuredImage || null
+};
+
+// Generate breadcrumbs for this page
+const breadcrumbs = [
+  {
+    name: typedDirectoryData.data.name,
+    url: "/"
+  },
+  {
+    name: typedLandingPage.data.title,
+    url: canonicalUrl
+  }
+];
+---
+
+<DirectoryLayout
+  title={`${typedLandingPage.data.title} | ${typedDirectoryData.data.name}`}
+  description={typedLandingPage.data.description}
+  directoryData={typedDirectoryData.data}
+  canonicalUrl={canonicalUrl}
+  structuredData={structuredData}
+  breadcrumbs={breadcrumbs}
+  image={typedLandingPage.data.featuredImage}
+>
+  <article class="landing-page">
+    <div class="container">
+      <header class="page-header">
+        <h1>{landingPage.data.title}</h1>
+        <p class="description">{landingPage.data.description}</p>
+        
+        {landingPage.data.keywords && landingPage.data.keywords.length > 0 && (
+          <div class="keywords">
+            {landingPage.data.keywords.map(keyword => (
+              <span class="keyword">{keyword}</span>
+            ))}
+          </div>
+        )}
+      </header>
+      
+      {landingPage.data.featuredImage && (
+        <div class="featured-image">
+          <img 
+            src={landingPage.data.featuredImage}
+            alt={`Featured image for ${landingPage.data.title}`}
+          />
+        </div>
+      )}
+      
+      <div class="content">
+        <Fragment set:html={Content} />
+      </div>
+      
+      {landingPage.data.relatedCategories && landingPage.data.relatedCategories.length > 0 && (
+        <div class="related-categories">
+          <h2>Related Categories</h2>
+          <div class="category-grid">
+            {landingPage.data.relatedCategories.map(categoryId => {
+              const category = typedDirectoryData.data.categories.find(c => c.id === categoryId);
+              if (!category) return null;
+              
+              return (
+                <a href={`/category/${category.id}`} class="category-card">
+                  <h3>{category.name}</h3>
+                  {category.description && <p>{category.description}</p>}
+                </a>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  </article>
+</DirectoryLayout>
+
+<style>
+  .container {
+    max-width: var(--max-width, 1200px);
+    margin: 0 auto;
+    padding: 0 1rem;
+  }
+  
+  .page-header {
+    margin-bottom: 2rem;
+  }
+  
+  .page-header h1 {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .description {
+    font-size: 1.25rem;
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+  }
+  
+  .keywords {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+  
+  .keyword {
+    background: var(--bg-secondary);
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    color: var(--text-primary);
+  }
+  
+  .featured-image {
+    margin-bottom: 2rem;
+  }
+  
+  .featured-image img {
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+  }
+  
+  .content {
+    margin-bottom: 3rem;
+    line-height: 1.8;
+  }
+  
+  .related-categories {
+    margin-top: 3rem;
+    padding-top: 3rem;
+    border-top: 1px solid var(--border-color);
+  }
+  
+  .related-categories h2 {
+    font-size: 1.8rem;
+    margin-bottom: 2rem;
+    text-align: center;
+  }
+  
+  .category-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+  }
+  
+  .category-card {
+    background: var(--bg-secondary);
+    padding: 2rem;
+    border-radius: 8px;
+    text-decoration: none;
+    color: var(--text-primary);
+    transition: transform 0.2s ease;
+  }
+  
+  .category-card:hover {
+    transform: translateY(-2px);
+  }
+  
+  .category-card h3 {
+    margin-bottom: 1rem;
+    color: var(--primary-color);
+  }
+  
+  .category-card p {
+    color: var(--text-muted);
+  }
+  
+  @media (max-width: 768px) {
+    .page-header h1 {
+      font-size: 2rem;
+    }
+    
+    .description {
+      font-size: 1.125rem;
+    }
+    
+    .category-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style> 

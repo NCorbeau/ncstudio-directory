@@ -1,0 +1,443 @@
+---
+import DirectoryLayout from "../layouts/DirectoryLayout.astro";
+import { AppProvider } from "../components/solid/providers/AppContext";
+import SearchBar from "../components/solid/SearchBar";
+import LayoutContainer from "../components/solid/LayoutContainer";
+import { generateDirectoryHomeSchema } from "../utils/schema-generator";
+import {
+  getDirectoryConfig,
+  getFeaturedListings,
+  getRecentListings,
+  getDirectoryListings,
+  getDirectoryLandingPages,
+} from "../utils/directory-helpers";
+import type { Directory } from "../types";
+
+// Get directory ID from environment variable
+const directoryId = process.env.CURRENT_DIRECTORY || 'default';
+
+// Fetch directory data
+const directoryData = await getDirectoryConfig(directoryId);
+
+// Handle case where directory isn't found
+if (!directoryData) {
+  return Astro.redirect("/404");
+}
+
+// Type cast the directory data
+const typedDirectoryData = directoryData as { data: Directory };
+
+const defaultLayout = typedDirectoryData.data.defaultLayout || 'Card';
+const availableLayouts = typedDirectoryData.data.availableLayouts || ['Card'];
+
+// Always render with default layout initially for server-side rendering
+let currentLayout = defaultLayout;
+
+// Fetch all listings (for any layout type)
+const allListings = await getDirectoryListings(directoryId);
+
+// Fetch featured listings (for featured section below main listings)
+const featuredListings = await getFeaturedListings(directoryId, 6);
+
+// Fetch recent listings (for recent section)
+const recentListings = await getRecentListings(directoryId, 4);
+
+// Fetch landing pages
+const landingPages = await getDirectoryLandingPages(directoryId);
+
+// Get categories from directory data
+const categories = typedDirectoryData.data.categories || [];
+
+// Construct canonical URL
+const canonicalUrl = new URL(
+  "/",
+  Astro.site || "http://localhost:4321"
+).toString();
+
+// Generate structured data for home page
+const structuredData = generateDirectoryHomeSchema(
+  typedDirectoryData.data,
+  canonicalUrl
+);
+
+// Get the direct URL query string for preserving filters when switching layouts
+const queryString = Astro.url.search;
+
+// Determine which listings to show in the main layout
+const mainListings = allListings;
+---
+
+<DirectoryLayout
+  title={typedDirectoryData.data.metaTags?.title || typedDirectoryData.data.name}
+  description={typedDirectoryData.data.metaTags?.description ||
+    typedDirectoryData.data.description}
+  directoryData={typedDirectoryData.data}
+  canonicalUrl={canonicalUrl}
+  structuredData={structuredData}
+>
+  <AppProvider initialDirectoryId={directoryId} client:load>
+    <!-- Hero Section -->
+    <section class="hero">
+      <div class="container">
+        <h1>{typedDirectoryData.data.name}</h1>
+        <p class="lead">{typedDirectoryData.data.description}</p>
+
+        <div class="search-container">
+          <SearchBar
+            directoryId={directoryId}
+            placeholder={`Search ${typedDirectoryData.data.name}...`}
+            client:load
+          />
+        </div>
+      </div>
+    </section>
+
+    <!-- Main Listings with Layout Switching -->
+    <section class="main-listings">
+      <div class="container">
+        <div class="section-header">
+          <h2>Browse {typedDirectoryData.data.name}</h2>
+          
+          {allListings.length > 0 ? (
+            <span class="listing-count">{allListings.length} listings found</span>
+          ) : (
+            <span class="listing-count">No listings found</span>
+          )}
+        </div>
+
+        {allListings.length > 0 ? (
+          <LayoutContainer
+            listings={mainListings}
+            directory={typedDirectoryData.data}
+            currentLayout={currentLayout}
+            categories={categories}
+            searchParams={queryString}
+            directoryId={directoryId}
+            client:visible
+          />
+        ) : (
+          <div class="no-listings-message">
+            <p>No listings have been added to this directory yet.</p>
+          </div>
+        )}
+      </div>
+    </section>
+
+    <!-- Categories Section -->
+    {categories.length > 0 && (
+      <section class="categories">
+        <div class="container">
+          <div class="section-header">
+            <h2>Browse by Category</h2>
+          </div>
+
+          <div class="category-grid">
+            {categories.map((category) => (
+              <a
+                href={`/category/${category.id}`}
+                class="category-card"
+              >
+                <h3>{category.name}</h3>
+                {category.description && <p>{category.description}</p>}
+              </a>
+            ))}
+          </div>
+        </div>
+      </section>
+    )}
+
+    <!-- Recent Listings Section (if different from featured and not empty) -->
+    {recentListings.length > 0 &&
+      !recentListings.every((r) =>
+        featuredListings.some((f) => f.slug === r.slug)
+      ) && (
+        <section class="recent">
+          <div class="container">
+            <div class="section-header">
+              <h2>Recent Additions</h2>
+              <a href={`/search?sort=newest`} class="view-all">
+                View All
+              </a>
+            </div>
+
+            <div class="listing-grid">
+              {recentListings.map((listing) => (
+                <div class="recent-card">
+                  <h3>
+                    <a href={`/${listing.data.full_path || listing.slug.replace(`${directoryId}/`, "")}`}>
+                      {listing.data.title}
+                    </a>
+                  </h3>
+                  <p>{listing.data.description.substring(0, 120)}...</p>
+                  {listing.data.updatedAt && (
+                    <div class="date-added">
+                      Added {new Date(listing.data.updatedAt).toLocaleDateString()}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+    <!-- Featured Listings Section -->
+    {featuredListings.length > 0 && (
+      <section class="featured">
+        <div class="container">
+          <div class="section-header">
+            <h2>Featured Listings</h2>
+          </div>
+
+          <div class="listing-grid">
+            {featuredListings.map((listing) => (
+              <div class="featured-card">
+                <h3>
+                  <a href={`/${listing.data.full_path || listing.slug.replace(`${directoryId}/`, "")}`}>
+                    {listing.data.title}
+                  </a>
+                </h3>
+                <p>{listing.data.description.substring(0, 120)}...</p>
+                {listing.data.featured_reason && (
+                  <div class="featured-reason">
+                    <strong>Why it's featured:</strong> {listing.data.featured_reason}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    )}
+
+    <!-- Landing Pages Section -->
+    {landingPages.length > 0 && (
+      <section class="landing-pages">
+        <div class="container">
+          <div class="section-header">
+            <h2>More Information</h2>
+          </div>
+
+          <div class="landing-page-grid">
+            {landingPages.map((page) => (
+              <a href={`/page/${page.slug.replace(`${directoryId}/`, "")}`} class="landing-page-card">
+                <h3>{page.data.title}</h3>
+                <p>{page.data.description}</p>
+              </a>
+            ))}
+          </div>
+        </div>
+      </section>
+    )}
+  </AppProvider>
+</DirectoryLayout>
+
+<style>
+  .hero {
+    padding: 4rem 0;
+    background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+    text-align: center;
+  }
+
+  .hero h1 {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    color: var(--text-primary);
+  }
+
+  .hero .lead {
+    font-size: 1.25rem;
+    color: var(--text-muted);
+    margin-bottom: 2rem;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .search-container {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  .main-listings {
+    padding: 4rem 0;
+  }
+
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+  }
+
+  .section-header h2 {
+    font-size: 2rem;
+    color: var(--text-primary);
+  }
+
+  .listing-count {
+    color: var(--text-muted);
+    font-size: 1rem;
+  }
+
+  .no-listings-message {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--text-muted);
+  }
+
+  .categories {
+    padding: 3rem 0;
+    background: var(--bg-secondary);
+  }
+
+  .category-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .category-card {
+    background: var(--bg-primary);
+    padding: 2rem;
+    border-radius: 8px;
+    text-decoration: none;
+    color: var(--text-primary);
+    transition: transform 0.2s ease;
+  }
+
+  .category-card:hover {
+    transform: translateY(-2px);
+  }
+
+  .category-card h3 {
+    margin-bottom: 1rem;
+    color: var(--primary-color);
+  }
+
+  .category-card p {
+    color: var(--text-muted);
+  }
+
+  .recent, .featured {
+    padding: 3rem 0;
+  }
+
+  .recent {
+    background: var(--bg-secondary);
+  }
+
+  .view-all {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 500;
+  }
+
+  .view-all:hover {
+    text-decoration: underline;
+  }
+
+  .listing-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+  }
+
+  .recent-card, .featured-card {
+    background: var(--bg-primary);
+    padding: 2rem;
+    border-radius: 8px;
+    transition: transform 0.2s ease;
+  }
+
+  .recent-card:hover, .featured-card:hover {
+    transform: translateY(-2px);
+  }
+
+  .recent-card h3, .featured-card h3 {
+    margin-bottom: 1rem;
+  }
+
+  .recent-card h3 a, .featured-card h3 a {
+    color: var(--text-primary);
+    text-decoration: none;
+  }
+
+  .recent-card h3 a:hover, .featured-card h3 a:hover {
+    color: var(--primary-color);
+  }
+
+  .recent-card p, .featured-card p {
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+  }
+
+  .date-added {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+  }
+
+  .featured-reason {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+  }
+
+  .featured-reason strong {
+    color: var(--primary-color);
+  }
+
+  .landing-pages {
+    padding: 3rem 0;
+    background: var(--bg-secondary);
+  }
+
+  .landing-page-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+  }
+
+  .landing-page-card {
+    background: var(--bg-primary);
+    padding: 2rem;
+    border-radius: 8px;
+    text-decoration: none;
+    color: var(--text-primary);
+    transition: transform 0.2s ease;
+  }
+
+  .landing-page-card:hover {
+    transform: translateY(-2px);
+  }
+
+  .landing-page-card h3 {
+    margin-bottom: 1rem;
+    color: var(--primary-color);
+  }
+
+  .landing-page-card p {
+    color: var(--text-muted);
+  }
+
+  @media (max-width: 768px) {
+    .hero h1 {
+      font-size: 2rem;
+    }
+
+    .hero .lead {
+      font-size: 1.125rem;
+    }
+
+    .section-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+
+    .category-grid,
+    .listing-grid,
+    .landing-page-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style> 

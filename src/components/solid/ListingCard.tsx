@@ -8,7 +8,8 @@ export default function ListingCard(props: ListingCardProps) {
   const { listing, url, theme = 'default' } = props;
   
   // Normalize the listing data
-  const normalizedListing = normalizeListing(listing);
+  // const normalizedListing = normalizeListing(listing);
+  const normalizedListing = listing;
   
   // Get directory context for category info to avoid API calls
   const directoryContext = useDirectory();

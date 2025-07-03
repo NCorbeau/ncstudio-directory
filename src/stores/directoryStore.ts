@@ -1,28 +1,10 @@
 // src/stores/directoryStore.ts
 import { createStore } from 'solid-js/store';
 import type { Directory, Listing, Category } from '../types';
-import { getDirectory } from '@/lib/nocodb';
+import { getDirectory, getListings } from '@/lib/nocodb';
 
-// Determine the current directory from the URL
+// Get the current directory ID from environment variable (single directory mode)
 function getCurrentDirectoryId(): string {
-  if (typeof window === 'undefined') {
-    return import.meta.env.CURRENT_DIRECTORY || 'default';
-  }
-
-  // Try to get directory from URL path
-  try {
-    const urlParts = window.location.pathname.split('/');
-    const directoryFromUrl = urlParts[1];
-    
-    // Return from URL if available
-    if (directoryFromUrl) {
-      return directoryFromUrl;
-    } 
-  } catch (error) {
-    console.error('Error parsing URL in getCurrentDirectoryId:', error);
-  }
-  
-  // Return from environment or default
   return import.meta.env.CURRENT_DIRECTORY || 'default';
 }
 
@@ -116,19 +98,6 @@ const directoryActions = {
   getCategory(id: string): Category | undefined {
     if (!directoryState.data) return undefined;
     return directoryState.data.categories.find(cat => cat.id === id);
-  },
-  
-  // Change the current directory
-  async changeDirectory(directoryId: string) {
-    if (directoryId === directoryState.id) return;
-    
-    setDirectoryState('id', directoryId);
-    setDirectoryState('initialized', false);
-    setDirectoryState('data', null);
-    setDirectoryState('listings', []);
-    
-    // Reinitialize with new directory
-    await this.initialize();
   }
 };
 

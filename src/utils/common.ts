@@ -2,36 +2,18 @@
 // Common utility functions used throughout the application
 
 /**
- * Extract the directory ID from the current URL
+ * Get the current directory ID from environment variable (single directory mode)
  */
 export function getCurrentDirectoryId(): string {
-    if (typeof window === 'undefined') {
-      return import.meta.env.CURRENT_DIRECTORY || 'default';
-    }
-  
-    // Try to get directory from URL path
-    try {
-      const urlParts = window.location.pathname.split('/');
-      const directoryFromUrl = urlParts[1];
-      
-      // Return from URL if available
-      if (directoryFromUrl) {
-        return directoryFromUrl;
-      } 
-    } catch (error) {
-      console.error('Error parsing URL in getCurrentDirectoryId:', error);
-    }
-    
-    // Return from environment or default
     return import.meta.env.CURRENT_DIRECTORY || 'default';
   }
   
   /**
-   * Create a directory-aware URL
+   * Create a URL (simplified for single directory mode)
    */
-  export function makeDirUrl(path: string, directoryId: string | null): string {
-    if (!directoryId) return path;
-    return `/${directoryId}${path.startsWith('/') ? path : '/' + path}`;
+  export function makeDirUrl(path: string, directoryId?: string | null): string {
+    // In single directory mode, ignore directoryId and just return the path
+    return path.startsWith('/') ? path : '/' + path;
   }
   
   /**
